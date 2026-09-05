@@ -326,6 +326,14 @@ meaningful — aura collapses no matter the craft. Aura requires that nobody is 
 0 = nobody wears it. 1 = a mild scene. 2 = a fanbase you can picture instantly.
 3 = liking it IS the personality.
 
+SUBTITLES AND AGE ARE NOT AURA. Foreign-language, old, or festival cinema is its own
+coded fandom — the "real cinema" personality — and reaching for it to seem serious is
+the same mistake as rewarding cinematography. A passport, a decade and a subtitle track
+are not evidence of conviction in either direction: A Prophet and Mr Inbetween earn
+their place on the axes, not by being French or Australian, and the top of this scale is
+a flat-looking American comedy from 2018. Never pick something BECAUSE it is foreign,
+old, or obscure. Judge what is on the screen.
+
 WORKED AXIS PROFILES (these reproduce his own numbers on the shared scale):
   Arizona (2018) = 9   → control 5, writing 5, under 4, commit 5, nochase 5, withhold 4; fandom 0
   Parasite       = 8   → control 5, writing 4, under 5, commit 4, nochase 3, withhold 3; fandom 0
@@ -613,23 +621,34 @@ const LANES = [
   ["nasty",   "Nasty",           "Lean towards work with no interest in being liked — hard, unsentimental, unsoftened."],
 ];
 
-// Kept separate per form. A shared list meant asking for shows while demanding
-// "under 100 minutes" or "a first or second feature", which dragged the answer
-// back to films every time.
-const SPICE = {
+// Variety by REGISTER, not by passport or decade. The previous list demanded
+// three of six be foreign / pre-1995 / non-Anglophone, which quota'd in exactly
+// the "real cinema" coded fandom the doctrine says drains aura — rewarding a
+// subtitle track for the same reason it refuses to reward cinematography.
+// These rotate the angle of attack instead, which is what actually keeps a
+// batch from collapsing into the same six crime films.
+const ANGLES = {
   film: [
-    "made before 1995","not in English","made outside the US, UK and Canada",
-    "released in the last four years","from the 2000s","under 100 minutes",
-    "a first or second feature","from Australia, Ireland or Scandinavia",
-    "that never got a wide release","from the 1970s or 80s",
+    "hiding inside a genre that usually carries no weight — comedy, action, heist, horror",
+    "contained: a few people, one place, no scale to hide behind",
+    "about work — a job shown in real detail",
+    "funny on purpose, and still hard underneath",
+    "led by someone with no interest in being liked",
+    "that looks cheap, flat or unfashionable",
+    "told from the wrong angle, or out of order, and earns it",
+    "domestic rather than criminal — no guns, still ruthless",
+    "by someone who only ever made one or two things",
   ],
   show: [
-    "made before 2000","not in English","made outside the US, UK and Canada",
-    "that ran for a single season","first aired in the last four years",
-    "from the 2000s","with episodes under 30 minutes",
-    "that was cancelled before it finished its story",
-    "from Australia, Ireland or Scandinavia",
-    "that aired somewhere nobody was looking",
+    "that ran one season and finished its thought",
+    "half-hour, and not a comedy in the way you expect",
+    "about work — a job shown in real detail",
+    "led by someone with no interest in being liked",
+    "that looks cheap, flat or unfashionable",
+    "buried on a channel or service nobody was watching",
+    "wearing a procedural shape and doing something else underneath",
+    "funny on purpose, and still hard underneath",
+    "domestic rather than criminal — no guns, still ruthless",
   ],
 };
 
@@ -700,8 +719,8 @@ async function doFind() {
   findBusy = true; findErr = ""; picks = []; render();
   ctl = new AbortController();
 
-  const pool = SPICE[kind];
-  const spice = pool[Math.floor(Math.random() * pool.length)];
+  const pool = ANGLES[kind];
+  const angle = pool[Math.floor(Math.random() * pool.length)];
   const laneTxt = (LANES.find(l => l[0] === lane) || [])[2] || "";
   const rubric = AXES.map(a => `  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
 
@@ -729,7 +748,11 @@ HARD RULES
   Returning four honest picks is better than six padded ones.
 - Strongly prefer things he is unlikely to have heard of. Skip the canon and skip anything
   already on his anchor list.
-- At least three of the six must be ${spice}. Vary era, country and register.
+- At least two of the six should be ${angle}.
+- Spread the register: no more than two picks doing the same thing in the same key.
+- Do NOT vary for the sake of country or decade, and never reach for a foreign or old
+  title to make the list look serious. If most honest answers here are recent and in
+  English, return recent English-language picks — that is not a failure of range.
 - Do not reward prestige cinematography or a moody score. A cheap-looking thing in total
   command beats a beautiful thing with thin writing.
 - Nothing already shown: ${state.seen.slice(-120).join("; ") || "none"}
