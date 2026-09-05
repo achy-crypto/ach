@@ -559,12 +559,30 @@ const LANES = [
   ["nasty",   "Nasty",           "Lean towards work with no interest in being liked — hard, unsentimental, unsoftened."],
 ];
 
-const SPICE = [
-  "made before 1995","not in English","made outside the US, UK and Canada",
-  "released in the last four years","from the 2000s","under 100 minutes",
-  "a first or second feature","from Australia, Ireland or Scandinavia",
-  "that never got a wide release","from the 1970s or 80s",
-];
+// Kept separate per form. A shared list meant asking for shows while demanding
+// "under 100 minutes" or "a first or second feature", which dragged the answer
+// back to films every time.
+const SPICE = {
+  film: [
+    "made before 1995","not in English","made outside the US, UK and Canada",
+    "released in the last four years","from the 2000s","under 100 minutes",
+    "a first or second feature","from Australia, Ireland or Scandinavia",
+    "that never got a wide release","from the 1970s or 80s",
+  ],
+  show: [
+    "made before 2000","not in English","made outside the US, UK and Canada",
+    "that ran for a single season","first aired in the last four years",
+    "from the 2000s","with episodes under 30 minutes",
+    "that was cancelled before it finished its story",
+    "from Australia, Ireland or Scandinavia",
+    "that aired somewhere nobody was looking",
+  ],
+};
+
+const FORM = {
+  film: { noun:"feature films", rule:"Every pick must be a FEATURE FILM. No television series, no miniseries, no documentaries series." },
+  show: { noun:"television series", rule:"Every pick must be a TELEVISION SERIES — episodic or a limited/mini series. NO FEATURE FILMS. If a title you are considering is a film, discard it and find a series instead." },
+};
 
 let kind = "film", lane = "any", floor = 8, findBusy = false, findErr = "", picks = [];
 
@@ -626,12 +644,17 @@ async function doFind() {
   findBusy = true; findErr = ""; picks = []; render();
   ctl = new AbortController();
 
-  const spice = SPICE[Math.floor(Math.random() * SPICE.length)];
+  const pool = SPICE[kind];
+  const spice = pool[Math.floor(Math.random() * pool.length)];
   const laneTxt = (LANES.find(l => l[0] === lane) || [])[2] || "";
   const rubric = AXES.map(a => `  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
 
   const prompt =
-`Recommend 6 ${kind}s with heavy aura.
+`Recommend 6 ${FORM[kind].noun} with heavy aura.
+
+${FORM[kind].rule}
+This is not negotiable and overrides every other preference below. Tag each pick with
+"form":"${kind}" to confirm it. Anything of the wrong form will be thrown away.
 
 ${DOCTRINE}
 
@@ -645,6 +668,7 @@ ${rubric}
 ${SHAPE_NOTE}
 
 HARD RULES
+- ${FORM[kind].rule}
 - Only include a pick whose axis scores genuinely put it at ${floor} or above on his scale.
   Returning four honest picks is better than six padded ones.
 - Strongly prefer things he is unlikely to have heard of. Skip the canon and skip anything
@@ -655,21 +679,31 @@ HARD RULES
 - Nothing already shown: ${state.seen.slice(-120).join("; ") || "none"}
 
 Reply with only this JSON:
-{"picks":[{"title":"","year":0,"ident":"","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"fandom":0,"fandomWhy":"","familiarity":3,"why":"what specifically gives it aura — the writing, the command, what it withholds","warn":"anything in it that might read as trying too hard, or empty string"}]}`;
+{"picks":[{"title":"","year":0,"form":"${kind}","ident":"","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"fandom":0,"fandomWhy":"","familiarity":3,"why":"what specifically gives it aura — the writing, the command, what it withholds","warn":"anything in it that might read as trying too hard, or empty string"}]}`;
 
   try {
     const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
-    const got = (out && Array.isArray(out.picks) ? out.picks : [])
-      .filter(p => p && p.title && composite(p.scores, p.fandom) >= floor);
+    const raw  = (out && Array.isArray(out.picks) ? out.picks : []).filter(p => p && p.title);
+    // Trust but verify: a pick that doesn't claim the form you asked for is dropped.
+    const form = raw.filter(p => !p.form || String(p.form).toLowerCase().indexOf(kind) >= 0);
+    const got  = form.filter(p => composite(p.scores, p.fandom) >= floor);
     picks = got;
+
+    const wrongForm = raw.length - form.length;
+    const belowBar  = form.length - got.length;
+    const notes = [];
+    if (wrongForm) notes.push(`${wrongForm} came back as the wrong form and ${wrongForm === 1 ? "was" : "were"} dropped.`);
+    if (belowBar)  notes.push(`${belowBar} fell below your floor once scored.`);
+
     if (!got.length) {
-      findErr = "Nothing cleared that bar once it was scored properly. Lower the floor or change the register.";
+      notes.push(raw.length
+        ? "Nothing survived. Try a lower floor or a different register."
+        : "Nothing came back. Try again.");
     } else {
-      const asked = (out.picks || []).length;
-      if (got.length < asked) findErr = `${asked - got.length} of ${asked} came back below your floor once scored and were dropped.`;
       state.seen = state.seen.concat(got.map(p => p.title)).slice(-300);
       saveState();
     }
+    findErr = notes.join(" ");
   } catch (e) {
     if (e && e.code === "cancelled") { findBusy = false; render(); return; }
     findErr = errCopy(e);
