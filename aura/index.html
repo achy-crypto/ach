@@ -348,33 +348,75 @@ const DOC = "aura/state";
 // nothing happened" looks like from the outside.
 const saveStatus = {};
 let dbUnavailable = false;
+let dbErr = "";
+let lastSave = { cloud: null, local: null };
+
+const LS_KEY = "aura:state:v1";
+
+function payload() {
+  return {
+    anchors: state.anchors,
+    log: state.log.slice(-300),
+    seen: state.seen.slice(-300),
+  };
+}
+
+function adopt(d) {
+  if (!d) return false;
+  if (Array.isArray(d.anchors)) state.anchors = d.anchors;
+  if (Array.isArray(d.log))     state.log     = d.log;
+  if (Array.isArray(d.seen))    state.seen    = d.seen;
+  return true;
+}
 
 async function loadState() {
+  // Cloud first (follows the link across devices), browser storage as the
+  // fallback so a view that can't reach db still remembers everything.
+  let got = false;
   try {
     db = await claude.use("db");
-    if (!db) { dbUnavailable = true; return; }
-    const snap = await db.doc(DOC).get();
-    if (snap.exists) {
-      const d = snap.data() || {};
-      if (Array.isArray(d.anchors)) state.anchors = d.anchors;
-      if (Array.isArray(d.log))     state.log     = d.log;
-      if (Array.isArray(d.seen))    state.seen    = d.seen;
+    if (!db) { dbUnavailable = true; dbErr = "not available in this view"; }
+    else {
+      const snap = await db.doc(DOC).get();
+      if (snap.exists) got = adopt(snap.data());
     }
-  } catch (e) { db = null; dbUnavailable = true; }
+  } catch (e) {
+    db = null; dbUnavailable = true;
+    dbErr = (e && (e.code || e.message)) || "unknown error";
+  }
+  // Probe browser storage up front so the Storage readout states a fact
+  // rather than waiting for the first write to find out.
+  try {
+    localStorage.setItem(LS_KEY + ":probe", "1");
+    localStorage.removeItem(LS_KEY + ":probe");
+    lastSave.local = true;
+  } catch (e) { lastSave.local = false; }
+
+  if (!got) {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) adopt(JSON.parse(raw));
+    } catch (e) { /* private mode, blocked storage — carry on in memory */ }
+  }
   state.loaded = true;
   render();
 }
 
 async function saveState() {
-  if (!db) return false;
-  try {
-    await db.doc(DOC).set({
-      anchors: state.anchors,
-      log: state.log.slice(-300),
-      seen: state.seen.slice(-300),
-    });
-    return true;
-  } catch (e) { return false; }
+  const body = payload();
+
+  let local = false;
+  try { localStorage.setItem(LS_KEY, JSON.stringify(body)); local = true; }
+  catch (e) { local = false; }
+
+  let cloud = false;
+  if (db) {
+    try { await db.doc(DOC).set(body); cloud = true; dbErr = ""; }
+    catch (e) { dbErr = (e && (e.code || e.message)) || "unknown error"; }
+  }
+
+  lastSave = { cloud, local };
+  return local || cloud;   // saved somewhere is saved
 }
 
 /* ---------- prompt assembly ---------- */
@@ -512,7 +554,7 @@ function readPanel() {
     }
     h += `</div>`;
   }
-  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">This view can't reach storage right now — readings still work, but logged verdicts and calibration won't be saved between visits.</div>` + h;
+  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">Cloud storage isn't available in this view, so verdicts save to this browser only. See Calibration → Storage.</div>` + h;
   return h;
 }
 
@@ -650,7 +692,7 @@ function findPanel() {
     });
     h += `</div>`;
   }
-  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">This view can't reach storage right now — finds still work, but logged verdicts won't be saved between visits.</div>` + h;
+  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">Cloud storage isn't available in this view, so verdicts save to this browser only. See Calibration → Storage.</div>` + h;
   return h;
 }
 
@@ -782,7 +824,8 @@ function calPanel() {
       <input type="text" id="ns" class="sc" placeholder="8.5" inputmode="decimal">
       <button class="go" data-act="addanch">Add</button>
     </div>
-    ${anchorSaveLine()}`;
+    ${anchorSaveLine()}
+    ${storageLine()}`;
 
   return h;
 }
@@ -800,11 +843,17 @@ async function logVerdict(title, score, verdict) {
   render();
 }
 
+function whereSaved() {
+  if (lastSave.cloud) return "Saved. It'll weigh on what comes next.";
+  if (lastSave.local) return "Saved to this browser. It'll weigh on what comes next.";
+  return "Saved. It'll weigh on what comes next.";
+}
+
 function saveLine(title, fallbackDone) {
   const s = saveStatus[title];
   if (s === "saving") return `<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;
-  if (s === "failed")  return `<div class="err" style="margin-top:9px">Logged for now, but the save failed — it resets if you reload. ${db ? "Try again." : "This view can't reach storage."}</div>`;
-  if (s === "ok" || fallbackDone) return `<div class="saved">Saved. It'll weigh on what comes next.</div>`;
+  if (s === "failed")  return `<div class="err" style="margin-top:9px">Logged on screen, but nothing could be written to storage — it resets if you reload.</div>`;
+  if (s === "ok" || fallbackDone) return `<div class="saved">${whereSaved()}</div>`;
   return "";
 }
 
@@ -823,9 +872,26 @@ async function mutateAnchors(fn) {
 function anchorSaveLine() {
   const s = saveStatus.anchors;
   if (s === "saving") return `<p class="note"><span class="status" style="display:inline-flex"><span class="dot"></span>Saving…</span></p>`;
-  if (s === "failed")  return `<p class="err">That change didn't save — reload now and you'll lose it. ${db ? "Try again." : "This view can't reach storage at all."}</p>`;
-  if (s === "ok")      return `<p class="saved">Saved.</p>`;
-  return `<p class="note">${db ? "Saved to this artifact — it survives reloads and follows the link." : "Storage is unavailable in this view, so changes last only until you reload."}</p>`;
+  if (s === "failed")  return `<p class="err">That change reached nothing — reload now and you'll lose it.</p>`;
+  if (s === "ok")      return `<p class="saved">${lastSave.cloud ? "Saved." : "Saved to this browser."}</p>`;
+  return "";
+}
+
+// Plain statement of where data is actually going, so a storage problem is
+// something you can read off the page instead of infer from things vanishing.
+function storageLine() {
+  const cloud = db
+    ? (dbErr ? `failing (${esc(dbErr)})` : "working")
+    : `unavailable${dbErr ? ` (${esc(dbErr)})` : ""}`;
+  let local = "untested";
+  if (lastSave.local === true) local = "working";
+  else if (lastSave.local === false) local = "blocked";
+  const bad = (!db || dbErr) && lastSave.local !== true;
+  return `
+    <h2 class="sec">Storage</h2>
+    <p class="subtle">Cloud (follows the link, any device): <b>${cloud}</b><br>
+    This browser (fallback): <b>${local}</b></p>
+    ${bad ? `<p class="err">Nothing is persisting right now — verdicts and anchors will reset when you reload.</p>` : ""}`;
 }
 
 /* ---------- plumbing ---------- */
