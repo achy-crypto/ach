@@ -341,10 +341,18 @@ let tab = "read";
 
 const DOC = "aura/state";
 
+// Per-title save status for the just-clicked verdict: "saving" | "ok" | "failed".
+// Without this, a verdict click updated local state and re-rendered instantly
+// whether or not the write actually reached storage — a failed save and a
+// working one looked identical, which is exactly what "I pressed it and
+// nothing happened" looks like from the outside.
+const saveStatus = {};
+let dbUnavailable = false;
+
 async function loadState() {
   try {
     db = await claude.use("db");
-    if (!db) return;
+    if (!db) { dbUnavailable = true; return; }
     const snap = await db.doc(DOC).get();
     if (snap.exists) {
       const d = snap.data() || {};
@@ -352,20 +360,21 @@ async function loadState() {
       if (Array.isArray(d.log))     state.log     = d.log;
       if (Array.isArray(d.seen))    state.seen    = d.seen;
     }
-  } catch (e) { db = null; }
+  } catch (e) { db = null; dbUnavailable = true; }
   state.loaded = true;
   render();
 }
 
 async function saveState() {
-  if (!db) return;
+  if (!db) return false;
   try {
     await db.doc(DOC).set({
       anchors: state.anchors,
       log: state.log.slice(-300),
       seen: state.seen.slice(-300),
     });
-  } catch (e) { /* keep working from memory */ }
+    return true;
+  } catch (e) { return false; }
 }
 
 /* ---------- prompt assembly ---------- */
@@ -498,11 +507,12 @@ function readPanel() {
         <div class="chips">
           ${VERDICTS.map(v => `<button class="chip" data-act="verdict" data-v="${v.key}" aria-pressed="${done && done.verdict === v.key ? "true" : "false"}">${v.label}</button>`).join("")}
         </div>
-        ${done ? `<div class="saved">Logged. It'll weigh on what comes next.</div>` : ""}
+        ${saveLine(r.name, !!done)}
       </div>`;
     }
     h += `</div>`;
   }
+  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">This view can't reach storage right now — readings still work, but logged verdicts and calibration won't be saved between visits.</div>` + h;
   return h;
 }
 
@@ -633,10 +643,12 @@ function findPanel() {
           <div class="chips">
             ${VERDICTS.map(v => `<button class="chip" data-act="pverdict" data-i="${i}" data-v="${v.key}" aria-pressed="${logged && logged.verdict === v.key ? "true" : "false"}">${v.label}</button>`).join("")}
           </div>
+          ${saveLine(p.title, !!logged)}
         </div>`;
     });
     h += `</div>`;
   }
+  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">This view can't reach storage right now — finds still work, but logged verdicts won't be saved between visits.</div>` + h;
   return h;
 }
 
@@ -775,12 +787,23 @@ function calPanel() {
 
 /* ---------- verdict capture ---------- */
 
-function logVerdict(title, score, verdict) {
+async function logVerdict(title, score, verdict) {
   const i = state.log.findIndex(e => e.title === title);
   const row = { title, score: Number(score), verdict, at: Date.now() };
   if (i >= 0) state.log[i] = row; else state.log.push(row);
-  saveState();
+  saveStatus[title] = "saving";
   render();
+  const ok = await saveState();
+  saveStatus[title] = ok ? "ok" : "failed";
+  render();
+}
+
+function saveLine(title, fallbackDone) {
+  const s = saveStatus[title];
+  if (s === "saving") return `<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;
+  if (s === "failed")  return `<div class="err" style="margin-top:9px">Logged for now, but the save failed — it resets if you reload. ${db ? "Try again." : "This view can't reach storage."}</div>`;
+  if (s === "ok" || fallbackDone) return `<div class="saved">Saved. It'll weigh on what comes next.</div>`;
+  return "";
 }
 
 /* ---------- plumbing ---------- */
@@ -820,11 +843,11 @@ document.addEventListener("click", ev => {
   if (act === "floor") { floor = Number(t.dataset.v); return render(); }
 
   if (act === "verdict" && reading && !reading.example)
-    return logVerdict(reading.name, composite(reading.scores, reading.fandom), t.dataset.v);
+    return void logVerdict(reading.name, composite(reading.scores, reading.fandom), t.dataset.v);
 
   if (act === "pverdict") {
     const p = picks[Number(t.dataset.i)];
-    if (p) logVerdict(p.title, composite(p.scores, p.fandom), t.dataset.v);
+    if (p) void logVerdict(p.title, composite(p.scores, p.fandom), t.dataset.v);
     return;
   }
   if (act === "dellog")  { state.log = state.log.filter(e => e.title !== t.dataset.t); saveState(); return render(); }
