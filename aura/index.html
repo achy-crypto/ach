@@ -549,7 +549,9 @@ Reply with only this JSON:
 "fandom":0,"fandomWhy":"","familiarity":3,"peak":"","kill":""}`;
 
   try {
-    const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:{ gcTime: 900000 } });
+    // No caching: this tab exists to test calibration changes, so a re-read
+    // after editing an anchor must never replay a stale answer.
+    const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
     reading = Object.assign({ name }, out, { example:false });
   } catch (e) {
     if (e && e.code === "cancelled") { readBusy = false; render(); return; }
@@ -780,7 +782,7 @@ function calPanel() {
       <input type="text" id="ns" class="sc" placeholder="8.5" inputmode="decimal">
       <button class="go" data-act="addanch">Add</button>
     </div>
-    <p class="note">${db ? "Saved to this artifact — it survives reloads and follows the link." : "Storage is unavailable in this view, so changes last only until you reload."}</p>`;
+    ${anchorSaveLine()}`;
 
   return h;
 }
@@ -804,6 +806,26 @@ function saveLine(title, fallbackDone) {
   if (s === "failed")  return `<div class="err" style="margin-top:9px">Logged for now, but the save failed — it resets if you reload. ${db ? "Try again." : "This view can't reach storage."}</div>`;
   if (s === "ok" || fallbackDone) return `<div class="saved">Saved. It'll weigh on what comes next.</div>`;
   return "";
+}
+
+// Anchor edits (add / remove / rescore) share this key rather than one per
+// title: editing the anchor list is a batch action, and the point is telling
+// you whether the WHOLE list you're looking at is the one in storage.
+async function mutateAnchors(fn) {
+  fn();
+  saveStatus.anchors = "saving";
+  render();
+  const ok = await saveState();
+  saveStatus.anchors = ok ? "ok" : "failed";
+  render();
+}
+
+function anchorSaveLine() {
+  const s = saveStatus.anchors;
+  if (s === "saving") return `<p class="note"><span class="status" style="display:inline-flex"><span class="dot"></span>Saving…</span></p>`;
+  if (s === "failed")  return `<p class="err">That change didn't save — reload now and you'll lose it. ${db ? "Try again." : "This view can't reach storage at all."}</p>`;
+  if (s === "ok")      return `<p class="saved">Saved.</p>`;
+  return `<p class="note">${db ? "Saved to this artifact — it survives reloads and follows the link." : "Storage is unavailable in this view, so changes last only until you reload."}</p>`;
 }
 
 /* ---------- plumbing ---------- */
@@ -851,14 +873,17 @@ document.addEventListener("click", ev => {
     return;
   }
   if (act === "dellog")  { state.log = state.log.filter(e => e.title !== t.dataset.t); saveState(); return render(); }
-  if (act === "delanch") { state.anchors = state.anchors.filter(a => a.title !== t.dataset.t); saveState(); return render(); }
+  if (act === "delanch") return void mutateAnchors(() => {
+    state.anchors = state.anchors.filter(a => a.title !== t.dataset.t);
+  });
   if (act === "addanch") {
     const ti = document.getElementById("na"), sc = document.getElementById("ns");
     const title = (ti.value || "").trim(), score = Number(sc.value);
     if (!title || !isFinite(score)) return;
-    state.anchors = state.anchors.filter(a => a.title.toLowerCase() !== title.toLowerCase());
-    state.anchors.push({ title, score: clamp(score, 1, 10), note: "" });
-    saveState(); render();
+    return void mutateAnchors(() => {
+      state.anchors = state.anchors.filter(a => a.title.toLowerCase() !== title.toLowerCase());
+      state.anchors.push({ title, score: clamp(score, 1, 10), note: "" });
+    });
   }
 });
 
@@ -872,7 +897,7 @@ document.addEventListener("change", ev => {
   if (!ev.target.classList.contains("anchsc")) return;
   const v = Number(ev.target.value);
   const a = state.anchors.find(x => x.title === ev.target.dataset.t);
-  if (a && isFinite(v)) { a.score = clamp(v, 1, 10); saveState(); }
+  if (a && isFinite(v)) void mutateAnchors(() => { a.score = clamp(v, 1, 10); });
 });
 
 render();
