@@ -570,6 +570,28 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 .err{font-family:"JetBrains Mono",monospace;font-size:13px;font-variant-numeric:tabular-nums}
 .err.good{color:var(--go)}
 .err.off{color:var(--signal)}
+/* ---- work ---- */
+.vs{display:grid;gap:8px;margin:14px 0}
+.vs button{
+  appearance:none;cursor:pointer;text-align:left;background:var(--panel);border:1px solid var(--rule);
+  border-left:3px solid var(--signal);color:var(--ink);padding:16px 15px;font-family:inherit;
+  font-size:16px;line-height:1.35;
+}
+.vs button:hover{border-color:var(--dim);background:var(--panel-2)}
+.vsor{text-align:center;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+.rank{counter-reset:r}
+.rank .item{counter-increment:r}
+.rank .item .txt:before{
+  content:counter(r);font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--signal);
+  margin-right:9px;font-weight:500;
+}
+.crumb{
+  border:1px solid var(--go);border-left:3px solid var(--go);background:var(--go-w);
+  padding:11px 13px;margin-bottom:12px;font-size:14px;line-height:1.4;
+}
+.crumb b{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--go);display:block;margin-bottom:3px;font-weight:500}
+.bucket{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+@media (max-width:420px){.bucket{grid-template-columns:1fr}}
 </style>
 
 <div class="app">
@@ -627,6 +649,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <div class="foot">
     <button class="back" data-go="parked" style="margin:0">Parking lot <span id="foot-parked"></span></button>
+    <button class="back" data-go="work" style="margin:0">Work</button>
     <button class="back" data-go="train" style="margin:0">Training</button>
     <button class="back" data-go="record" style="margin:0">The record</button>
   </div>
@@ -738,6 +761,35 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <button class="launch" id="launch" disabled>Start the clock</button>
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ WORK ============ -->
+<section class="screen" id="s-work" hidden>
+  <button class="back" id="work-back">&larr; back</button>
+  <div id="work-menu">
+    <h2 class="ask">Work.</h2>
+    <p class="sub">The rest of the app already handles starting, drifting and the spinning. These are the four that only happen when other people are involved.</p>
+    <div id="work-state"></div>
+    <div class="stack">
+      <button class="big" data-work="crumb">
+        <span class="t">Someone's interrupting me.</span>
+        <span class="d">Drop a breadcrumb in eight seconds. Re-entry is the expensive part of an interruption, not the interruption.</span>
+      </button>
+      <button class="big" data-work="meet">
+        <span class="t">I'm in a meeting.</span>
+        <span class="d">Somewhere to put what you want to say, and what you just agreed to, while it's happening. Afterwards is too late.</span>
+      </button>
+      <button class="big go" data-work="pick">
+        <span class="t">Everything feels equally urgent.</span>
+        <span class="d">It never asks you to rank anything. Just which of two, over and over, until the order falls out.</span>
+      </button>
+      <button class="big go" data-work="shut">
+        <span class="t">Close the day out.</span>
+        <span class="d">Ten minutes now buys you an evening that isn't spent rehearsing work, and a tomorrow that starts warm instead of cold.</span>
+      </button>
+    </div>
+  </div>
+  <div id="work-run" hidden></div>
 </section>
 
 <!-- ============ TRAINING ============ -->
@@ -1031,6 +1083,8 @@ body.night img,body.night .lamp{filter:saturate(.6)}
   <h2 class="ask">Where'd you go?</h2>
   <p class="sub">Name it so it stops pulling. Getting it out costs less than resisting it, and you get to come back with it written down instead of half-remembered.</p>
   <input class="field" id="drift-in" placeholder="the tab, the thought, the thing you suddenly had to look up" autocomplete="off">
+  <span class="lab" style="display:block;margin:14px 0 6px">And where were you, exactly?</span>
+  <input class="field" id="drift-crumb" placeholder="the next keystroke, not the project" autocomplete="off">
   <div class="row" style="margin-top:10px">
     <button class="btn prime" id="drift-park">Park it and get back in</button>
     <button class="btn" id="drift-skip">Nothing to park, just get me back</button>
@@ -1192,6 +1246,7 @@ const state = {
   wired:    [],   // implementation intentions
   nights:   [],   // landing sequences, not sleep — the app can't see sleep
   training: null, // drill reps
+  work:     null, // breadcrumb + tomorrow's first move
   sleep:    null, // landing time + the sequence itself
   live:     null, // the run in progress, if any
   sound:    true,
@@ -1211,6 +1266,7 @@ function payload() {
     sleep:    state.sleep,
     nights:   state.nights || [],
     training: state.training,
+    work:     state.work,
   };
 }
 
@@ -1224,6 +1280,7 @@ function adopt(d) {
   if (d.sleep && typeof d.sleep === "object") state.sleep = d.sleep;
   if (Array.isArray(d.nights)) state.nights = d.nights;
   if (d.training && typeof d.training === "object") state.training = d.training;
+  if (d.work && typeof d.work === "object") state.work = d.work;
   state.live = d.live && typeof d.live === "object" ? d.live : null;
   return true;
 }
@@ -1369,7 +1426,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "train", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "train", "work", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1382,6 +1439,7 @@ function go(name) {
   if (name === "play")   renderPlay();
   if (name === "now")    renderNow();
   if (name === "train")  renderTrain();
+  if (name === "work")   renderWork();
   if (name !== "train")  stopDrill();
   if (name === "sleep")  renderSleep();
   if (name === "land")   renderLand();
@@ -1449,6 +1507,27 @@ function renderHome() {
         ' You left it running.</span></button>';
     $("resume").addEventListener("click", () => go("run"));
   } else slot.innerHTML = "";
+
+  /* Yesterday's shutdown hands today's start a warm context. */
+  const wk = work();
+  if (!live && wk.tomorrow && dayKey(wk.tomorrow.at) !== dayKey()) {
+    slot.innerHTML +=
+      '<button class="big go" id="home-tom" style="margin-bottom:9px">' +
+      '<span class="t">You left this for today &mdash; ' + esc(wk.tomorrow.move) + "</span>" +
+      '<span class="d">Decided yesterday while you still had the context, so you don\'t have to work it out from cold now.</span></button>';
+    $("home-tom").addEventListener("click", () => {
+      openStart(wk.tomorrow.task || wk.tomorrow.move, wk.tomorrow.move);
+      wk.tomorrow = null; save();
+    });
+  }
+
+  const hr = new Date().getHours(), wd = new Date().getDay();
+  const workedToday = state.sessions.some((x) => x.mode !== "play" && dayKey(x.endedAt) === dayKey());
+  if (hr >= 16 && hr < 22 && wd >= 1 && wd <= 5 && workedToday && !live) {
+    slot.innerHTML += '<p class="note finding" style="margin:0 0 9px">It\'s gone four. ' +
+      '<button class="linkish" id="home-shut">Close the day out</button> before you leave &mdash; ten minutes now is the difference between an evening off and an evening rehearsing.</p>';
+    $("home-shut").addEventListener("click", () => { go("work"); $("work-menu").hidden = true; $("work-run").hidden = false; toolShut(); });
+  }
 
   const due = state.parked.filter((p) => !p.doneAt && p.dueAt && p.dueAt <= now());
   const w = $("wired-slot");
@@ -1799,6 +1878,255 @@ let lastVia = "start";
 let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
+
+/* ---------- work ----------
+   Everything else in the app assumes you're alone with the task. These
+   four are the ones other people cause: an interruption you can't
+   decline, a meeting that evaporates out of working memory, flattened
+   priority, and carrying the whole day home in your head. */
+
+function work() {
+  if (!state.work) state.work = { crumb: null, tomorrow: null };
+  return state.work;
+}
+const dayKey = (t) => new Date(t || now()).toDateString();
+
+function dropCrumb(text, task) {
+  text = (text || "").trim();
+  if (!text) return;
+  work().crumb = { text, task: task || (state.live ? state.live.task : ""), at: now() };
+  save();
+}
+
+function renderWork() {
+  stopWork();
+  $("work-menu").hidden = false;
+  $("work-run").hidden = true;
+  $("work-run").innerHTML = "";
+
+  const w = work();
+  let h = "";
+  if (w.crumb)
+    h += '<div class="crumb"><b>Where you were &mdash; ' + when(w.crumb.at) + "</b>" + esc(w.crumb.text) +
+      (w.crumb.task ? '<span style="display:block;color:var(--dim);font-size:12.5px;margin-top:4px">on: ' + esc(w.crumb.task) + "</span>" : "") +
+      '<div class="row" style="margin-top:9px"><button class="btn prime" id="crumb-go">Pick it back up</button>' +
+      '<button class="btn ghost" id="crumb-clear">Clear it</button></div></div>';
+  const t = w.tomorrow;
+  if (t && dayKey(t.at) !== dayKey())
+    h += '<div class="crumb"><b>You left this for today</b>' + esc(t.move) +
+      (t.task ? '<span style="display:block;color:var(--dim);font-size:12.5px;margin-top:4px">on: ' + esc(t.task) + "</span>" : "") +
+      '<div class="row" style="margin-top:9px"><button class="btn prime" id="tom-go">Start it</button>' +
+      '<button class="btn ghost" id="tom-clear">Not today</button></div></div>';
+  $("work-state").innerHTML = h;
+
+  if ($("crumb-go"))   $("crumb-go").addEventListener("click", () => { const c = work().crumb; openStart(c.task || c.text, c.text); work().crumb = null; save(); });
+  if ($("crumb-clear"))$("crumb-clear").addEventListener("click", () => { work().crumb = null; save(); renderWork(); });
+  if ($("tom-go"))     $("tom-go").addEventListener("click", () => { const x = work().tomorrow; openStart(x.task || x.move, x.move); work().tomorrow = null; save(); });
+  if ($("tom-clear"))  $("tom-clear").addEventListener("click", () => { work().tomorrow = null; save(); renderWork(); });
+}
+
+let workTimer = null;
+function stopWork() { clearInterval(workTimer); workTimer = null; }
+
+$("work-back").addEventListener("click", () => {
+  if (!$("work-run").hidden) { stopWork(); renderWork(); } else go("home");
+});
+$("work-menu").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-work]");
+  if (!b) return;
+  $("work-menu").hidden = true;
+  $("work-run").hidden = false;
+  ({ crumb: toolCrumb, meet: toolMeet, pick: toolPick, shut: toolShut })[b.dataset.work]();
+});
+
+/* --- interrupted: the breadcrumb --- */
+function toolCrumb() {
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">Breadcrumb</span>' +
+    '<p class="sub" style="margin:0 0 10px">The interruption is cheap. Finding your place again is what costs twenty minutes, ' +
+    "and the detail that gets you back is smaller than you think &mdash; the next keystroke, not the project. " +
+    '"about to rename the handler" gets you back. "the refactor" does not.</p>' +
+    '<input class="field" id="cb-in" placeholder="what were you about to do next?" autocomplete="off">' +
+    '<button class="btn prime wide" id="cb-go" style="margin-top:10px">Drop it and go</button>' +
+    '<p class="sub" style="margin:10px 0 0;font-size:12.5px">Then look at them. Being looked at is most of what they want, and it ends the conversation faster than half-attention does.</p></div>';
+  setTimeout(() => $("cb-in").focus(), 60);
+  const fire = () => {
+    dropCrumb($("cb-in").value, state.live ? state.live.task : "");
+    $("work-run").innerHTML = '<div class="drill"><span class="lab">Dropped</span><p style="margin:0">It\'ll be on the Work screen when you get back. Go.</p>' +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="cb-back">Back</button></div></div>';
+    $("cb-back").addEventListener("click", renderWork);
+  };
+  $("cb-go").addEventListener("click", fire);
+  $("cb-in").addEventListener("keydown", (e) => { if (e.key === "Enter") fire(); });
+}
+
+/* --- meetings --- */
+let meetSay = [], meetOwe = [];
+function toolMeet() {
+  meetSay = []; meetOwe = [];
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">In a meeting</span>' +
+    '<p class="sub" style="margin:0 0 10px">Two problems, both working memory. A thought you want to contribute either gets blurted over someone ' +
+    "or held so hard you stop listening &mdash; park it and it does neither. And what you agreed to has to be caught " +
+    "<em>as it happens</em>, because reconstructing it afterwards is exactly the thing that doesn't work.</p>" +
+    '<div class="bucket">' +
+      '<div><span class="lab">Say this when there\'s a gap</span>' +
+      '<div class="park"><input id="mt-say" placeholder="the point you want to make"><button id="mt-say-b">Hold</button></div></div>' +
+      '<div><span class="lab">I just agreed to</span>' +
+      '<div class="park"><input id="mt-owe" placeholder="what you committed to"><button id="mt-owe-b">Log</button></div></div>' +
+    "</div>" +
+    '<div id="mt-list"></div>' +
+    '<button class="btn prime wide" id="mt-done" style="margin-top:12px">Meeting\'s over</button>' +
+    '<p class="sub" style="margin:10px 0 0;font-size:12.5px">Move your hands. Doodling, a pen, walking if you can &mdash; occupying the restless channel is what frees the listening one, and it is not rudeness.</p></div>';
+
+  const paint = () => {
+    $("mt-list").innerHTML =
+      (meetSay.length ? '<div class="sec" style="margin:14px 0 0"><h3>Holding <span>' + meetSay.length + "</span></h3>" +
+        meetSay.map((x, i) => '<div class="item"><span class="txt">' + esc(x) + '</span><span class="acts"><button data-said="' + i + '">Said it</button></span></div>').join("") + "</div>" : "") +
+      (meetOwe.length ? '<div class="sec" style="margin:14px 0 0"><h3>You owe <span>' + meetOwe.length + "</span></h3>" +
+        meetOwe.map((x) => '<div class="item"><span class="txt">' + esc(x) + "</span></div>").join("") + "</div>" : "");
+  };
+  const add = (which) => {
+    const el = $(which === "say" ? "mt-say" : "mt-owe"), v = el.value.trim();
+    if (!v) return;
+    (which === "say" ? meetSay : meetOwe).push(v);
+    el.value = ""; paint();
+  };
+  $("mt-say-b").addEventListener("click", () => add("say"));
+  $("mt-owe-b").addEventListener("click", () => add("owe"));
+  $("mt-say").addEventListener("keydown", (e) => { if (e.key === "Enter") add("say"); });
+  $("mt-owe").addEventListener("keydown", (e) => { if (e.key === "Enter") add("owe"); });
+  $("mt-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-said]");
+    if (b) { meetSay.splice(Number(b.dataset.said), 1); paint(); }
+  });
+  $("mt-done").addEventListener("click", () => {
+    meetOwe.forEach((x) => parkIt(x, "task"));
+    const n = meetOwe.length;
+    $("work-run").innerHTML = '<div class="drill"><span class="lab">Filed</span><p style="margin:0">' +
+      (n ? "<b>" + n + " commitment" + (n === 1 ? "" : "s") + "</b> in the parking lot, caught while they were being made rather than reconstructed after. " +
+           "That's the difference between being the person who follows through and the person who meant to."
+         : "Nothing logged. If you genuinely agreed to nothing, good &mdash; if you can't remember, that's the case for catching them live.") +
+      (meetSay.length ? " " + meetSay.length + " thing" + (meetSay.length === 1 ? "" : "s") + " you never got to say: still here, worth sending as a message." : "") +
+      "</p>" + (meetSay.length ? meetSay.map((x) => '<p class="quote" style="margin:12px 0 0;font-size:14px">' + esc(x) + "</p>").join("") : "") +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="mt-back">Back</button></div></div>';
+    $("mt-back").addEventListener("click", renderWork);
+  });
+}
+
+/* --- priority without ranking --- */
+let pickList = [], pickPairs = [], pickIx = 0, pickWins = {};
+function toolPick() {
+  const parked = state.parked.filter((p) => !p.doneAt && p.kind === "task").slice(-6).map((p) => p.text);
+  pickList = [];
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">What\'s actually first</span>' +
+    '<p class="sub" style="margin:0 0 10px">ADHD flattens priority &mdash; a trivial email is exactly as loud as the deadline, which is why "just prioritise" is useless advice. ' +
+    "Ranking a list means holding all of it at once. Choosing between two doesn't. So it only ever shows you two.</p>" +
+    '<div class="park" style="margin-bottom:8px"><input id="pk-in" placeholder="one thing on your plate"><button id="pk-add">Add</button></div>' +
+    (parked.length ? '<div class="chips" id="pk-chips" style="margin-bottom:8px">' + parked.map((t) => '<button class="chip q" data-pk="' + esc(t) + '">' + esc(t) + "</button>").join("") + "</div>" : "") +
+    '<div id="pk-list"></div>' +
+    '<button class="btn prime wide" id="pk-go" style="margin-top:10px" disabled>Add two or more</button></div>';
+
+  const paint = () => {
+    $("pk-list").innerHTML = pickList.map((x, i) =>
+      '<div class="item"><span class="txt">' + esc(x) + '</span><span class="acts"><button data-rm="' + i + '">&times;</button></span></div>').join("");
+    const ok = pickList.length >= 2;
+    $("pk-go").disabled = !ok;
+    $("pk-go").textContent = ok ? "Start comparing (" + (pickList.length * (pickList.length - 1) / 2) + " choices)" : "Add two or more";
+  };
+  const add = (v) => {
+    v = (v || "").trim();
+    if (!v || pickList.length >= 5) return;
+    pickList.push(v); $("pk-in").value = ""; paint();
+  };
+  $("pk-add").addEventListener("click", () => add($("pk-in").value));
+  $("pk-in").addEventListener("keydown", (e) => { if (e.key === "Enter") add($("pk-in").value); });
+  if ($("pk-chips")) $("pk-chips").addEventListener("click", (e) => { const b = e.target.closest("[data-pk]"); if (b) add(b.dataset.pk); });
+  $("pk-list").addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (b) { pickList.splice(Number(b.dataset.rm), 1); paint(); } });
+  $("pk-go").addEventListener("click", startPairs);
+  paint();
+}
+
+function startPairs() {
+  pickPairs = []; pickIx = 0; pickWins = {};
+  pickList.forEach((a, i) => pickList.slice(i + 1).forEach((b) => pickPairs.push([a, b])));
+  for (let i = pickPairs.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [pickPairs[i], pickPairs[j]] = [pickPairs[j], pickPairs[i]]; }
+  pickList.forEach((x) => { pickWins[x] = 0; });
+  nextPair();
+}
+
+function nextPair() {
+  if (pickIx >= pickPairs.length) return pickResult();
+  const [a, b] = pickPairs[pickIx];
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">' + (pickIx + 1) + " of " + pickPairs.length + "</span>" +
+    '<p class="sub" style="margin:0">If only one of these got done today, which would you rather it were? Go on instinct &mdash; deliberating is the failure mode here.</p>' +
+    '<div class="vs"><button data-win="a">' + esc(a) + '</button><span class="vsor">or</span><button data-win="b">' + esc(b) + "</button></div></div>";
+  $("work-run").querySelectorAll("[data-win]").forEach((btn) => btn.addEventListener("click", () => {
+    pickWins[btn.dataset.win === "a" ? a : b]++;
+    pickIx++; nextPair();
+  }));
+}
+
+function pickResult() {
+  const order = pickList.slice().sort((a, b) => pickWins[b] - pickWins[a]);
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">Your order</span>' +
+    '<p class="sub" style="margin:0 0 8px">You never ranked anything. This fell out of a handful of two-way choices, which is the only form the question comes in that you can actually answer.</p>' +
+    '<div class="rank">' + order.map((x) => '<div class="item"><span class="txt">' + esc(x) + '<span class="meta">' + pickWins[x] + " of " + (pickList.length - 1) + " head to head</span></span></div>").join("") + "</div>" +
+    '<p class="note finding" style="margin-top:14px">Top one only. The rest go in the parking lot, out of sight &mdash; a visible list of four is four things competing for attention, and that is the state you came here to leave.</p>' +
+    '<div class="row" style="margin-top:12px"><button class="btn prime" id="pk-start">Start the top one</button>' +
+    '<button class="btn" id="pk-park">Park the rest</button></div></div>';
+  $("pk-start").addEventListener("click", () => openStart(order[0], ""));
+  $("pk-park").addEventListener("click", () => {
+    order.slice(1).forEach((x) => parkIt(x, "task"));
+    $("pk-park").textContent = "Parked"; $("pk-park").disabled = true;
+  });
+}
+
+/* --- close the day --- */
+function toolShut() {
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">Close the day</span>' +
+    '<p class="sub" style="margin:0 0 12px">Two problems, one fix. Work follows you home because the loops are still open and nothing outside your head is holding them. ' +
+    "And tomorrow starts cold because the context you had at five o'clock is gone by nine. Ten minutes now buys back both.</p>" +
+    '<span class="lab" style="display:block;margin-bottom:6px">1 &mdash; Where did you actually get to?</span>' +
+    '<input class="field" id="sd-crumb" placeholder="the specific place you stopped" autocomplete="off">' +
+    '<span class="lab" style="display:block;margin:14px 0 6px">2 &mdash; What\'s still open? One line each.</span>' +
+    '<div class="park"><input id="sd-open" placeholder="unfinished, unanswered, unsent"><button id="sd-open-b">Park</button></div>' +
+    '<p class="sub" id="sd-count" style="margin:6px 0 0;font-size:12.5px"></p>' +
+    '<span class="lab" style="display:block;margin:14px 0 6px">3 &mdash; Tomorrow\'s first move</span>' +
+    '<p class="sub" style="margin:0 0 6px;font-size:12.5px">Decide it now, while you still have the context. Tomorrow-morning-you has none and will pick email instead.</p>' +
+    '<input class="field" id="sd-move" placeholder="the first physical thing, under a minute" autocomplete="off">' +
+    '<button class="btn prime wide" id="sd-done" style="margin-top:14px">Shut down</button></div>';
+
+  let n = 0;
+  const park = () => {
+    const v = $("sd-open").value.trim();
+    if (!v) return;
+    const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(9, 0, 0, 0);
+    parkIt(v, "task", t.getTime());
+    $("sd-open").value = ""; n++;
+    $("sd-count").textContent = n + " parked for 9am tomorrow. Not yours again until then.";
+  };
+  $("sd-open-b").addEventListener("click", park);
+  $("sd-open").addEventListener("keydown", (e) => { if (e.key === "Enter") park(); });
+  $("sd-done").addEventListener("click", () => {
+    const crumb = $("sd-crumb").value.trim(), move = $("sd-move").value.trim();
+    if (crumb) dropCrumb(crumb, "");
+    if (move) { work().tomorrow = { move, task: crumb || "", at: now() }; }
+    save();
+    $("work-run").innerHTML = '<div class="drill"><span class="lab">Shut down</span>' +
+      '<p style="margin:0 0 10px">' + (n ? "<b>" + n + " loop" + (n === 1 ? "" : "s") + " closed</b> and " : "") +
+      (move ? "tomorrow's first move is decided. " : "") +
+      "Everything that was going to get rehearsed tonight is written down somewhere that will still exist in the morning. " +
+      "The rehearsing was never about solving it &mdash; it was your head refusing to drop something nothing else was holding. Something else is holding it now.</p>" +
+      (move ? '<p class="quote">' + esc(move) + "</p><p class=\"sub\" style=\"margin:0\">That'll be waiting on the home screen tomorrow, ready to start.</p>" : "") +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="sd-back">Done</button></div></div>';
+    $("sd-back").addEventListener("click", () => go("home"));
+  });
+}
 
 /* ---------- training ----------
    Not brain training: working-memory games improve working-memory games
@@ -3222,6 +3550,7 @@ $("spin-launch").addEventListener("click", () => { lastVia = "spin"; openStart("
 function renderDrift() {
   const L = state.live;
   $("drift-in").value = "";
+  $("drift-crumb").value = "";
   $("drift-note").innerHTML = L
     ? "Your session is still running: <b>" + esc(L.task) + "</b>. The clock kept going, which is fine &mdash; " +
       "drifting mid-session is the default state, not a relapse. Park what pulled you and step back in."
@@ -3231,6 +3560,7 @@ function renderDrift() {
 }
 
 $("drift-park").addEventListener("click", () => {
+  dropCrumb($("drift-crumb").value, state.live ? state.live.task : "");
   const v = $("drift-in").value.trim();
   if (v) { parkIt(v, "thought"); if (state.live) { state.live.parked = (state.live.parked || 0) + 1; save(); } }
   backIn();
