@@ -227,7 +227,7 @@ textarea.field{min-height:96px;resize:vertical}
 .clock.over .tag{color:var(--go)}
 
 .rw{position:relative;height:44px;background:var(--panel-2);border:1px solid var(--rule);overflow:hidden;margin:12px 0 20px}
-.rw-fill{position:absolute;top:0;left:0;bottom:0;width:100%;background:var(--signal);transition:width .5s linear}
+.rw-fill{position:absolute;top:0;right:0;bottom:0;width:100%;background:var(--signal);transition:width .5s linear}
 @media (prefers-reduced-motion:reduce){.rw-fill{transition:none}}
 .rw-tick{position:absolute;inset:0;pointer-events:none;
   background-image:repeating-linear-gradient(to right,currentColor 0 1px,transparent 1px var(--tick,25%));}
@@ -354,6 +354,112 @@ details.why summary:hover{color:var(--ink)}
   color:var(--dim);margin-bottom:14px;
 }
 .back:hover{color:var(--signal)}
+
+/* ---- engagement engine: scoreboard, dial, sound ---- */
+.board{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:0}
+.board .side{text-align:right;flex:none}
+.count{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 84,"opsz" 96;
+  font-size:clamp(58px,17vw,96px);font-weight:700;letter-spacing:-.05em;line-height:.84;
+  font-variant-numeric:tabular-nums;margin:0;color:var(--go);
+}
+.count.flat{color:var(--ink)}
+.unitlab{
+  display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--dim);margin-top:7px;
+}
+.clock-sm{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 84;
+  font-size:clamp(30px,9vw,44px);font-weight:700;letter-spacing:-.04em;line-height:.9;
+  font-variant-numeric:tabular-nums;margin:0;
+}
+.clock-sm.over{color:var(--go)}
+
+.gauge{margin:14px 0 0;position:relative;padding-bottom:15px}
+.rw{margin:0}
+.toll{position:absolute;top:0;height:57px;width:0;border-left:2px dashed var(--ink);opacity:.62;pointer-events:none;z-index:2}
+.toll b{
+  position:absolute;top:60px;left:0;transform:translateX(-50%);
+  font-family:"JetBrains Mono",monospace;font-size:8.5px;
+  letter-spacing:.13em;text-transform:uppercase;font-weight:500;white-space:nowrap;color:var(--ink);
+}
+.work{height:11px;background:var(--panel-2);border:1px solid var(--rule);border-top:0;position:relative;overflow:hidden}
+.work-fill{position:absolute;top:0;left:0;bottom:0;width:0;background:var(--go);transition:width .3s ease-out}
+@media (prefers-reduced-motion:reduce){.work-fill{transition:none}}
+.pace{
+  display:flex;justify-content:space-between;gap:10px;margin-top:9px;
+  font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+}
+.pace .ahead{color:var(--go)}
+.pace .behind{color:var(--signal)}
+
+.tally{
+  appearance:none;width:100%;cursor:pointer;margin:16px 0 12px;
+  background:var(--go);border:1px solid var(--go);color:var(--panel);
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;
+  font-size:19px;font-weight:800;letter-spacing:.01em;padding:16px;
+  transition:transform .06s;
+}
+.tally:hover{filter:brightness(1.08)}
+.tally:active{transform:scale(.985)}
+.tally small{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;opacity:.8;margin-top:4px}
+.tally.pop{animation:pop .22s ease-out}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.018)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.tally.pop{animation:none}}
+
+.inbtn{
+  appearance:none;width:100%;cursor:pointer;margin-bottom:12px;text-align:left;
+  background:var(--go-w);border:1px solid var(--go);border-left:3px solid var(--go);color:var(--ink);
+  padding:11px 13px;font-family:inherit;
+}
+.inbtn:hover{background:var(--panel)}
+.inbtn .t{display:block;font-weight:700;font-size:14.5px}
+.inbtn .d{display:block;color:var(--dim);font-size:12.5px;margin-top:2px}
+.instamp{
+  border:1px solid var(--go);border-left:3px solid var(--go);background:var(--go-w);
+  padding:9px 12px;margin-bottom:12px;font-size:13px;color:var(--ink);
+}
+.instamp b{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--go);display:block;margin-bottom:2px;font-weight:500}
+
+.dial{border:1px solid var(--rule);background:var(--panel);padding:14px;margin-bottom:14px}
+.dial>p{margin:0 0 10px;font-size:13.5px;color:var(--ink-soft)}
+.card{
+  appearance:none;display:block;width:100%;text-align:left;cursor:pointer;margin-bottom:6px;
+  background:var(--panel-2);border:1px solid var(--rule);border-left:3px solid var(--signal);
+  color:var(--ink);padding:10px 12px;font-family:inherit;font-size:13.5px;line-height:1.4;
+}
+.card:hover{border-color:var(--dim);background:var(--panel)}
+.card.easier{border-left-color:var(--go)}
+.rules{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px}
+.rule{
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.06em;
+  border:1px solid var(--signal);color:var(--signal);padding:3px 7px;
+}
+
+.sndrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--hair);padding-top:12px;margin-top:16px}
+.sndrow .lab{flex:none}
+.seg{display:flex;border:1px solid var(--rule)}
+.seg button{
+  appearance:none;cursor:pointer;background:var(--panel);border:0;border-right:1px solid var(--rule);
+  color:var(--dim);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;padding:6px 10px;
+}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--signal);color:var(--panel)}
+input[type="range"]{accent-color:var(--signal);width:92px}
+
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mini .lab{display:block;margin-bottom:6px}
+.unitpick{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.tin{width:74px;text-align:center;font-variant-numeric:tabular-nums}
+.pre{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.pre button{
+  appearance:none;cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:10.5px;
+  background:none;border:1px solid var(--rule);color:var(--dim);padding:6px 9px;
+}
+.pre button[aria-pressed="true"]{border-color:var(--go);color:var(--go);background:var(--go-w)}
+.pre button:hover{border-color:var(--dim)}
+
 .linkish{
   appearance:none;background:none;border:0;padding:0;cursor:pointer;color:var(--signal);
   font-family:inherit;font-size:inherit;text-decoration:underline;text-underline-offset:2px;
@@ -364,7 +470,7 @@ details.why summary:hover{color:var(--ink)}
 
 <header class="mast">
   <h1><span class="lamp" id="lamp"></span>Cold Start</h1>
-  <p>A launcher for the part of you that won't turn over. Not a tracker. Nothing here to keep alive.</p>
+  <p>Gets you moving, then engineers the conditions absorption actually needs. Not a tracker. Nothing here to keep alive.</p>
   <div class="strip" id="strip">
     <div class="cell"><span class="k">State</span><span class="v" id="rd-state">idle</span></div>
     <div class="cell"><span class="k">Parked</span><span class="v" id="rd-parked">0</span></div>
@@ -404,9 +510,27 @@ details.why summary:hover{color:var(--ink)}
   </div>
 
   <details class="why">
-    <summary>Why these three and not a points system</summary>
+    <summary>Why this and not a points system</summary>
     <p class="note" style="margin-top:14px">Streaks and coins stop working in about four days, because an abstract number going up is not a reward an ADHD dopamine system reliably answers to — and once you break the streak, the app becomes a thing you're avoiding too. The bottleneck was never <b>knowing</b> or <b>wanting</b>. It's the gap between deciding and moving. So this only ever works on that gap.</p>
+    <p class="note">On hyperfocus specifically: it can't be summoned by wanting it, and any app that says otherwise is selling you something. It's a state with entry conditions &mdash; a challenge tuned to a narrow band, feedback fast enough to feel, a visible finish line, and no available exits. What you <em>can</em> do is build those conditions on purpose instead of waiting for a task to happen to have them. That's what the score, the dial and the sound floor are for.</p>
     <dl>
+      <dt>Give the task a live score</dt>
+      <dd>Games hand you feedback every second; a report hands you feedback in three days, which is why one holds you and the other doesn't. Counting a real unit of the work, with a rate and a pace line, manufactures the loop the task is missing. This is not points for chores &mdash; the number counts the work itself and can't be farmed.</dd>
+      <dd><cite>Flow: immediate feedback and a clear proximal goal.</cite></dd>
+
+      <dt>Turn the dial instead of trying harder</dt>
+      <dd>Absorption sits in a narrow band between too easy and too hard, and falling out of it in either direction feels identical from the inside: you leave. But the fixes are opposites. Bored means raise the difficulty &mdash; beat your own rate, no backspace, halve the clock. Overwhelmed means lower it &mdash; do the deliberately terrible version, do only the part you already know. Grinding fixes neither.</dd>
+      <dd><cite>Csikszentmihalyi: the challenge/skill channel.</cite></dd>
+
+      <dt>Measure what your entry actually costs</dt>
+      <dd>Most people quit a few minutes before the state they were trying to reach. So the app asks you to mark the moment it stops feeling like effort, and after three of those it can tell you your real number &mdash; and how far short of it you typically stop. That one fact tends to change more than any amount of encouragement.</dd>
+
+      <dt>Interest, novelty, challenge, urgency</dt>
+      <dd>An ADHD nervous system runs on those four rather than on importance, which is why the deadline works and the plan doesn't. Nothing here appeals to importance. When your recent sessions die, the app tells you to change one thing about the setup, because habituation kills the novelty channel first.</dd>
+
+      <dt>A steady sound floor</dt>
+      <dd>Brown noise gives the stimulus-seeking part of the system something constant to chew on so the rest can settle, and unlike music with words it doesn't compete for language. Synthesised here, no streaming, works offline.</dd>
+
       <dt>Shrink the first move until it's stupid</dt>
       <dd>Initiation is the whole fight; continuation usually takes care of itself once you're in. So the app refuses to let you plan. It makes you name one physical action under sixty seconds, then starts the clock immediately.</dd>
       <dd><cite>Behavioural activation; the "just five minutes" rule.</cite></dd>
@@ -453,7 +577,20 @@ details.why summary:hover{color:var(--ink)}
   </div>
 
   <div class="blk">
-    <span class="lab">3 — How long you owe it</span>
+    <span class="lab">3 — What you're counting</span>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">A task with no score gives you no feedback until it's over, and a brain with no feedback leaves. Pick a unit small enough that you'll hit the button every minute or two.</p>
+    <div class="unitpick" id="unitpick"></div>
+    <div class="row">
+      <input class="field tin" id="unit-in" placeholder="unit" autocomplete="off">
+      <span style="font-size:14px;color:var(--dim)">get to</span>
+      <input class="field tin" id="target-in" type="number" min="1" max="999" inputmode="numeric">
+      <button class="btn ghost" id="no-target">no target, just count</button>
+    </div>
+    <p class="sub" id="best-hint" style="margin:8px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <div class="blk">
+    <span class="lab">4 — How long you owe it</span>
     <div class="rwpick" id="rwpick">
       <button data-min="5" aria-pressed="false"><span class="m">5</span><span class="u">min</span></button>
       <button data-min="12" aria-pressed="true"><span class="m">12</span><span class="u">min</span></button>
@@ -461,6 +598,16 @@ details.why summary:hover{color:var(--ink)}
       <button data-min="45" aria-pressed="false"><span class="m">45</span><span class="u">min</span></button>
     </div>
     <p class="sub" id="rw-hint" style="margin:8px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <div class="blk">
+    <span class="lab">Before you go — close the exits</span>
+    <div class="pre" id="pre">
+      <button data-pre="phone" aria-pressed="false">phone in another room</button>
+      <button data-pre="tabs" aria-pressed="false">tabs shut</button>
+      <button data-pre="door" aria-pressed="false">door shut / headphones on</button>
+    </div>
+    <div id="novel-slot"></div>
   </div>
 
   <button class="launch" id="launch" disabled>Start the clock</button>
@@ -570,24 +717,53 @@ details.why summary:hover{color:var(--ink)}
 
 <!-- ============ FOCUS SURFACE ============ -->
 <section class="screen surface" id="s-run" hidden>
-  <h2 class="taskname" id="run-task">—</h2>
+  <h2 class="taskname" id="run-task">&mdash;</h2>
   <div class="movebar" id="run-movebar">
     <span class="mv"><b>Start here</b><span id="run-move"></span></span>
     <button class="btn" id="move-done" style="flex:none">Did it</button>
   </div>
-  <p class="clock num" id="run-clock"><span id="run-time">00:00</span><span class="tag" id="run-tag">left</span></p>
-  <div class="rw" id="rw"><div class="rw-tick"></div><div class="rw-fill" id="rw-fill"><div class="rw-tick"></div></div></div>
+
+  <div class="rules" id="run-rules"></div>
+
+  <div class="board">
+    <div>
+      <p class="count num" id="run-count">0</p>
+      <span class="unitlab" id="run-unit">chunks</span>
+    </div>
+    <div class="side">
+      <p class="clock-sm num" id="run-clock"><span id="run-time">00:00</span></p>
+      <span class="unitlab" id="run-tag">left</span>
+    </div>
+  </div>
+
+  <div class="gauge">
+    <div class="rw" id="rw">
+      <div class="rw-tick"></div>
+      <div class="rw-fill" id="rw-fill"><div class="rw-tick"></div></div>
+    </div>
+    <div class="work" id="work"><div class="work-fill" id="work-fill"></div></div>
+    <div class="toll" id="toll" hidden><b id="toll-lab">toll</b></div>
+    <div class="pace"><span id="pace-l">&nbsp;</span><span id="pace-r">&nbsp;</span></div>
+  </div>
+
+  <button class="tally" id="tally">+1<small id="tally-unit">chunk</small></button>
+
+  <div id="in-slot"></div>
 
   <div class="park">
     <input id="park-in" placeholder="something popped into your head? put it here" autocomplete="off">
     <button id="park-btn">Park</button>
   </div>
-  <p class="parkhint" id="park-hint">Parking does not leave this screen. That's the entire point of it.</p>
+  <p class="parkhint" id="park-hint">Space bar counts. Parking never leaves this screen.</p>
+
+  <div id="dial-slot"></div>
 
   <div class="row" id="run-actions">
-    <button class="btn prime" id="run-done">Finished</button>
-    <button class="btn" id="run-stop">Stop here</button>
+    <button class="btn" id="run-dial">This isn't working</button>
+    <button class="btn ghost" id="run-undo">&minus;1</button>
     <button class="btn ghost" id="run-drift">I drifted</button>
+    <button class="btn prime" id="run-done">Finished</button>
+    <button class="btn ghost" id="run-stop">Stop</button>
   </div>
 
   <div id="expired" hidden style="margin-top:18px">
@@ -597,6 +773,16 @@ details.why summary:hover{color:var(--ink)}
       <button class="btn prime" data-add="12">+12</button>
       <button class="btn" id="wrap">Wrap it up</button>
     </div>
+  </div>
+
+  <div class="sndrow">
+    <span class="lab">Sound floor</span>
+    <div class="seg" id="sndseg">
+      <button data-snd="off" aria-pressed="true">off</button>
+      <button data-snd="brown" aria-pressed="false">noise</button>
+      <button data-snd="rain" aria-pressed="false">rain</button>
+    </div>
+    <input type="range" id="sndvol" min="0" max="100" value="35" aria-label="Sound floor volume">
   </div>
 </section>
 
@@ -695,6 +881,7 @@ function payload() {
     wired:    state.wired.slice(-60),
     live:     state.live,
     sound:    state.sound,
+    soundVol: state.soundVol,
   };
 }
 
@@ -704,6 +891,7 @@ function adopt(d) {
   if (Array.isArray(d.parked))   state.parked   = d.parked;
   if (Array.isArray(d.wired))    state.wired    = d.wired;
   if (typeof d.sound === "boolean") state.sound = d.sound;
+  if (typeof d.soundVol === "number") { state.soundVol = d.soundVol; snd.vol = d.soundVol; }
   state.live = d.live && typeof d.live === "object" ? d.live : null;
   return true;
 }
@@ -965,15 +1153,92 @@ const SMALLER = [
   "just touch it for ten seconds",
 ];
 
-let runwayMin = 12, smallerIx = 0;
+/* What a task can be scored in. The unit has to be small enough to tap every
+   minute or two — that tap rate IS the feedback loop the task doesn't have. */
+const UNIT_RULES = [
+  { re: /\b(write|writing|essay|draft|report|chapter|blog|post|paper|thesis|article)\b/i, units: ["paragraphs", "bad sentences", "pages"], target: 6 },
+  { re: /\b(e?mail|reply|inbox|respond|message|dm)\b/i, units: ["replies sent", "threads cleared"], target: 12 },
+  { re: /\b(code|coding|bug|refactor|pr|ticket|deploy|test|repo|merge|build)\b/i, units: ["tests green", "functions touched", "chunks"], target: 8 },
+  { re: /\b(clean|tidy|dish|laundry|room|kitchen|desk|wash|hoover|vacuum|bin|trash)\b/i, units: ["things put away", "surfaces cleared"], target: 25 },
+  { re: /\b(call|phone|ring|dentist|doctor|appointment|book|schedule)\b/i, units: ["calls made"], target: 3 },
+  { re: /\b(admin|tax|form|invoice|bill|insurance|bank|receipt|expense|renew)\b/i, units: ["fields filled", "items done"], target: 10 },
+  { re: /\b(study|revise|read|learn|course|lecture|exam|revision)\b/i, units: ["pages", "cards", "problems"], target: 10 },
+  { re: /\b(apply|cv|resume|application|job|cover letter)\b/i, units: ["applications", "sections rewritten"], target: 4 },
+  { re: /\b(pack|move|box|sort|declutter|wardrobe|closet)\b/i, units: ["boxes filled", "shelves cleared"], target: 5 },
+];
+const UNIT_FALLBACK = { units: ["chunks", "small wins"], target: 8 };
+
+/* The flow dial. Absorption sits in a narrow band between bored and swamped;
+   these are the two directions out of it. */
+const HARDER = [
+  "No backspace. Mistakes stay in.",
+  "One pass only. Nothing gets revisited.",
+  "Stand up and do it standing.",
+  "Halve the clock, keep the target.",
+  "Narrate it out loud as you go.",
+  "Handwrite it first, type it later.",
+  "No looking anything up. Guess and mark it.",
+];
+const EASIER = [
+  "Do the worst possible version on purpose. Deliberately bad.",
+  "Only the part you already know how to do. Skip everything else.",
+  "Say it out loud to nobody, then write down what you said.",
+  "Drop the target. Just count what happens.",
+  "Do one unit, then decide whether to carry on.",
+  "Wrong medium on purpose: notes app, paper, voice memo. Not the real document.",
+  "Halve the scope and finish the half.",
+];
+const NOVEL = [
+  "Move — different room, the floor, outside, a café.",
+  "Change the input — handwrite it, dictate it, different app.",
+  "Change the sound — noise on if it was silent, silent if it was noisy.",
+  "Change posture — stand, or sit somewhere you never work.",
+  "Change the time — this window isn't working, take it later.",
+];
+
+let runwayMin = 12, smallerIx = 0, unitTarget = null, preflight = [], unitDirty = false;
 
 function openStart(task, move) {
+  preflight = [];
+  unitDirty = false;
   go("start");
   $("task-in").value = task || "";
   $("move-in").value = move || "";
   suggestMoves();
+  suggestUnits();
   refreshLaunch();
   setTimeout(() => $(task ? "move-in" : "task-in").focus(), 60);
+}
+
+function unitDeck() {
+  const t = $("task-in").value.trim();
+  if (t) for (const r of UNIT_RULES) if (r.re.test(t)) return r;
+  return UNIT_FALLBACK;
+}
+
+function bestRate(unit) {
+  const runs = state.sessions.filter((x) => x.unit === unit && x.count > 0 && x.elapsedSec > 120);
+  if (!runs.length) return null;
+  return runs.reduce((m, x) => Math.max(m, x.count / (x.elapsedSec / 60)), 0);
+}
+
+function suggestUnits() {
+  const deck = unitDeck();
+  $("unitpick").innerHTML = deck.units
+    .map((u) => '<button class="chip" data-unit="' + esc(u) + '">' + esc(u) + "</button>").join("");
+  if (!unitDirty) {
+    unitTarget = deck.units[0];
+    $("unit-in").value = deck.units[0];
+    $("target-in").value = deck.target;
+  }
+  paintBestHint();
+}
+
+function paintBestHint() {
+  const u = $("unit-in").value.trim(), b = bestRate(u);
+  $("best-hint").textContent = b
+    ? "Your best on " + u + " is " + b.toFixed(1) + " a minute. Beating your own number is the only honest way to make a boring task harder."
+    : "No history on this unit yet, so the first run sets the bar you race afterwards.";
 }
 
 function suggestMoves() {
@@ -1004,6 +1269,17 @@ function renderStart() {
   $("task-chips").innerHTML = recentTasks()
     .map((t) => '<button class="chip q" data-task="' + esc(t) + '">' + esc(t) + "</button>").join("");
   suggestMoves();
+  suggestUnits();
+  $$("#pre button").forEach((b) => b.setAttribute("aria-pressed", String(preflight.indexOf(b.dataset.pre) >= 0)));
+
+  /* Habituation is the quiet killer: same desk, same setup, same result.
+     Only raise it once the record actually shows a run of dead sessions. */
+  const recent = state.sessions.slice(-4);
+  const dead = recent.filter((x) => x.outcome !== "landed").length;
+  $("novel-slot").innerHTML = (recent.length >= 4 && dead >= 3)
+    ? '<p class="sub" style="margin:6px 0 8px;font-size:12.5px">Three of your last four died. That is usually not you &mdash; it is the setup going stale. Change exactly one thing:</p>' +
+      '<div class="chips">' + NOVEL.map((n) => '<button class="chip" data-novel="' + esc(n) + '">' + esc(n) + "</button>").join("") + "</div>"
+    : "";
   $$("#rwpick button").forEach((b) =>
     b.setAttribute("aria-pressed", String(Number(b.dataset.min) === runwayMin)));
   $("rw-hint").textContent = runwayHint();
@@ -1025,7 +1301,7 @@ function refreshLaunch() {
   $("launch").textContent = ok ? "Start the clock" : "Name it first";
 }
 
-$("task-in").addEventListener("input", () => { suggestMoves(); refreshLaunch(); });
+$("task-in").addEventListener("input", () => { suggestMoves(); suggestUnits(); refreshLaunch(); });
 $("task-in").addEventListener("keydown", (e) => { if (e.key === "Enter") $("move-in").focus(); });
 $("move-in").addEventListener("keydown", (e) => { if (e.key === "Enter" && $("task-in").value.trim()) launch(); });
 
@@ -1066,6 +1342,35 @@ $("move-chips").addEventListener("click", async (e) => {
   }
 });
 
+$("unitpick").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-unit]");
+  if (!b) return;
+  $("unit-in").value = b.dataset.unit;
+  unitTarget = b.dataset.unit;
+  unitDirty = true;
+  paintBestHint();
+});
+$("unit-in").addEventListener("input", () => { unitDirty = true; paintBestHint(); });
+$("no-target").addEventListener("click", () => {
+  $("target-in").value = "";
+  $("best-hint").textContent = "No target. You still get the count and the rate — you just aren't racing a line.";
+});
+$("pre").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-pre]");
+  if (!b) return;
+  const k = b.dataset.pre, i = preflight.indexOf(k);
+  if (i >= 0) preflight.splice(i, 1); else preflight.push(k);
+  b.setAttribute("aria-pressed", String(i < 0));
+});
+$("novel-slot").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-novel]");
+  if (!b) return;
+  pendingNovelty = b.dataset.novel;
+  $("novel-slot").innerHTML = '<p class="note finding" style="margin:6px 0 0">Changed for this run: <b>' +
+    esc(b.dataset.novel) + "</b> Do it before you hit the button, not after.</p>";
+});
+let pendingNovelty = null;
+
 $("rwpick").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-min]");
   if (!b) return;
@@ -1079,11 +1384,19 @@ function launch() {
   const task = $("task-in").value.trim();
   if (!task) return;
   armAudio();
+  const target = parseInt($("target-in").value, 10);
   state.live = {
     id: uid(),
     task,
     move: $("move-in").value.trim(),
     moveDone: false,
+    unit: $("unit-in").value.trim() || "chunks",
+    target: target > 0 ? target : null,
+    count: 0,
+    inAt: null,
+    tollSec: typicalTimeToIn() || Math.min(480, runwayMin * 60 * 0.4),
+    constraints: pendingNovelty ? [pendingNovelty] : [],
+    pre: preflight.slice(),
     plannedMin: runwayMin,
     plannedSec: runwayMin * 60,
     addedSec: 0,
@@ -1092,6 +1405,7 @@ function launch() {
     parked: 0,
     chimed: false,
   };
+  pendingNovelty = null;
   lastVia = "start";
   save();
   go("run");
@@ -1104,6 +1418,19 @@ let lastVia = "start";
 let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
+
+function median(a) {
+  if (!a.length) return 0;
+  const v = a.slice().sort((x, y) => x - y), h = Math.floor(v.length / 2);
+  return v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2;
+}
+
+/* How long it actually takes THIS person to get in, from their own taps —
+   not a rule of thumb. Falls back to null until there's enough to mean it. */
+function typicalTimeToIn() {
+  const ins = state.sessions.filter((x) => x.timeToInSec > 0).map((x) => x.timeToInSec);
+  return ins.length >= 3 ? median(ins) : null;
+}
 
 function paintRun() {
   const L = state.live;
@@ -1121,11 +1448,47 @@ function paintRun() {
     $("move-done").disabled = !!L.moveDone;
   }
 
+  $("run-rules").innerHTML = (L.constraints || []).map((c) => '<span class="rule">' + esc(c) + "</span>").join("");
+
   const total   = L.plannedSec + L.addedSec;
   const elapsed = (now() - L.startedAt) / 1000;
   const rem     = total - elapsed;
-  const tickN   = total / 60 <= 15 ? Math.max(1, Math.round(total / 60)) : Math.round(total / 300);
+  const eFrac   = clamp(elapsed / total, 0, 1);
+
+  /* score channel */
+  $("run-count").textContent = L.count;
+  $("run-count").classList.toggle("flat", L.count === 0);
+  $("run-unit").textContent = L.unit + (L.target ? " · target " + L.target : "");
+  $("tally-unit").textContent = L.unit;
+
+  const wFrac = L.target ? clamp(L.count / L.target, 0, 1) : 0;
+  $("work").hidden = !L.target;
+  $("work-fill").style.width = (wFrac * 100) + "%";
+
+  if (L.target) {
+    const need = L.target * eFrac, d = L.count - need;
+    const l = $("pace-l");
+    if (Math.abs(d) < 0.5)      { l.textContent = "on the line"; l.className = ""; }
+    else if (d > 0)             { l.textContent = "ahead by " + Math.round(d); l.className = "ahead"; }
+    else                        { l.textContent = "behind by " + Math.round(-d); l.className = "behind"; }
+  } else { $("pace-l").innerHTML = "&nbsp;"; $("pace-l").className = ""; }
+
+  const best = bestRate(L.unit);
+  $("pace-r").textContent = elapsed > 45
+    ? (L.count / (elapsed / 60)).toFixed(1) + "/min" + (best ? " · best " + best.toFixed(1) : "")
+    : (best ? "best " + best.toFixed(1) + "/min" : "");
+
+  /* time channel — the bar's axis is elapsed time, so the shrinking block
+     sits on the right and its left edge marches toward the finish. */
+  const tickN = total / 60 <= 15 ? Math.max(1, Math.round(total / 60)) : Math.round(total / 300);
   $("rw").style.setProperty("--tick", (100 / tickN) + "%");
+
+  const showToll = !L.inAt && L.tollSec < total;
+  $("toll").hidden = !showToll;
+  if (showToll) {
+    $("toll").style.left = clamp(L.tollSec / total * 100, 4, 96) + "%";
+    $("toll-lab").textContent = (typicalTimeToIn() ? "your usual in · " : "the toll · ") + Math.round(L.tollSec / 60) + "m";
+  }
 
   if (rem > 0) {
     $("run-time").textContent = mmss(rem);
@@ -1142,16 +1505,176 @@ function paintRun() {
     $("rw-fill").style.width = "100%";
     if (!L.chimed) {
       L.chimed = true; chime(); save();
-      $("expired-note").innerHTML =
-        "Runway's up, so the deal is done &mdash; you owe it nothing else. " +
-        "But if you're actually <b>in</b> it, stopping now is the expensive move. That absorption is the thing you " +
-        "were trying to get to, and it doesn't come back on demand. Ride it.";
+      $("expired-note").innerHTML = L.inAt
+        ? "You are <b>in</b>, and the runway just ran out. Stopping now is the expensive move &mdash; this state took " +
+          mins((L.inAt - L.startedAt) / 1000) + " to reach and it will not come back on demand. Extend."
+        : "Runway's up and you owe it nothing else. But you never marked getting in, which usually means you stopped " +
+          "just short of it. One more block is the cheapest experiment you have.";
       $("expired").hidden = false;
-    } else {
-      $("expired").hidden = false;
-    }
+    } else $("expired").hidden = false;
+  }
+
+  paintIn(elapsed);
+}
+
+function paintIn(elapsed) {
+  const L = state.live;
+  const slot = $("in-slot");
+  if (L.inAt) {
+    const at = (L.inAt - L.startedAt) / 1000;
+    slot.innerHTML = '<div class="instamp"><b>In &mdash; crossed at ' + mmss(at) + '</b>' +
+      "You're in the state you were trying to reach. Don't stop to check anything, don't switch tasks, " +
+      "don't tidy the desk. Ride it until it ends on its own.</div>";
+    return;
+  }
+  const usual = typicalTimeToIn();
+  const late  = usual && elapsed > usual;
+  slot.innerHTML = '<button class="inbtn" id="im-in"><span class="t">I\'m in &mdash; it stopped feeling like effort</span>' +
+    '<span class="d">' + (late
+      ? "You're past your usual crossing point. If it hasn't happened, turn the dial rather than stopping."
+      : "Tap it the moment the grinding stops. This is the only way the app learns how long your entry actually takes.") +
+    "</span></button>";
+  $("im-in").addEventListener("click", () => {
+    state.live.inAt = now(); save(); paintRun();
+    flashPark("Marked. Now protect it — nothing gets checked until the clock ends.");
+  });
+}
+
+/* ---- the counter: the feedback loop the task doesn't have ---- */
+
+function bump(n) {
+  const L = state.live;
+  if (!L) return;
+  L.count = Math.max(0, L.count + n);
+  save(); paintRun();
+  if (n > 0) {
+    const t = $("tally");
+    t.classList.remove("pop"); void t.offsetWidth; t.classList.add("pop");
+    tick();
   }
 }
+$("tally").addEventListener("click", () => bump(1));
+$("run-undo").addEventListener("click", () => bump(-1));
+document.addEventListener("keydown", (e) => {
+  if (screen !== "run" || e.code !== "Space") return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  e.preventDefault();
+  bump(1);
+});
+
+function tick() {
+  if (!state.sound || !audio) return;
+  try {
+    const o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime;
+    o.type = "triangle"; o.frequency.setValueAtTime(880, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.05, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + 0.1);
+  } catch (e) {}
+}
+
+/* ---- the flow dial ---- */
+
+function pick3(deck) {
+  const d = deck.slice();
+  for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [d[i], d[j]] = [d[j], d[i]]; }
+  return d.slice(0, 3);
+}
+
+$("run-dial").addEventListener("click", () => {
+  $("dial-slot").innerHTML =
+    '<div class="dial"><p>Absorption only happens in a narrow band. Off the band in either direction and your ' +
+    'attention leaves &mdash; and the two directions need opposite fixes. Which is it?</p>' +
+    '<button class="card" data-dir="easy">It\'s boring. My mind keeps sliding off to something more interesting.</button>' +
+    '<button class="card easier" data-dir="hard">It\'s too much. I don\'t know where to put my hands and I want out.</button>' +
+    '<button class="btn ghost" data-dir="close" style="margin-top:4px">never mind</button></div>';
+});
+
+$("dial-slot").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-dir]"), c = e.target.closest("[data-rule]");
+  if (c) {
+    state.live.constraints = (state.live.constraints || []).concat(c.dataset.rule);
+    save(); $("dial-slot").innerHTML = ""; paintRun();
+    flashPark("Rule applied. Restart the task under it right now, this second.");
+    return;
+  }
+  if (!b) return;
+  const dir = b.dataset.dir;
+  if (dir === "close") { $("dial-slot").innerHTML = ""; return; }
+
+  const L = state.live, best = bestRate(L.unit);
+  let deck = dir === "easy" ? pick3(HARDER) : pick3(EASIER);
+  if (dir === "easy" && best) deck = ["Beat " + best.toFixed(1) + " " + L.unit + " a minute. That's your own record."].concat(deck.slice(0, 2));
+
+  $("dial-slot").innerHTML = '<div class="dial"><p>' + (dir === "easy"
+      ? "Boredom means it's too easy, so the fix is to make it <b>harder</b>, not to try harder. Pick one and apply it now."
+      : "Overwhelm means it's too hard, so the fix is to make it <b>smaller and worse</b>, not to push. Pick one and apply it now.") +
+    "</p>" + deck.map((x) => '<button class="card' + (dir === "hard" ? " easier" : "") + '" data-rule="' + esc(x) + '">' + esc(x) + "</button>").join("") +
+    '<button class="btn ghost" data-dir="close" style="margin-top:4px">none of these</button></div>';
+});
+
+/* ---- sound floor: a steady non-lyrical bed, synthesised, no files ---- */
+
+const snd = { mode: "off", vol: 0.35, buf: null, nodes: null };
+
+function noiseBuffer(ctx, seconds) {
+  const len = Math.floor(ctx.sampleRate * seconds), buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for (let i = 0; i < len; i++) {
+    const w = Math.random() * 2 - 1;
+    last = (last + 0.02 * w) / 1.02;
+    d[i] = last * 3.4;
+  }
+  return buf;
+}
+
+function stopSound() {
+  if (!snd.nodes) return;
+  try { snd.nodes.src.stop(); } catch (e) {}
+  try { if (snd.nodes.lfo) snd.nodes.lfo.stop(); } catch (e) {}
+  try { snd.nodes.g.disconnect(); } catch (e) {}
+  snd.nodes = null;
+}
+
+function setSound(mode) {
+  armAudio();
+  stopSound();
+  snd.mode = mode;
+  $$("#sndseg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.snd === mode)));
+  state.soundFloor = mode; state.soundVol = snd.vol; save();
+  if (mode === "off" || !audio) return;
+  try {
+    if (audio.state === "suspended") audio.resume();
+    if (!snd.buf) snd.buf = noiseBuffer(audio, 6);
+    const src = audio.createBufferSource(), filt = audio.createBiquadFilter(), g = audio.createGain();
+    src.buffer = snd.buf; src.loop = true;
+    if (mode === "brown") { filt.type = "lowpass";  filt.frequency.value = 480; }
+    else                  { filt.type = "bandpass"; filt.frequency.value = 1500; filt.Q.value = 0.4; }
+    g.gain.value = snd.vol * (mode === "rain" ? 1.6 : 0.8);
+    src.connect(filt); filt.connect(g); g.connect(audio.destination);
+    let lfo = null;
+    if (mode === "rain") {
+      lfo = audio.createOscillator();
+      const lg = audio.createGain();
+      lfo.frequency.value = 0.07; lg.gain.value = snd.vol * 0.5;
+      lfo.connect(lg); lg.connect(g.gain); lfo.start();
+    }
+    src.start();
+    snd.nodes = { src, g, lfo };
+  } catch (e) { snd.nodes = null; }
+}
+
+$("sndseg").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-snd]");
+  if (b) setSound(b.dataset.snd);
+});
+$("sndvol").addEventListener("input", (e) => {
+  snd.vol = Number(e.target.value) / 100;
+  if (snd.nodes) snd.nodes.g.gain.value = snd.vol * (snd.mode === "rain" ? 1.6 : 0.8);
+  state.soundVol = snd.vol; save();
+});
 
 $("move-done").addEventListener("click", () => {
   if (!state.live) return;
@@ -1208,6 +1731,9 @@ function finishRun(reason) {
   const elapsed = (now() - L.startedAt) / 1000;
   pending = {
     id: L.id, task: L.task, move: L.move, moveDone: !!L.moveDone,
+    unit: L.unit, target: L.target, count: L.count || 0,
+    timeToInSec: L.inAt ? Math.round((L.inAt - L.startedAt) / 1000) : 0,
+    constraints: L.constraints || [], pre: L.pre || [],
     plannedMin: L.plannedMin, plannedSec: L.plannedSec,
     elapsedSec: Math.round(elapsed),
     overtimeSec: Math.max(0, Math.round(elapsed - L.plannedSec)),
@@ -1237,19 +1763,36 @@ $$("#s-debrief .outcomes button").forEach((b) => b.addEventListener("click", () 
   const sameFails = sameTask.filter((x) => x.outcome !== "landed").length;
 
   let read = "";
+  const scoreLine = s.count > 0
+    ? "<b>" + s.count + " " + esc(s.unit) + "</b> in " + mins(s.elapsedSec) +
+      " (" + (s.count / (s.elapsedSec / 60)).toFixed(1) + " a minute" +
+      (s.target ? ", target was " + s.target : "") + "). "
+    : "";
+  const inLine = s.timeToInSec
+    ? "You crossed into it at <b>" + mmss(s.timeToInSec) + "</b>. "
+    : "";
+
   if (s.outcome === "landed") {
-    read = "<b>" + mins(s.elapsedSec) + " on it</b>" +
+    read = scoreLine + inLine + "<b>" + mins(s.elapsedSec) + " on it</b>" +
       (s.overtimeSec > 60 ? ", " + mins(s.overtimeSec) + " of that past the runway &mdash; that's the absorption, and it only ever shows up <em>after</em> you'd already started. " : ". ") +
       "That's " + landedWeek + " landed in the last seven days.";
   } else if (s.outcome === "partial") {
-    read = "In and out still put <b>" + mins(s.elapsedSec) + "</b> on it that wouldn't otherwise exist" +
+    read = scoreLine + inLine + "In and out still put <b>" + mins(s.elapsedSec) + "</b> on it that wouldn't otherwise exist" +
       (s.parked ? ", and you caught " + s.parked + " thing" + (s.parked > 1 ? "s" : "") + " without leaving." : ".") +
       " Partial is the normal outcome, not the failure case.";
   } else {
-    read = "Fine. Nothing is deducted, because there's nothing here to deduct from. " +
-      (s.moveDone
-        ? "You did do the first move, which means the block is somewhere after starting &mdash; try a shorter runway next time."
-        : "You never got the first move done, which means it was still too big. Halve it.");
+    const usual = typicalTimeToIn();
+    read = scoreLine + "Fine. Nothing is deducted, because there's nothing here to deduct from. ";
+    if (usual && !s.timeToInSec && s.elapsedSec < usual)
+      read += "But look at the clock: you stopped at " + mins(s.elapsedSec) + " and it usually takes you " +
+        mins(usual) + " to get in. <b>You quit " + mins(usual - s.elapsedSec) + " short of the point where it starts working.</b> " +
+        "That is the single most fixable thing in this whole app.";
+    else if (!(s.constraints || []).length)
+      read += (s.moveDone
+        ? "You got the first move done, so the block is after starting, not before it. Next time use the dial in the first five minutes instead of grinding &mdash; boring and overwhelming need opposite fixes and grinding fixes neither."
+        : "You never ticked the first move, which means it was still too big. Halve it.");
+    else
+      read += "You did turn the dial, which is the right move. If the same constraint fails twice, it's the wrong direction &mdash; try the other side.";
   }
   $("debrief-read").innerHTML = read;
 
@@ -1528,6 +2071,56 @@ function findings() {
     out.push("<b>" + parkedTotal + " thoughts caught mid-session</b> without leaving the screen. Go and read the parking lot: " +
       "the proportion of those that turned out to be worth chasing is the number worth knowing.");
 
+  /* The entry-cost readout. This is the one number most likely to change
+     behaviour, so it goes first and it only speaks when the data is real. */
+  const ins   = s.filter((x) => x.timeToInSec > 0);
+  const bails = s.filter((x) => !x.timeToInSec && x.outcome !== "landed" && x.elapsedSec > 30);
+  if (ins.length >= 3) {
+    const med = median(ins.map((x) => x.timeToInSec));
+    let line = "<b>It takes you about " + mins(med) + " to get in.</b> That's measured from " + ins.length +
+      " of your own sessions, not a rule of thumb. The grinding before that point is the toll, not a verdict on the task.";
+    if (bails.length >= 3) {
+      const bm = median(bails.map((x) => x.elapsedSec));
+      if (bm < med - 60)
+        line += " The sessions you abandoned ended at " + mins(bm) + " &mdash; <b>you are quitting roughly " +
+          mins(med - bm) + " before the point it starts working.</b> Nothing else on this page matters as much as that gap.";
+    }
+    out.unshift(line);
+  } else if (ins.length) {
+    out.push("<b>You've marked getting in " + ins.length + " time" + (ins.length === 1 ? "" : "s") +
+      ".</b> Three is where it can start telling you your real entry cost, which is the number worth having.");
+  }
+
+  const rated = s.filter((x) => x.count > 0 && x.elapsedSec > 120);
+  if (rated.length >= 3) {
+    const byUnit = new Map();
+    rated.forEach((x) => { const r = x.count / (x.elapsedSec / 60); byUnit.set(x.unit, Math.max(byUnit.get(x.unit) || 0, r)); });
+    const top = Array.from(byUnit.entries()).sort((a, b) => b[1] - a[1])[0];
+    out.push("<b>Your record on " + esc(top[0]) + " is " + top[1].toFixed(1) + " a minute.</b> " +
+      "When a task goes flat, racing that number is the honest way to add difficulty &mdash; boredom is a sign the challenge is too low, not that you're lazy.");
+  }
+
+  const dialled = s.filter((x) => (x.constraints || []).length), plain = s.filter((x) => !(x.constraints || []).length);
+  if (dialled.length >= 3 && plain.length >= 3) {
+    const dr = dialled.reduce((a, x) => a + score(x.outcome), 0) / dialled.length;
+    const pr = plain.reduce((a, x) => a + score(x.outcome), 0) / plain.length;
+    if (Math.abs(dr - pr) >= 0.2)
+      out.push(dr > pr
+        ? "<b>Turning the dial works for you.</b> Sessions where you applied a constraint land " + pct(dr) +
+          " of the time against " + pct(pr) + " without one. Reach for it in the first five minutes, not the last."
+        : "<b>The dial isn't helping so far.</b> " + pct(dr) + " with a constraint against " + pct(pr) +
+          " without. Check you're picking the right direction &mdash; bored needs harder, swamped needs smaller.");
+  }
+
+  const shut = s.filter((x) => (x.pre || []).length >= 2), open_ = s.filter((x) => !(x.pre || []).length);
+  if (shut.length >= 3 && open_.length >= 3) {
+    const sr = shut.reduce((a, x) => a + score(x.outcome), 0) / shut.length;
+    const or_ = open_.reduce((a, x) => a + score(x.outcome), 0) / open_.length;
+    if (sr - or_ >= 0.2)
+      out.push("<b>Closing the exits is doing more work than anything else here.</b> " + pct(sr) +
+        " landed with the phone away and the tabs shut, " + pct(or_) + " without. It's the cheapest lever on the list.");
+  }
+
   if (s.length < 5)
     out.unshift("<b>" + s.length + " session" + (s.length === 1 ? "" : "s") + " logged.</b> Not enough to say anything true yet &mdash; " +
       "patterns start showing up around five, and this won't invent one before then.");
@@ -1544,6 +2137,8 @@ function renderRecord() {
   let h = '<div class="tiles">' +
     '<div class="tile"><span class="n">' + (focused ? mins(focused) : "0m") + '</span><span class="k">Time on task<em>that otherwise wasn\'t happening</em></span></div>' +
     '<div class="tile"><span class="n good">' + (over ? mins(over) : "0m") + '</span><span class="k">Past the runway<em>the absorption, measured</em></span></div>' +
+    '<div class="tile"><span class="n">' + (typicalTimeToIn() ? mins(typicalTimeToIn()) : "&mdash;") +
+      '</span><span class="k">Your entry cost<em>' + (typicalTimeToIn() ? "how long until it stops feeling like effort" : "mark \u201cI\u2019m in\u201d 3 times to measure it") + '</em></span></div>' +
     '<div class="tile"><span class="n">' + s.length + '</span><span class="k">Sessions started<em>started is the metric, not finished</em></span></div>' +
     '<div class="tile"><span class="n">' + landed + '</span><span class="k">Landed<em>' +
       (s.length ? pct(landed / s.length) + " of them" : "nothing yet") + '</em></span></div>' +
@@ -1560,6 +2155,8 @@ function renderRecord() {
       ? s.slice(-25).reverse().map((x) =>
           '<div class="item"><span class="txt">' + esc(x.task) +
             '<span class="meta">' + when(x.startedAt) + " · " + mins(x.elapsedSec) + " of " + x.plannedMin + "m" +
+            (x.count ? " · " + x.count + " " + esc(x.unit) : "") +
+            (x.timeToInSec ? " · in at " + mmss(x.timeToInSec) : "") +
             (x.overtimeSec > 60 ? " · +" + mins(x.overtimeSec) + " over" : "") +
             (x.parked ? " · " + x.parked + " caught" : "") + "</span>" +
             (x.note ? '<span class="meta" style="text-transform:none;letter-spacing:0;font-size:11.5px">&ldquo;' + esc(x.note) + "&rdquo;</span>" : "") +
@@ -1579,6 +2176,7 @@ $("sound-toggle").addEventListener("click", () => {
 
 function boot() {
   $("sound-toggle").textContent = "Sound: " + (state.sound ? "on" : "off");
+  if (typeof state.soundVol === "number") { snd.vol = state.soundVol; $("sndvol").value = Math.round(snd.vol * 100); }
   $("save-state").textContent = !state.loaded ? "checking storage"
     : db ? "cloud + this browser"
     : canLocal ? "saved in this browser"
