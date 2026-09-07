@@ -55,6 +55,9 @@
 }
 
 *{box-sizing:border-box}
+/* Elements that set their own display (.orb, .movebar, .check) would beat
+   the UA rule for [hidden]; toggling .hidden must always win. */
+[hidden]{display:none!important}
 button,input,textarea,select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 body{
   overscroll-behavior-y:contain;
@@ -485,6 +488,56 @@ input[type="range"]{accent-color:var(--signal);width:92px}
   .back,.linkish{padding:6px 0;display:inline-block}
   input[type="range"]{width:110px;height:30px}
 }
+/* ---- night mode: a screen you can look at at 2am ----
+   Long-wavelength, low-luminance, large type. A bright white panel in a
+   dark room undoes the thing the panel is for. */
+body.night{
+  --ground:#06060a;--panel:#0d0e13;--panel-2:#13141a;
+  --ink:#c08a5e;--ink-soft:#9c7250;--dim:#6b513c;
+  --rule:#241b14;--hair:#191309;
+  --signal:#c2703c;--signal-w:#c2703c1a;
+  --go:#93794f;--go-w:#93794f1a;--warn:#a8563a;
+}
+body.night .mast h1{color:var(--dim)}
+body.night .mast p,body.night .strip{display:none}
+body.night img,body.night .lamp{filter:saturate(.6)}
+
+.nightwrap{text-align:center;padding:8px 0 0}
+.shuffle{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(38px,12vw,60px);font-weight:600;letter-spacing:-.02em;line-height:1.1;
+  margin:0;min-height:1.6em;display:flex;align-items:center;justify-content:center;
+  color:var(--ink);transition:opacity .9s ease-in-out;
+}
+@media (prefers-reduced-motion:reduce){.shuffle{transition:none}}
+.shuffle.fade{opacity:.06}
+.scanpart{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:clamp(26px,8vw,40px);
+  font-weight:600;margin:0 0 6px;line-height:1.15;
+}
+.scancue{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.nightbar{height:4px;background:var(--panel-2);margin:20px 0;position:relative;overflow:hidden}
+.nightbar i{position:absolute;top:0;left:0;bottom:0;width:0;background:var(--signal);display:block}
+.blackout{position:fixed;inset:0;background:#000;z-index:9999;display:flex;align-items:flex-end;justify-content:center;padding-bottom:40px}
+.blackout span{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#1d1d1d}
+
+.check{display:flex;align-items:center;gap:11px;border-bottom:1px solid var(--hair);padding:12px 0;cursor:pointer}
+.check:last-of-type{border-bottom:0}
+.check .box{
+  width:22px;height:22px;flex:none;border:1.5px solid var(--rule);
+  display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--go);
+}
+.check.on .box{border-color:var(--go);background:var(--go-w)}
+.check.on .t{color:var(--dim);text-decoration:line-through}
+.check .t{flex:1;font-size:15.5px;text-align:left}
+.check .x{background:none;border:0;color:var(--dim);cursor:pointer;font-size:15px;padding:4px 6px}
+
+.grouplab{
+  font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);margin:20px 0 8px;display:block;
+}
+.grouplab:first-child{margin-top:0}
+
 </style>
 
 <div class="app">
@@ -508,7 +561,8 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 
   <div id="resume-slot"></div>
 
-  <div class="triage">
+  <div class="triage" id="triage">
+    <span class="grouplab">Stuck on something</span>
     <button class="big" data-go="start">
       <span class="t">Can't start.</span>
       <span class="d">You know exactly what to do. You are not doing it. It's been a while.</span>
@@ -521,6 +575,7 @@ input[type="range"]{accent-color:var(--signal);width:92px}
       <span class="t">Started, then drifted.</span>
       <span class="d">You were on it forty seconds ago and you have no idea where you went.</span>
     </button>
+    <span class="grouplab">Nothing's landing</span>
     <button class="big go" data-go="play">
       <span class="t">Can't get into anything, even fun stuff.</span>
       <span class="d">Games, shows, hobbies. You want to want it. It reads as flat from the first minute, or drains out fast.</span>
@@ -528,6 +583,11 @@ input[type="range"]{accent-color:var(--signal);width:92px}
     <button class="big go" data-go="now">
       <span class="t">Don't know what to do with myself.</span>
       <span class="d">Task's done, or there was never one. Empty time, and the scroll is about to eat it.</span>
+    </button>
+    <span class="grouplab" id="night-lab">Night</span>
+    <button class="big" id="sleep-btn" data-go="sleep">
+      <span class="t">Should be asleep.</span>
+      <span class="d">Still going, or in bed and wired. Different problems, both handled.</span>
     </button>
   </div>
 
@@ -645,6 +705,116 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 
   <button class="launch" id="launch" disabled>Start the clock</button>
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ SLEEP ============ -->
+<section class="screen" id="s-sleep" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Which one is it?</h2>
+  <p class="sub">Two different failures wearing the same face. One is that you can't stop; the other is that you've stopped and your body hasn't. They need opposite things.</p>
+  <div class="stack">
+    <button class="big" data-go="land">
+      <span class="t">I can't stop doing things.</span>
+      <span class="d">It's late, you know it, and you're still going. Stopping is a task too, and it's the same broken muscle as starting.</span>
+    </button>
+    <button class="big go" data-go="down">
+      <span class="t">I'm in bed and wired.</span>
+      <span class="d">Lights off, brain on. A dark quiet room is understimulation, so it makes its own noise.</span>
+    </button>
+  </div>
+
+  <div class="blk" style="margin-top:26px">
+    <span class="lab">Tonight's landing time</span>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">Not a bedtime &mdash; the time you <em>start</em> the sequence. This is the only bit that actually goes wrong, so it's the only bit worth setting.</p>
+    <div class="row">
+      <input class="field tin" type="time" id="land-time" style="width:auto">
+      <button class="btn" id="land-save">Set it</button>
+    </div>
+    <p class="sub" id="land-hist" style="margin:8px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <p class="note" style="margin-top:22px">This does not track your sleep and never will &mdash; a web page can't see whether you slept, and anything claiming to would be making it up. It tracks the one thing it can see: when you started landing versus when you said you would.</p>
+</section>
+
+<!-- ============ LANDING ============ -->
+<section class="screen" id="s-land" hidden>
+  <button class="back" data-go="sleep">&larr; back</button>
+  <h2 class="ask">Land it.</h2>
+  <p class="sub" id="land-frame"></p>
+
+  <div class="blk">
+    <span class="lab">1 &mdash; Put the open loops down</span>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">Anything unfinished gets rehearsed at 3am, because nothing outside your head is holding it. One line each, then it's not yours until morning.</p>
+    <div class="park" style="margin-bottom:8px">
+      <input id="land-park" placeholder="what's still open?" autocomplete="off">
+      <button id="land-park-btn">Park</button>
+    </div>
+    <p class="sub" id="land-parked" style="margin:0;font-size:12.5px"></p>
+  </div>
+
+  <div class="blk">
+    <span class="lab">2 &mdash; The sequence</span>
+    <p class="sub" style="margin:0 0 4px;font-size:12.5px">Every step is a place you get derailed, so they're listed instead of remembered. Edit it to match your actual life.</p>
+    <div id="land-list"></div>
+    <div class="row" style="margin-top:8px">
+      <input class="field" id="land-add" placeholder="add a step" autocomplete="off" style="flex:1;min-width:140px">
+      <button class="btn" id="land-add-btn">Add</button>
+    </div>
+    <p class="sub" id="land-clock" style="margin:10px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <div class="blk">
+    <span class="lab">3 &mdash; Something to land on</span>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">A boring wind-down loses to the phone every time. Give the stimulus-seeking part something quieter to chew, or it will pick for you.</p>
+    <div class="chips" id="land-wind"></div>
+  </div>
+
+  <button class="launch" id="in-bed">I'm in bed</button>
+</section>
+
+<!-- ============ DOWN ============ -->
+<section class="screen" id="s-down" hidden>
+  <button class="back" data-go="sleep">&larr; back</button>
+  <div id="down-pick">
+    <h2 class="ask">Give it something to do.</h2>
+    <p class="sub">"Clear your mind" is the one instruction your brain can't follow. All three of these work the same way &mdash; they occupy the part that's generating noise, rather than asking it to stop.</p>
+    <div class="stack">
+      <button class="big" data-tool="shuffle">
+        <span class="t">Shuffle</span>
+        <span class="d">A random unconnected word every few seconds. Picture it, let it go. It jams the narrative loop and imitates how thinking actually falls apart at sleep onset. Can read them aloud so you can shut your eyes.</span>
+      </button>
+      <button class="big go" data-tool="breath">
+        <span class="t">Long exhale</span>
+        <span class="d">In for four, out for seven. The out-breath is the parasympathetic half &mdash; making it longer than the in-breath is the whole mechanism.</span>
+      </button>
+      <button class="big go" data-tool="scan">
+        <span class="t">Tense and release</span>
+        <span class="d">Squeeze a muscle group hard, then drop it. Concrete and physical, which beats "relax" &mdash; an instruction nobody can actually carry out.</span>
+      </button>
+    </div>
+    <p class="note" style="margin-top:22px">You don't have to sleep. You have to <b>rest</b>. Lying still with your eyes closed recovers a real fraction of what sleep does, and dropping the requirement to fall asleep removes the thing keeping you awake &mdash; trying.</p>
+  </div>
+
+  <div id="down-run" hidden>
+    <div class="nightwrap">
+      <p class="scancue" id="down-cue">ready</p>
+      <p class="shuffle" id="down-word" hidden>&nbsp;</p>
+      <p class="scanpart" id="down-part" hidden>&nbsp;</p>
+      <div class="orb" id="down-orb" hidden style="margin:18px auto"><span class="c" id="down-orb-cue"></span></div>
+      <div class="nightbar"><i id="down-bar"></i></div>
+    </div>
+    <div class="row" style="justify-content:center;margin-top:6px">
+      <button class="btn" id="down-black">Screen off</button>
+      <button class="btn ghost" id="down-speak">Read aloud: off</button>
+      <button class="btn ghost" id="down-stop">Stop</button>
+    </div>
+    <p class="sub" style="margin:18px 0 0;font-size:12.5px" id="down-note"></p>
+  </div>
+
+  <div class="sec" style="margin-top:26px" id="down-rule">
+    <h3>If you're still awake in twenty minutes</h3>
+    <p class="note" style="margin-top:12px">Get up. Go to another room, dim light, do something dull until you're heavy, then come back. Lying there awake teaches your body that bed is where you lie awake, and that association is most of what keeps insomnia going once it starts. Twenty minutes, then move.</p>
+  </div>
 </section>
 
 <!-- ============ WHAT NOW ============ -->
@@ -956,6 +1126,8 @@ const state = {
   sessions: [],   // finished runs
   parked:   [],   // thoughts, worries, tasks
   wired:    [],   // implementation intentions
+  nights:   [],   // landing sequences, not sleep — the app can't see sleep
+  sleep:    null, // landing time + the sequence itself
   live:     null, // the run in progress, if any
   sound:    true,
   loaded:   false,
@@ -971,6 +1143,8 @@ function payload() {
     live:     state.live,
     sound:    state.sound,
     soundVol: state.soundVol,
+    sleep:    state.sleep,
+    nights:   state.nights || [],
   };
 }
 
@@ -981,6 +1155,8 @@ function adopt(d) {
   if (Array.isArray(d.wired))    state.wired    = d.wired;
   if (typeof d.sound === "boolean") state.sound = d.sound;
   if (typeof d.soundVol === "number") { state.soundVol = d.soundVol; snd.vol = d.soundVol; }
+  if (d.sleep && typeof d.sleep === "object") state.sleep = d.sleep;
+  if (Array.isArray(d.nights)) state.nights = d.nights;
   state.live = d.live && typeof d.live === "object" ? d.live : null;
   return true;
 }
@@ -1126,7 +1302,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "now", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1138,6 +1314,11 @@ function go(name) {
   if (name === "start")  renderStart();
   if (name === "play")   renderPlay();
   if (name === "now")    renderNow();
+  if (name === "sleep")  renderSleep();
+  if (name === "land")   renderLand();
+  if (name === "down")   renderDown();
+  document.body.classList.toggle("night", name === "down" || name === "land");
+  if (name !== "down") stopDown();
   if (name === "parked") renderParked();
   if (name === "record") renderRecord();
   if (name === "run")    { paintRun(); keepAwake(true); }
@@ -1182,6 +1363,12 @@ function paintStrip() {
 /* ---------- home ---------- */
 
 function renderHome() {
+  const h = new Date().getHours();
+  const night = h >= 21 || h < 5;
+  const lab = $("night-lab"), btn = $("sleep-btn"), tri = $("triage");
+  if (night && tri.firstElementChild !== lab) { tri.insertBefore(btn, tri.firstElementChild); tri.insertBefore(lab, btn); }
+  if (!night && tri.firstElementChild === lab) { tri.appendChild(lab); tri.appendChild(btn); }
+
   const live = state.live;
   const slot = $("resume-slot");
   if (live) {
@@ -1543,6 +1730,268 @@ let lastVia = "start";
 let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
+
+/* ---------- sleep ----------
+   ADHD melatonin onset runs genuinely late, so a bedtime is not the
+   lever. The lever is when the wind-down STARTS, because stopping is the
+   same impaired function as starting. And a dark room is understimulation
+   for a stimulus-seeking brain, so the night tools give it something to
+   hold rather than telling it to be quiet. */
+
+const LAND_DEFAULT = [
+  "Phone on the charger, out of arm's reach",
+  "Teeth",
+  "Water by the bed",
+  "Alarm set",
+  "Lights down, one lamp only",
+];
+const WIND_DOWN = [
+  "Audiobook or podcast, sleep timer on, screen face down",
+  "One album in the dark, nothing else",
+  "A paper book, boring on purpose",
+  "A documentary you've seen before, audio only",
+  "Shower — warm, then let yourself cool down after",
+  "Lie down and let the shuffle run",
+];
+
+/* Concrete, neutral, unconnected. The point is that no story can form. */
+const SHUFFLE_WORDS = ("anchor acorn apron arch badger bagel balloon bamboo barrel basket beacon bell bench bicycle blanket boulder bracelet bramble bridge bucket buckle buoy cabin cactus candle canoe cardigan carpet cellar chalk cherry chimney cinnamon clover cobble compass coral cottage crane crayon cricket crumb cushion daisy dandelion dolphin domino doorknob dune eggshell elm envelope feather fern ferry fiddle fig flagstone flute fossil fountain freckle frost funnel gable garland gate ginger glacier glove granite grapevine gravel greenhouse hammock harbour harp hazel hedge heron hinge honey hoof iceberg ivy jigsaw kettle kite ladder lagoon lantern lattice lavender ledge lemon lighthouse linen lobster locket magnet mango maple marble marsh meadow mitten moss moth mushroom nest oar orchard otter owl paddle pantry parchment pebble pelican pendulum pepper pier pigeon pillar pinecone plum pond poppy porch pottery prairie pumpkin quarry quilt rabbit radish raft ribbon ridge rope rosemary rudder saddle sandal sapling satchel scarf seagull seashell shutter silo sled slipper sparrow spindle spruce starfish stork sunflower tapestry teapot thicket thimble thistle tide timber toadstool trellis trout tulip tunnel turnip umbrella valley velvet vine violin walnut waterfall wheelbarrow whisker willow windmill wren yarn yew").split(" ");
+
+const SCAN_PARTS = [
+  "Both feet", "Calves", "Thighs", "Backside", "Stomach",
+  "Both hands", "Forearms", "Shoulders, up to your ears", "Jaw and forehead",
+];
+
+function sleepState() {
+  if (!state.sleep) state.sleep = { landTime: "", list: LAND_DEFAULT.slice() };
+  if (!Array.isArray(state.sleep.list) || !state.sleep.list.length) state.sleep.list = LAND_DEFAULT.slice();
+  return state.sleep;
+}
+
+function renderSleep() {
+  const sl = sleepState();
+  $("land-time").value = sl.landTime || "23:00";
+  const n = (state.nights || []).filter((x) => x.lateBy != null);
+  if (n.length >= 3) {
+    const late = median(n.map((x) => x.lateBy));
+    $("land-hist").textContent = late > 60
+      ? "Across " + n.length + " nights you start it about " + mins(late) + " after you said you would. That gap is the whole problem — not the wind-down, which you're fine at once it's running."
+      : "Across " + n.length + " nights you start within about " + mins(Math.abs(late)) + " of your own time. That's the hard part done.";
+  } else {
+    $("land-hist").textContent = "Set it and the app will tell you how late you actually start, which is the only number here worth knowing.";
+  }
+}
+
+$("land-save").addEventListener("click", () => {
+  sleepState().landTime = $("land-time").value; save();
+  $("land-hist").textContent = "Set. Nothing will nag you about it — the app can't send notifications. It's a line to measure yourself against, not an alarm.";
+});
+
+function renderLand() {
+  const sl = sleepState();
+  if (!landStartedAt) {
+    landStartedAt = now();
+    let lateBy = null;
+    if (sl.landTime) {
+      const [h, m] = sl.landTime.split(":").map(Number);
+      const t = new Date(); t.setHours(h, m, 0, 0);
+      if (t.getTime() - landStartedAt > 6 * 36e5) t.setDate(t.getDate() - 1);
+      lateBy = Math.round((landStartedAt - t.getTime()) / 1000);
+    }
+    landLate = lateBy;
+  }
+  $("land-frame").innerHTML = (landLate != null && landLate > 900)
+    ? "You're <b>" + mins(landLate) + "</b> past your own landing time. Worth knowing why, once: the night is the only stretch of the day nobody wants anything from you, so going to bed reads as giving that up. That's a real trade, not a character flaw — but it's cheaper to take the hour back tomorrow morning than to keep paying for it tonight."
+    : "Stopping is a task, and it's the same muscle as starting. So it gets the same treatment: the steps are listed rather than remembered, because each one is a place you get derailed.";
+  renderLandList();
+  $("land-parked").textContent = "";
+  $("land-wind").innerHTML = WIND_DOWN.map((w) => '<button class="chip" data-wind="' + esc(w) + '">' + esc(w) + "</button>").join("");
+  tickLand();
+}
+
+function renderLandList() {
+  const sl = sleepState();
+  $("land-list").innerHTML = sl.list.map((t, i) =>
+    '<div class="check' + (landDone.indexOf(i) >= 0 ? " on" : "") + '" data-step="' + i + '">' +
+    '<span class="box">' + (landDone.indexOf(i) >= 0 ? "&#10003;" : "") + "</span>" +
+    '<span class="t">' + esc(t) + "</span>" +
+    '<button class="x" data-del="' + i + '" aria-label="remove step">&times;</button></div>').join("");
+}
+
+let landStartedAt = null, landLate = null, landDone = [], landTick = null;
+
+function tickLand() {
+  clearInterval(landTick);
+  landTick = setInterval(() => {
+    if (screen !== "land") { clearInterval(landTick); return; }
+    const el = $("land-clock");
+    if (!el || !landStartedAt) return;
+    const e = (now() - landStartedAt) / 1000;
+    el.textContent = landDone.length === sleepState().list.length
+      ? "All of it, in " + mmss(e) + ". That is how long it actually takes."
+      : landDone.length + " of " + sleepState().list.length + " · " + mmss(e) + " so far. It is shorter than it feels from the sofa.";
+  }, 1000);
+}
+
+$("land-list").addEventListener("click", (e) => {
+  const d = e.target.closest("[data-del]");
+  if (d) { sleepState().list.splice(Number(d.dataset.del), 1); landDone = []; save(); renderLandList(); return; }
+  const c = e.target.closest("[data-step]");
+  if (!c) return;
+  const i = Number(c.dataset.step), at = landDone.indexOf(i);
+  if (at >= 0) landDone.splice(at, 1); else landDone.push(i);
+  renderLandList();
+});
+$("land-add-btn").addEventListener("click", () => {
+  const v = $("land-add").value.trim();
+  if (!v) return;
+  sleepState().list.push(v); save(); $("land-add").value = ""; renderLandList();
+});
+$("land-add").addEventListener("keydown", (e) => { if (e.key === "Enter") $("land-add-btn").click(); });
+
+$("land-park-btn").addEventListener("click", landPark);
+$("land-park").addEventListener("keydown", (e) => { if (e.key === "Enter") landPark(); });
+function landPark() {
+  const v = $("land-park").value.trim();
+  if (!v) return;
+  const t = new Date(); t.setDate(t.getDate() + 1); t.setHours(9, 0, 0, 0);
+  parkIt(v, "task", t.getTime());
+  $("land-park").value = "";
+  $("land-parked").textContent = "Down. It's in the parking lot with tomorrow morning on it, so there's nothing left to rehearse.";
+}
+$("land-wind").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-wind]");
+  if (!b) return;
+  landWind = b.dataset.wind;
+  $("land-wind").innerHTML = '<p class="note finding" style="margin:0">Tonight: <b>' + esc(landWind) + "</b> Set it up before you get in, not after.</p>";
+});
+let landWind = "";
+
+$("in-bed").addEventListener("click", () => {
+  if (!state.nights) state.nights = [];
+  state.nights.push({
+    startedAt: landStartedAt || now(), inBedAt: now(),
+    lateBy: landLate, took: landStartedAt ? Math.round((now() - landStartedAt) / 1000) : null,
+    steps: landDone.length, wind: landWind,
+  });
+  state.nights = state.nights.slice(-120);
+  landStartedAt = null; landLate = null; landDone = []; landWind = "";
+  save();
+  go("down");
+});
+
+/* ---- the night tools ---- */
+
+let downTimer = null, downTool = "", downSpeak = false, downStart = 0;
+
+function renderDown() {
+  $("down-pick").hidden = false;
+  $("down-run").hidden = true;
+  $("down-rule").hidden = false;
+}
+
+function stopDown() {
+  clearInterval(downTimer); clearTimeout(downTimer); downTimer = null;
+  try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+  keepAwake(false);
+}
+
+$("down-pick").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tool]");
+  if (!b) return;
+  downTool = b.dataset.tool;
+  $("down-pick").hidden = true; $("down-rule").hidden = true; $("down-run").hidden = false;
+  $("down-word").hidden = downTool !== "shuffle";
+  $("down-part").hidden = downTool !== "scan";
+  $("down-orb").hidden = downTool !== "breath";
+  $("down-speak").hidden = downTool !== "shuffle" || !("speechSynthesis" in window);
+  downStart = now();
+  keepAwake(true);
+  if (downTool === "shuffle") runShuffle();
+  if (downTool === "breath")  runExhale();
+  if (downTool === "scan")    runScan();
+});
+
+$("down-stop").addEventListener("click", () => { stopDown(); renderDown(); });
+$("down-black").addEventListener("click", () => {
+  const o = document.createElement("div");
+  o.className = "blackout";
+  o.innerHTML = "<span>tap to bring it back</span>";
+  o.addEventListener("click", () => o.remove());
+  document.body.appendChild(o);
+});
+$("down-speak").addEventListener("click", () => {
+  downSpeak = !downSpeak;
+  $("down-speak").textContent = "Read aloud: " + (downSpeak ? "on" : "off");
+  if (!downSpeak) { try { speechSynthesis.cancel(); } catch (e) {} }
+});
+
+function say(text) {
+  if (!downSpeak || !("speechSynthesis" in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.75; u.pitch = 0.9; u.volume = 0.5;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function downProgress(frac) { $("down-bar").style.width = clamp(frac * 100, 0, 100) + "%"; }
+
+function runShuffle() {
+  const TOTAL = 15 * 60 * 1000;
+  $("down-cue").textContent = "picture it, then let it go";
+  $("down-note").textContent = "No connection between them, on purpose — a story is the thing keeping you awake. If you lose track and drift, that was the point.";
+  let last = "";
+  const step = () => {
+    let w = SHUFFLE_WORDS[(Math.random() * SHUFFLE_WORDS.length) | 0];
+    while (w === last) w = SHUFFLE_WORDS[(Math.random() * SHUFFLE_WORDS.length) | 0];
+    last = w;
+    const el = $("down-word");
+    el.classList.add("fade");
+    setTimeout(() => { el.textContent = w; el.classList.remove("fade"); say(w); }, 700);
+    downProgress((now() - downStart) / TOTAL);
+    if (now() - downStart > TOTAL) { $("down-cue").textContent = "still here? that's fine. it's still running."; downStart = now(); }
+  };
+  step();
+  downTimer = setInterval(step, 7500);
+}
+
+function runExhale() {
+  const PH = [
+    { c: "in through your nose", ms: 4000, s: 1 },
+    { c: "hold", ms: 1000, s: 1 },
+    { c: "out, slowly, through your mouth", ms: 7000, s: 0.5 },
+  ];
+  $("down-cue").textContent = "follow it, don't force it";
+  $("down-note").textContent = "Out longer than in is the entire mechanism — that ratio is what shifts you out of the alert branch of the nervous system. Twelve rounds is about two and a half minutes.";
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let i = 0, round = 0;
+  const step = () => {
+    if (i === 0) { round++; downProgress(round / 12); if (round > 12) { $("down-orb-cue").textContent = "done"; $("down-cue").textContent = "stay there"; return; } }
+    const p = PH[i];
+    $("down-orb-cue").textContent = p.c;
+    if (!reduced) { $("down-orb").style.transitionDuration = p.ms + "ms"; $("down-orb").style.transform = "scale(" + p.s + ")"; }
+    if (i === 0) say("in"); if (i === 2) say("out");
+    i = (i + 1) % PH.length;
+    downTimer = setTimeout(step, p.ms);
+  };
+  step();
+}
+
+function runScan() {
+  $("down-note").textContent = "Squeeze hard enough to feel it, never hard enough to hurt. The release is the part that does the work, so let it go all at once rather than easing off.";
+  let i = 0, phase = 0;
+  const step = () => {
+    if (i >= SCAN_PARTS.length) {
+      $("down-part").textContent = "All of it"; $("down-cue").textContent = "heavy, and staying there";
+      say("all of it. heavy."); downProgress(1); return;
+    }
+    $("down-part").textContent = SCAN_PARTS[i];
+    if (phase === 0) { $("down-cue").textContent = "squeeze — five seconds"; say("squeeze " + SCAN_PARTS[i]); phase = 1; downTimer = setTimeout(step, 5000); }
+    else { $("down-cue").textContent = "let go completely"; say("let go"); phase = 0; i++; downProgress(i / SCAN_PARTS.length); downTimer = setTimeout(step, 14000); }
+  };
+  step();
+}
 
 /* ---------- what now: dealing the next twelve minutes ----------
    The transition after a task has nothing on the far side of it, and
