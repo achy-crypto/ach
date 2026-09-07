@@ -538,6 +538,38 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 }
 .grouplab:first-child{margin-top:0}
 
+/* ---- training drills ---- */
+.drill{border:1px solid var(--rule);background:var(--panel);padding:16px;margin-bottom:14px}
+.drill .lab{display:block;margin-bottom:8px}
+.bigtap{
+  appearance:none;width:100%;cursor:pointer;background:var(--go);border:1px solid var(--go);color:var(--panel);
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;
+  font-size:19px;font-weight:800;padding:20px 16px;margin:12px 0;
+}
+.bigtap:hover{filter:brightness(1.08)}
+.bigtap.amber{background:var(--signal);border-color:var(--signal)}
+.bigtap small{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;opacity:.82;margin-top:5px}
+.repcount{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 86;
+  font-size:52px;font-weight:700;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+  margin:0;text-align:center;color:var(--go);
+}
+.repunit{display:block;text-align:center;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-top:8px}
+.opts{display:grid;gap:6px;margin:10px 0}
+.opts button{
+  appearance:none;cursor:pointer;text-align:left;background:var(--panel-2);border:1px solid var(--rule);
+  color:var(--ink);padding:11px 13px;font-family:inherit;font-size:14px;
+}
+.opts button:hover{border-color:var(--dim)}
+.opts button.right{border-color:var(--go);background:var(--go-w)}
+.opts button.wrong{border-color:var(--warn);opacity:.6}
+.quote{
+  border-left:3px solid var(--signal);padding:4px 0 4px 13px;margin:0 0 14px;
+  font-size:16.5px;line-height:1.45;font-style:italic;
+}
+.err{font-family:"JetBrains Mono",monospace;font-size:13px;font-variant-numeric:tabular-nums}
+.err.good{color:var(--go)}
+.err.off{color:var(--signal)}
 </style>
 
 <div class="app">
@@ -595,6 +627,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <div class="foot">
     <button class="back" data-go="parked" style="margin:0">Parking lot <span id="foot-parked"></span></button>
+    <button class="back" data-go="train" style="margin:0">Training</button>
     <button class="back" data-go="record" style="margin:0">The record</button>
   </div>
 
@@ -705,6 +738,37 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <button class="launch" id="launch" disabled>Start the clock</button>
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ TRAINING ============ -->
+<section class="screen" id="s-train" hidden>
+  <button class="back" id="train-back">&larr; back</button>
+  <h2 class="ask">Reps, not levels.</h2>
+  <p class="note" style="margin-bottom:18px">Brain-training games don't work. Working-memory games make you better at working-memory games &mdash; the transfer to real attention, symptoms or getting anything done collapses once the raters are blinded. Any app selling you a daily n-back to fix your ADHD is selling you the game. What holds up for adults is <b>skills practice</b> and <b>noticing practice</b>, so that's what these are. Four drills, two to four minutes each. No streak, no score, nothing to protect.</p>
+
+  <div id="train-menu">
+    <div class="stack">
+      <button class="big" data-drill="notice">
+        <span class="t">Notice and return</span>
+        <span class="d">You count the times you catch yourself drifting. The catching is the skill; staying is not the exercise and never was.</span>
+      </button>
+      <button class="big" data-drill="time">
+        <span class="t">Time check</span>
+        <span class="d">Guess when an interval is up with no clock. ADHD time estimation is measurably off, and it's the one thing here with a curve that actually moves.</span>
+      </button>
+      <button class="big" data-drill="shrink">
+        <span class="t">Shrink it</span>
+        <span class="d">A vague task, 45 seconds, produce one physical first move. Drills the reflex so you stop needing the app to do it.</span>
+      </button>
+      <button class="big" data-drill="thought">
+        <span class="t">Catch the thought</span>
+        <span class="d">Spot the trap in the self-talk, then rewrite it. Standard CBT, and the part with the real evidence base for adults.</span>
+      </button>
+    </div>
+    <div id="train-reps" style="margin-top:26px"></div>
+  </div>
+
+  <div id="train-run" hidden></div>
 </section>
 
 <!-- ============ SLEEP ============ -->
@@ -1127,6 +1191,7 @@ const state = {
   parked:   [],   // thoughts, worries, tasks
   wired:    [],   // implementation intentions
   nights:   [],   // landing sequences, not sleep — the app can't see sleep
+  training: null, // drill reps
   sleep:    null, // landing time + the sequence itself
   live:     null, // the run in progress, if any
   sound:    true,
@@ -1145,6 +1210,7 @@ function payload() {
     soundVol: state.soundVol,
     sleep:    state.sleep,
     nights:   state.nights || [],
+    training: state.training,
   };
 }
 
@@ -1157,6 +1223,7 @@ function adopt(d) {
   if (typeof d.soundVol === "number") { state.soundVol = d.soundVol; snd.vol = d.soundVol; }
   if (d.sleep && typeof d.sleep === "object") state.sleep = d.sleep;
   if (Array.isArray(d.nights)) state.nights = d.nights;
+  if (d.training && typeof d.training === "object") state.training = d.training;
   state.live = d.live && typeof d.live === "object" ? d.live : null;
   return true;
 }
@@ -1302,7 +1369,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "train", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1314,6 +1381,8 @@ function go(name) {
   if (name === "start")  renderStart();
   if (name === "play")   renderPlay();
   if (name === "now")    renderNow();
+  if (name === "train")  renderTrain();
+  if (name !== "train")  stopDrill();
   if (name === "sleep")  renderSleep();
   if (name === "land")   renderLand();
   if (name === "down")   renderDown();
@@ -1730,6 +1799,228 @@ let lastVia = "start";
 let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
+
+/* ---------- training ----------
+   Not brain training: working-memory games improve working-memory games
+   and stop there. These are the two things that hold up for adults —
+   skills rehearsal from the CBT-for-ADHD curriculum, and noticing
+   practice — counted honestly as reps rather than dressed up as levels. */
+
+const VAGUE = [
+  "sort out the flat", "deal with the emails", "start the assignment",
+  "get on top of money", "book the appointments", "fix my sleep",
+  "sort the car out", "reply to everyone", "do something about the wardrobe",
+  "get the paperwork together", "plan the trip", "tidy the desk properly",
+];
+
+const TRAPS = ["all-or-nothing", "labelling", "mind reading", "catastrophising", "should-statements", "discounting the positive"];
+const THOUGHTS = [
+  { t: "I've wasted the whole day. It's ruined now, may as well write it off.", trap: "all-or-nothing",
+    why: "A day isn't ruined or perfect. Four o'clock is still four o'clock, and the evening is real time you're about to throw away to protect a story about the morning." },
+  { t: "Everyone else manages this without making a whole thing of it. I'm just lazy.", trap: "labelling",
+    why: "\"Lazy\" is a verdict on a person, not a description of a problem. Executive dysfunction is a mechanism you can work around; laziness is an insult being used as a diagnosis, and it points at nothing you can act on." },
+  { t: "If I start it and don't finish it, that's worse than not starting at all.", trap: "all-or-nothing",
+    why: "Unfinished is a state, not a failure. Every finished thing spent most of its life unfinished." },
+  { t: "They've taken ages to reply. They're annoyed with me.", trap: "mind reading",
+    why: "One data point — a delay — and the rest is filled in. Delays have fifty causes and almost none of them are you." },
+  { t: "If I don't get this done tonight the whole thing falls apart.", trap: "catastrophising",
+    why: "Follow the chain out one link at a time and it usually stops at \"that would be annoying\", not at collapse." },
+  { t: "I should be able to just sit down and do it like a normal person.", trap: "should-statements",
+    why: "\"Should\" measures you against hardware you don't have. It adds shame, shame adds avoidance, and avoidance is the actual problem." },
+  { t: "Yeah I did it, but it was late and it was scrappy, so it doesn't really count.", trap: "discounting the positive",
+    why: "Late and scrappy is done. Everything after the \"but\" is doing the damage." },
+];
+
+function training() {
+  if (!state.training) state.training = { notice: 0, catches: 0, time: [], shrink: 0, thought: 0 };
+  if (!Array.isArray(state.training.time)) state.training.time = [];
+  return state.training;
+}
+
+let drillTimer = null;
+function stopDrill() { clearInterval(drillTimer); clearTimeout(drillTimer); drillTimer = null; }
+
+function renderTrain() {
+  stopDrill();
+  $("train-menu").hidden = false;
+  $("train-run").hidden = true;
+  $("train-run").innerHTML = "";
+
+  const t = training(), errs = t.time.map((x) => x.err);
+  let h = '<div class="sec"><h3>Reps</h3>' +
+    '<div class="tiles" style="margin-top:14px">' +
+    '<div class="tile"><span class="n good">' + t.catches + '</span><span class="k">Catches<em>times you noticed you\'d drifted</em></span></div>' +
+    '<div class="tile"><span class="n">' + t.time.length + '</span><span class="k">Time checks<em>' +
+      (errs.length >= 3 ? "median error " + Math.round(median(errs.map(Math.abs))) + "%" : "three needed before it means anything") + '</em></span></div>' +
+    '<div class="tile"><span class="n">' + t.shrink + '</span><span class="k">Shrinks<em>first moves produced under a clock</em></span></div>' +
+    '<div class="tile"><span class="n">' + t.thought + '</span><span class="k">Thoughts caught<em>traps spotted and rewritten</em></span></div>' +
+    "</div>";
+
+  if (errs.length >= 6) {
+    const early = errs.slice(0, Math.floor(errs.length / 2)).map(Math.abs);
+    const late  = errs.slice(-Math.floor(errs.length / 2)).map(Math.abs);
+    const a = median(early), b = median(late);
+    h += '<p class="note finding" style="margin-top:16px">Your time estimates were off by <b>' + Math.round(a) +
+      "%</b> across the first half and <b>" + Math.round(b) + "%</b> across the last. " +
+      (b < a - 3 ? "That's the curve moving, which is the one thing on this page that genuinely trains."
+       : b > a + 3 ? "No improvement yet. It usually takes twenty-odd reps spread over days rather than one sitting."
+       : "Flat so far. Worth spreading the reps across days — cramming them doesn't calibrate anything.") +
+      (median(errs) < -5 ? " You consistently call time <b>early</b> — things feel longer than they are, which is what makes starting feel expensive."
+       : median(errs) > 5 ? " You consistently call time <b>late</b> — things feel shorter than they are, which is where the lost hours go." : "") + "</p>";
+  }
+  h += "</div>";
+  $("train-reps").innerHTML = h;
+}
+
+/* Mid-drill, back means back to the drill list — never a dead end. */
+$("train-back").addEventListener("click", () => {
+  if (!$("train-run").hidden) { stopDrill(); renderTrain(); } else go("home");
+});
+
+$("train-menu").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-drill]");
+  if (!b) return;
+  $("train-menu").hidden = true;
+  $("train-run").hidden = false;
+  ({ notice: drillNotice, time: drillTime, shrink: drillShrink, thought: drillThought })[b.dataset.drill]();
+});
+
+function drillDone(html) {
+  save();
+  $("train-run").innerHTML += '<div class="drill">' + html +
+    '<div class="row" style="margin-top:12px"><button class="btn prime" data-again>Again</button>' +
+    '<button class="btn" data-back>Back to the drills</button></div></div>';
+}
+$("train-run").addEventListener("click", (e) => {
+  if (e.target.closest("[data-back]")) { stopDrill(); renderTrain(); return; }
+  if (e.target.closest("[data-again]")) { const d = $("train-run").dataset.kind; stopDrill(); $("train-run").innerHTML = ""; ({ notice: drillNotice, time: drillTime, shrink: drillShrink, thought: drillThought })[d](); }
+});
+
+/* --- 1. notice and return --- */
+function drillNotice() {
+  const T = 180;
+  $("train-run").dataset.kind = "notice";
+  $("train-run").innerHTML =
+    '<div class="drill"><span class="lab">Notice and return · three minutes</span>' +
+    '<p class="sub" style="margin:0 0 4px">Rest your attention on your breath. The moment you notice you\'ve gone somewhere else &mdash; and you will, constantly &mdash; hit the button and come back. ' +
+    "Wandering isn't the failure state here. It's the rep. A meditation app that makes you feel bad for drifting has the exercise upside down.</p>" +
+    '<p class="repcount" id="nt-n">0</p><span class="repunit" id="nt-lab">catches</span>' +
+    '<button class="bigtap" id="nt-tap">I caught it<small>tap every single time</small></button>' +
+    '<div class="nightbar"><i id="nt-bar"></i></div></div>';
+  let n = 0; const start = now();
+  $("nt-tap").addEventListener("click", () => {
+    n++; $("nt-n").textContent = n;
+    $("nt-lab").textContent = n === 1 ? "catch" : "catches";
+    tick();
+  });
+  drillTimer = setInterval(() => {
+    const e = (now() - start) / 1000;
+    $("nt-bar").style.width = clamp(e / T * 100, 0, 100) + "%";
+    if (e < T) return;
+    stopDrill(); chime();
+    const t = training(); t.notice++; t.catches += n;
+    $("nt-tap").disabled = true;
+    drillDone("<span class=\"lab\">Done</span><p style=\"margin:0\">You caught yourself <b>" + n + "</b> time" + (n === 1 ? "" : "s") +
+      ". That's " + n + " rep" + (n === 1 ? "" : "s") + " of the only move that matters &mdash; noticing you'd gone, and coming back without a fight about it. " +
+      (n >= 12 ? "A high count is a good session, not a bad one. It means you were watching."
+       : n <= 2 ? "A low count usually means you drifted and didn't notice, rather than that you stayed. Next time, expect to catch more."
+       : "That's a normal count. It doesn't go down with practice so much as it gets faster.") + "</p>");
+  }, 250);
+}
+
+/* --- 2. time check --- */
+function drillTime() {
+  const target = [30, 45, 60, 90][(Math.random() * 4) | 0];
+  $("train-run").dataset.kind = "time";
+  $("train-run").innerHTML =
+    '<div class="drill"><span class="lab">Time check</span>' +
+    '<p class="sub" style="margin:0 0 4px">No clock, no counting seconds out loud, no tapping a rhythm. Just sit with it and stop when it feels done. ' +
+    "Time estimation is measurably off in ADHD and it is the reason a twenty-minute job feels like an afternoon &mdash; but it responds to feedback, which is why this is here and an n-back isn't.</p>" +
+    '<p class="repcount" id="tc-big">' + target + '</p><span class="repunit">seconds — start, then stop when you think it\'s up</span>' +
+    '<button class="bigtap amber" id="tc-go">Start<small>the number disappears</small></button></div>';
+  $("tc-go").addEventListener("click", () => {
+    const start = now();
+    $("tc-big").textContent = "—";
+    $("tc-go").textContent = "Stop";
+    $("tc-go").innerHTML = 'Stop<small>when it feels like ' + target + ' seconds</small>';
+    $("tc-go").replaceWith($("tc-go").cloneNode(true));
+    $("tc-go").addEventListener("click", () => {
+      const actual = (now() - start) / 1000;
+      const err = Math.round((actual - target) / target * 100);
+      const t = training();
+      t.time.push({ target, actual: Math.round(actual * 10) / 10, err, at: now() });
+      t.time = t.time.slice(-200);
+      $("tc-big").textContent = actual.toFixed(1);
+      $("tc-go").disabled = true;
+      drillDone('<span class="lab">Result</span><p style="margin:0">You called <b>' + target + "s</b> at <b>" + actual.toFixed(1) + 's</b> — <span class="err ' +
+        (Math.abs(err) <= 10 ? "good" : "off") + '">' + (err > 0 ? "+" : "") + err + "%</span>, " +
+        (Math.abs(err) <= 10 ? "which is close." : err < 0 ? "stopping early — it felt longer than it was." : "running over — it felt shorter than it was.") +
+        " " + (err < -10 ? "That direction is the one that makes starting feel expensive: a job your body thinks takes an hour actually takes twenty minutes."
+             : err > 10 ? "That direction is where evenings disappear: half an hour of something reads as ten minutes."
+             : "Do a few across different days rather than back to back — repeating it in one sitting calibrates you to the sitting, not to time.") + "</p>");
+    });
+  });
+}
+
+/* --- 3. shrink it --- */
+function drillShrink() {
+  const own = state.parked.filter((p) => !p.doneAt && p.kind === "task").map((p) => p.text);
+  const pool = own.length && Math.random() < 0.5 ? own : VAGUE;
+  const task = pool[(Math.random() * pool.length) | 0];
+  $("train-run").dataset.kind = "shrink";
+  $("train-run").innerHTML =
+    '<div class="drill"><span class="lab">Shrink it · 45 seconds</span>' +
+    '<p class="quote">' + esc(task) + "</p>" +
+    '<p class="sub" style="margin:0 0 8px">One physical first move. Not a plan, not a list, not "think about". Something a body does, in under a minute, with no decisions in it.</p>' +
+    '<input class="field" id="sk-in" placeholder="the first move" autocomplete="off">' +
+    '<div class="nightbar" style="margin:12px 0"><i id="sk-bar"></i></div>' +
+    '<button class="btn prime wide" id="sk-go">Lock it in</button></div>';
+  setTimeout(() => $("sk-in").focus(), 60);
+  const start = now();
+  drillTimer = setInterval(() => {
+    const e = (now() - start) / 1000;
+    $("sk-bar").style.width = clamp(e / 45 * 100, 0, 100) + "%";
+    if (e >= 45) { stopDrill(); if ($("sk-go")) $("sk-go").click(); }
+  }, 200);
+  $("sk-in").addEventListener("keydown", (e) => { if (e.key === "Enter") $("sk-go").click(); });
+  $("sk-go").addEventListener("click", () => {
+    stopDrill();
+    const v = $("sk-in").value.trim();
+    $("sk-go").disabled = true;
+    training().shrink++;
+    drillDone('<span class="lab">Mark your own</span>' +
+      (v ? '<p class="quote" style="border-left-color:var(--go)">' + esc(v) + "</p>" : '<p class="sub" style="margin:0 0 8px">Nothing written. Running out of time is information: that task needs breaking twice, not once.</p>') +
+      '<p class="sub" style="margin:0">Three questions, honestly: is it something a <b>body</b> does? Is it under <b>sixty seconds</b>? Are there <b>no decisions</b> left in it? ' +
+      "Any no means it's still a plan wearing a move's clothes. The rubric is the thing you're memorising here &mdash; after twenty of these you run it without noticing.</p>");
+  });
+}
+
+/* --- 4. catch the thought --- */
+function drillThought() {
+  const q = THOUGHTS[(Math.random() * THOUGHTS.length) | 0];
+  const opts = [q.trap].concat(TRAPS.filter((x) => x !== q.trap).sort(() => Math.random() - 0.5).slice(0, 3)).sort(() => Math.random() - 0.5);
+  $("train-run").dataset.kind = "thought";
+  $("train-run").innerHTML =
+    '<div class="drill"><span class="lab">Catch the thought</span>' +
+    '<p class="quote">' + esc(q.t) + "</p>" +
+    '<p class="sub" style="margin:0 0 4px">Which trap is it? Getting the name right is most of the work &mdash; a thought you can label stops being a fact and starts being a sentence.</p>' +
+    '<div class="opts" id="th-opts">' + opts.map((o) => '<button data-opt="' + esc(o) + '">' + esc(o) + "</button>").join("") + "</div></div>";
+  $("th-opts").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-opt]");
+    if (!b) return;
+    $$("#th-opts button").forEach((x) => {
+      x.disabled = true;
+      if (x.dataset.opt === q.trap) x.classList.add("right");
+      else if (x === b) x.classList.add("wrong");
+    });
+    training().thought++;
+    drillDone('<span class="lab">' + (b.dataset.opt === q.trap ? "That's it" : "It's " + esc(q.trap)) + "</span>" +
+      '<p style="margin:0 0 12px">' + q.why + "</p>" +
+      '<span class="lab">Now rewrite it — true, not nice</span>' +
+      '<input class="field" id="th-re" placeholder="what would you say to someone else in this exact position?" autocomplete="off">' +
+      '<p class="sub" style="margin:8px 0 0;font-size:12.5px">The target isn\'t cheering yourself up. It\'s accuracy &mdash; the original was inaccurate, and the shame it produces is what turns a hard task into an avoided one.</p>');
+  });
+}
 
 /* ---------- sleep ----------
    ADHD melatonin onset runs genuinely late, so a bedtime is not the
