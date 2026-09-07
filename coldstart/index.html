@@ -1975,7 +1975,9 @@ $("work-back").addEventListener("click", () => {
 $("work-run").addEventListener("click", (e) => {
   if (e.target.closest("[data-brback]")) { stopWork(); toolBreak(); return; }
   const br = e.target.closest("[data-br]");
-  if (br) { stopWork(); ({ timer: brTimer, told: brTold, rsd: brRSD, grind: brGrind })[br.dataset.br](); return; }
+  if (br) { stopWork(); ({ timer: brTimer, told: brTold, rsd: brRSD, grind: brGrind, rot: brRotate })[br.dataset.br](); return; }
+  const gk = e.target.closest("[data-gk]");
+  if (gk) { grindDeck(gk.dataset.gk); return; }
   const g = e.target.closest("[data-g]");
   if (g) brBack('<span class="lab">For the next hour</span><p class="quote" style="border-left-color:var(--go)">' + esc(g.dataset.g) + "</p>" +
     '<p class="sub" style="margin:0">Nobody needs to know you\'re doing it. That\'s rather the point.</p>');
@@ -1997,7 +1999,10 @@ $("work-menu").addEventListener("click", (e) => {
 
 const KIT_DEFAULT = ["Badge / lanyard", "Right uniform", "Keys", "Phone charged", "Water", "Food for break", "Meds if you take them"];
 
-const GRIND = [
+/* Boredom decks split by who owns the pace. Racing only works when the
+   output is yours; on a machine- or team-paced line it isn't, so the
+   challenge has to sit on something you actually control. */
+const GRIND_MINE = [
   "Count something nobody asked you to count. How many of one thing come past this hour.",
   "Beat your own last hour. Actually count it, or it doesn't work.",
   "Do it in a deliberately different order than usual.",
@@ -2008,6 +2013,26 @@ const GRIND = [
   "Teach it in your head — explain every step to an imaginary new starter.",
   "Guess the time before you check it. See how far off you are.",
 ];
+const GRIND_LINE = [
+  "Zero double-handling. Nothing gets touched twice for the next half hour.",
+  "Motion economy: pick one movement you make all day and find a way to do it with one less reach. Then keep it.",
+  "How few movements can one item take from arriving to gone? Get that number down.",
+  "Clean streak: how long can you go with nothing dropped, sent back or redone. That's yours. The volume isn't.",
+  "Read ahead — before the next lot lands, call what's on it. Keep score in your head.",
+  "Set up the person after you. Make the hand-off cleaner than the one you got.",
+  "Work to a beat. Pick a tempo and hold it. Steady beats fast on volume, and it's the one pace nobody can take off you.",
+  "Both hands. Find something you do one-handed out of habit and do it two-handed.",
+  "Silent teaching: narrate it like you're training a new starter. Notice which bits are actually hard.",
+];
+const GRIND_WAIT = [
+  "Pre-position everything for the next burst so it costs less when it lands.",
+  "Reset your station to how you'd want to find it.",
+  "Guess how long until the next lot arrives, then see if you were right.",
+  "Stretch whatever's aching. You're standing on it for the rest of the shift.",
+  "Learn the name of one person you don't know yet.",
+  "Do the bit nobody claims. It buys goodwill you can spend later.",
+];
+const FLAT_CHIPS = [10, 20, 30, 45, 60];
 
 function shift() {
   if (!state.shift) state.shift = { start: "", journey: 25, ready: 20, kit: KIT_DEFAULT.slice() };
@@ -2093,7 +2118,8 @@ function toolBreak() {
       '<button class="big" data-br="timer"><span class="t">Break timer</span><span class="d">Losing track on a break is a written warning, not a mistake. It tells you the time you\'re due back and nags before it.</span></button>' +
       '<button class="big" data-br="told"><span class="t">Dump what I was told</span><span class="d">Instructions arrive once, verbally, while your hands are full. Get it down now — asking twice is what makes people think you\'re not trying.</span></button>' +
       '<button class="big go" data-br="rsd"><span class="t">I got told off / a customer was vile</span><span class="d">Ninety seconds so it doesn\'t eat the rest of the shift and then the evening.</span></button>' +
-      '<button class="big go" data-br="grind"><span class="t">I\'m bored out of my mind</span><span class="d">The task can\'t change. How you do it can, and that\'s the whole lever.</span></button>' +
+      '<button class="big go" data-br="grind"><span class="t">I\'m bored out of my mind</span><span class="d">The task can\'t change. What you do inside it can — but only if the challenge sits on something you actually control.</span></button>' +
+      '<button class="big" data-br="rot"><span class="t">Which station kills me fastest</span><span class="d">If you rotate positions, they don\'t all go flat at the same rate. Log it a few times and you\'ll know which to take while you\'re fresh.</span></button>' +
     "</div></div>";
 }
 
@@ -2180,17 +2206,99 @@ function brRSD() {
 }
 
 function brGrind() {
-  const d = GRIND.slice();
-  for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [d[i], d[j]] = [d[j], d[i]]; }
   $("work-run").innerHTML =
     '<div class="drill"><span class="lab">Make it a game</span>' +
-    '<p class="sub" style="margin:0 0 10px">Boredom on a repetitive job isn\'t weakness, it\'s a task with no feedback and no challenge in it &mdash; ' +
-    "the two things attention needs to stay. You can't change the work, so you change the rules you're doing it under. " +
-    "Pick one for the next hour.</p>" +
+    '<p class="sub" style="margin:0 0 10px">Boredom on repetitive work isn\'t weakness &mdash; it\'s a task with no feedback and no challenge in it, which are the two things attention needs to stay put. ' +
+    "But before picking a game: <b>who owns the pace right now?</b> That changes which games work at all.</p>" +
+    '<div class="stack">' +
+      '<button class="big" data-gk="mine"><span class="t">Mine.</span><span class="d">If I go faster, more gets done. Stocking, cleaning, prep, paperwork.</span></button>' +
+      '<button class="big go" data-gk="line"><span class="t">The line\'s, or other people\'s.</span><span class="d">A machine sets the speed, or it depends on whoever\'s upstream. Going faster changes nothing.</span></button>' +
+      '<button class="big go" data-gk="wait"><span class="t">Nothing\'s coming.</span><span class="d">Dead time. Waiting on carts, deliveries, customers, the next lot.</span></button>' +
+    "</div></div>";
+}
+
+function grindDeck(kind) {
+  const deck = kind === "mine" ? GRIND_MINE : kind === "line" ? GRIND_LINE : GRIND_WAIT;
+  const d = deck.slice();
+  for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [d[i], d[j]] = [d[j], d[i]]; }
+  const intro = kind === "line"
+    ? '<p class="note finding" style="margin:0 0 12px">Then racing the clock is the wrong game, and it\'s why it stopped working. ' +
+      "You can empty your station and the backlog still grows, because the carts came down late and the person before you is slower than you. " +
+      "<b>Racing a number you don't control is how you end up resentful and still bored.</b> Everything below is something that stays yours no matter how the line behaves.</p>" +
+      '<p class="sub" style="margin:0 0 12px;font-size:12.5px">And the one genuinely interesting thing about a line: its speed is set entirely by its slowest point, never by its fastest. ' +
+      "Your station running hot changes the total by nothing. Working out where the jam actually is &mdash; and feeding that spot instead &mdash; is the only move that changes the number, " +
+      "it's a real puzzle rather than a fake one, and it's the thing supervisors notice.</p>"
+    : kind === "wait"
+    ? '<p class="sub" style="margin:0 0 12px">Dead time is worse than hard work &mdash; nothing to push against, and the clock stops moving. Fill it on purpose before it fills itself.</p>'
+    : '<p class="sub" style="margin:0 0 12px">Your pace, your output. Racing works here, so race.</p>';
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">' + (kind === "line" ? "Things that stay yours" : kind === "wait" ? "Dead time" : "Your pace") + "</span>" + intro +
     d.slice(0, 4).map((x) => '<button class="card" data-g="' + esc(x) + '">' + esc(x) + "</button>").join("") +
-    '<div class="row" style="margin-top:10px"><button class="btn ghost" id="gr-more">Different ones</button>' +
+    '<div class="row" style="margin-top:10px"><button class="btn ghost" data-gk="' + kind + '">Different ones</button>' +
     '<button class="btn" data-brback>Back</button></div></div>';
-  $("gr-more").addEventListener("click", brGrind);
+}
+
+/* --- which station goes flat fastest --- */
+function brRotate() {
+  const sh = shift();
+  if (!Array.isArray(sh.stations)) sh.stations = [];
+  if (!Array.isArray(sh.flats)) sh.flats = [];
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">Rotation log</span>' +
+    '<p class="sub" style="margin:0 0 10px">Rotating between positions is the built-in novelty supply, but they don\'t all drain at the same rate &mdash; ' +
+    "and knowing which one dies fastest tells you which to take while you're fresh and which to ask to move off sooner. " +
+    "Log it on your break, roughly. Rough is enough.</p>" +
+    '<div class="chips" id="rt-chips" style="margin-bottom:8px"></div>' +
+    '<div class="row" style="margin-bottom:12px"><input class="field" id="rt-add" placeholder="add a position" style="flex:1;min-width:130px"><button class="btn" id="rt-add-b">Add</button></div>' +
+    '<div id="rt-step"></div><div id="rt-out" style="margin-top:16px"></div></div>';
+
+  const paint = () => {
+    $("rt-chips").innerHTML = sh.stations.map((t, i) =>
+      '<button class="chip" data-st="' + esc(t) + '">' + esc(t) + '<span data-stdel="' + i + '" style="color:var(--dim);margin-left:7px">&times;</span></button>').join("")
+      || '<span class="sub" style="font-size:12.5px">No positions yet — add them below. e.g. stripping, feeding, take-off.</span>';
+    paintOut();
+  };
+  const paintOut = () => {
+    const byS = new Map();
+    sh.flats.forEach((f) => { if (!byS.has(f.station)) byS.set(f.station, []); byS.get(f.station).push(f.sec); });
+    const rows = Array.from(byS.entries()).filter(([, v]) => v.length >= 2)
+      .map(([k, v]) => ({ k, n: v.length, m: median(v) })).sort((a, b) => a.m - b.m);
+    if (!rows.length) {
+      $("rt-out").innerHTML = sh.flats.length
+        ? '<p class="sub" style="margin:0;font-size:12.5px">' + sh.flats.length + " logged. Two per position before it says anything.</p>" : "";
+      return;
+    }
+    $("rt-out").innerHTML = '<div class="sec"><h3>How fast each one drains</h3>' +
+      rows.map((r) => '<div class="item"><span class="txt">' + esc(r.k) + '<span class="meta">flat at ~' + mins(r.m) + " · " + r.n + " logs</span></span></div>").join("") +
+      (rows.length >= 2
+        ? '<p class="note finding" style="margin-top:14px"><b>' + esc(rows[0].k) + "</b> drains fastest &mdash; about " + mins(rows[0].m) +
+          " before it goes flat, against " + mins(rows[rows.length - 1].m) + " on <b>" + esc(rows[rows.length - 1].k) + "</b>. " +
+          "Take " + esc(rows[0].k) + " early while you've still got something in the tank, and it's the reasonable one to ask to rotate off first. " +
+          "That's not a preference now, it's a number.</p>"
+        : "") + "</div>";
+  };
+  $("rt-chips").addEventListener("click", (e) => {
+    const del = e.target.closest("[data-stdel]");
+    if (del) { sh.stations.splice(Number(del.dataset.stdel), 1); save(); paint(); return; }
+    const b = e.target.closest("[data-st]");
+    if (!b) return;
+    const st = b.dataset.st;
+    $("rt-step").innerHTML = '<span class="lab" style="display:block;margin-bottom:7px">Roughly how long on ' + esc(st) + " before it went flat?</span>" +
+      '<div class="chips">' + FLAT_CHIPS.map((m) => '<button class="chip" data-flat="' + m + '">' + m + (m === 60 ? "+ min" : " min") + "</button>").join("") + "</div>";
+    $("rt-step").querySelectorAll("[data-flat]").forEach((c) => c.addEventListener("click", () => {
+      sh.flats.push({ station: st, sec: Number(c.dataset.flat) * 60, at: now() });
+      sh.flats = sh.flats.slice(-200); save();
+      $("rt-step").innerHTML = '<p class="sub" style="margin:0;font-size:12.5px">Logged: ' + esc(st) + ", " + c.dataset.flat + " minutes.</p>";
+      paintOut();
+    }));
+  });
+  $("rt-add-b").addEventListener("click", () => {
+    const v = $("rt-add").value.trim();
+    if (!v) return;
+    sh.stations.push(v); save(); $("rt-add").value = ""; paint();
+  });
+  $("rt-add").addEventListener("keydown", (e) => { if (e.key === "Enter") $("rt-add-b").click(); });
+  paint();
 }
 
 /* --- after the shift --- */
