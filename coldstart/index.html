@@ -364,6 +364,11 @@ details.why summary:hover{color:var(--ink)}
   font-variant-numeric:tabular-nums;margin:0;color:var(--go);
 }
 .count.flat{color:var(--ink)}
+.surface.nocount .count,.surface.nocount #run-unit,.surface.nocount #tally,
+.surface.nocount .work,.surface.nocount #run-undo{display:none}
+.surface.nocount .clock-sm{font-size:clamp(58px,17vw,96px)}
+.surface.nocount .board .side{text-align:left}
+.surface.nocount .board{justify-content:flex-start}
 .unitlab{
   display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.15em;
   text-transform:uppercase;color:var(--dim);margin-top:7px;
@@ -500,6 +505,10 @@ input[type="range"]{accent-color:var(--signal);width:92px}
       <span class="t">Started, then drifted.</span>
       <span class="d">You were on it forty seconds ago and you have no idea where you went.</span>
     </button>
+    <button class="big go" data-go="play">
+      <span class="t">A game keeps going flat.</span>
+      <span class="d">You want to enjoy it. It holds you for a while, then the interest just drains out.</span>
+    </button>
   </div>
 
   <div id="wired-slot"></div>
@@ -514,6 +523,10 @@ input[type="range"]{accent-color:var(--signal);width:92px}
     <p class="note" style="margin-top:14px">Streaks and coins stop working in about four days, because an abstract number going up is not a reward an ADHD dopamine system reliably answers to — and once you break the streak, the app becomes a thing you're avoiding too. The bottleneck was never <b>knowing</b> or <b>wanting</b>. It's the gap between deciding and moving. So this only ever works on that gap.</p>
     <p class="note">On hyperfocus specifically: it can't be summoned by wanting it, and any app that says otherwise is selling you something. It's a state with entry conditions &mdash; a challenge tuned to a narrow band, feedback fast enough to feel, a visible finish line, and no available exits. What you <em>can</em> do is build those conditions on purpose instead of waiting for a task to happen to have them. That's what the score, the dial and the sound floor are for.</p>
     <dl>
+      <dt>Games: stop before it goes flat, not after</dt>
+      <dd>The same theory runs backwards for something you already want to do. A game arrives holding you and then drains, in three specific ways: you consume its novelty faster than it produces it, your skill climbs past its challenge curve, and eventually it stops handing you goals &mdash; leaving you to generate your own, which is the exact function that's impaired. So Play mode makes you bring a goal and a self-imposed rule, and books the session to end <em>before</em> your measured flat point. Ending mid-thing leaves an open loop that pulls you back; playing it into the ground is what turns a game you loved into one you can't open.</dd>
+      <dd><cite>Challenge runs, no-hit runs and nuzlockes are this technique, invented by players. Zeigarnik again for the stopping rule.</cite></dd>
+
       <dt>Give the task a live score</dt>
       <dd>Games hand you feedback every second; a report hands you feedback in three days, which is why one holds you and the other doesn't. Counting a real unit of the work, with a rate and a pace line, manufactures the loop the task is missing. This is not points for chores &mdash; the number counts the work itself and can't be farmed.</dd>
       <dd><cite>Flow: immediate feedback and a clear proximal goal.</cite></dd>
@@ -612,6 +625,48 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 
   <button class="launch" id="launch" disabled>Start the clock</button>
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ PLAY ============ -->
+<section class="screen" id="s-play" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Give it something to be about.</h2>
+  <p class="sub">A game stops holding you when it runs out of goals it hands you and the novelty is spent &mdash; then staying interested becomes your job, which is the one thing that's hard. So you bring the goal and the rule, and you stop before it goes flat rather than after.</p>
+
+  <div class="blk">
+    <span class="lab">What are you playing</span>
+    <input class="field" id="game-in" placeholder="the game" autocomplete="off">
+    <div class="chips" id="game-chips" style="margin-top:7px"></div>
+    <p class="sub" id="game-hist" style="margin:8px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <div class="blk">
+    <span class="lab">One thing this session is for</span>
+    <p class="sub" style="margin:0 0 7px;font-size:12.5px">Nameable and finishable tonight. "Play some Elden Ring" is not a goal and your brain knows it.</p>
+    <input class="field" id="goal-in" placeholder="e.g. get to the next site of grace without dying" autocomplete="off">
+    <div class="chips" id="goal-chips" style="margin-top:7px"></div>
+  </div>
+
+  <div class="blk">
+    <span class="lab">A rule you're imposing on yourself</span>
+    <p class="sub" style="margin:0 0 7px;font-size:12.5px">This is the actual fix. When a game gets easy the challenge drops out of the band and interest dies &mdash; so you put the difficulty back by hand. Challenge runs, no-hit runs, nuzlockes: this is how people keep games alive for hundreds of hours.</p>
+    <input class="field" id="rule-in" placeholder="e.g. melee only, no healing items" autocomplete="off">
+    <div class="chips" id="rule-chips" style="margin-top:7px"></div>
+  </div>
+
+  <div class="blk">
+    <span class="lab">Stop before it goes flat</span>
+    <div class="rwpick" id="playpick">
+      <button data-min="30" aria-pressed="false"><span class="m">30</span><span class="u">min</span></button>
+      <button data-min="45" aria-pressed="true"><span class="m">45</span><span class="u">min</span></button>
+      <button data-min="60" aria-pressed="false"><span class="m">60</span><span class="u">min</span></button>
+      <button data-min="90" aria-pressed="false"><span class="m">90</span><span class="u">min</span></button>
+    </div>
+    <p class="sub" id="play-hint" style="margin:8px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <button class="launch" id="play-launch" disabled>Start playing</button>
+  <p class="sub" style="margin:10px 0 0;font-size:12.5px">The counterintuitive bit: stop while it's still good, mid-thing, with something unfinished. An open loop pulls you back tomorrow. Play until you're bored and the game feels dead the next time you look at it &mdash; that's how a game you loved becomes one you can't touch.</p>
 </section>
 
 <!-- ============ OFFLOAD ============ -->
@@ -768,11 +823,7 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 
   <div id="expired" hidden style="margin-top:18px">
     <p class="note finding" id="expired-note"></p>
-    <div class="row">
-      <button class="btn prime" data-add="5">Keep going +5</button>
-      <button class="btn prime" data-add="12">+12</button>
-      <button class="btn" id="wrap">Wrap it up</button>
-    </div>
+    <div class="row" id="expired-row"></div>
   </div>
 
   <div class="sndrow">
@@ -1005,7 +1056,7 @@ function chime() {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1015,6 +1066,7 @@ function go(name) {
   window.scrollTo(0, 0);
   if (name === "home")   renderHome();
   if (name === "start")  renderStart();
+  if (name === "play")   renderPlay();
   if (name === "parked") renderParked();
   if (name === "record") renderRecord();
   if (name === "run")    { paintRun(); setTimeout(() => $("park-in").focus(), 60); }
@@ -1255,8 +1307,9 @@ function suggestMoves() {
 
 function recentTasks() {
   const seen = [], out = [];
-  for (let i = state.sessions.length - 1; i >= 0 && out.length < 3; i--) {
-    const t = state.sessions[i].task;
+  const ws = state.sessions.filter((x) => x.mode !== "play");
+  for (let i = ws.length - 1; i >= 0 && out.length < 3; i--) {
+    const t = ws[i].task;
     if (t && seen.indexOf(t.toLowerCase()) < 0) { seen.push(t.toLowerCase()); out.push(t); }
   }
   state.parked.filter((p) => !p.doneAt && p.kind === "task").slice(-3).forEach((p) => {
@@ -1287,7 +1340,7 @@ function renderStart() {
 }
 
 function runwayHint() {
-  const g = groups(state.sessions.filter((s) => s.plannedMin), (s) => s.plannedMin, 3);
+  const g = groups(state.sessions.filter((s) => s.mode !== "play" && s.plannedMin), (s) => s.plannedMin, 3);
   if (g.length < 2) return "Twelve is the default because it's short enough that starting doesn't need a decision.";
   const best = g[0], worst = g[g.length - 1];
   if (best.rate - worst.rate < 0.2) return "Your record doesn't favour any length yet — they all land about the same.";
@@ -1419,6 +1472,185 @@ let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
 
+/* ---------- play: keeping a game alive ----------
+   Work mode manufactures engagement that isn't there. Play mode is the
+   opposite problem: it arrives on its own and then drains, so the job is
+   to replace the novelty the game has stopped supplying and to get out
+   before the session turns flat. */
+
+const PLAY_RULES = [
+  "One life. If you die, the session is over.",
+  "No fast travel. Walk everywhere.",
+  "No guides, no wiki, no map markers. Work it out.",
+  "Difficulty up one notch, just for tonight.",
+  "Play the build or class you always refuse to play.",
+  "Worst weapon only. Never upgrade it.",
+  "No menus mid-fight. Whatever's equipped is what you've got.",
+  "Spend nothing. Bank every resource.",
+  "HUD off.",
+  "Commentate out loud the whole way through.",
+  "Avoid every fight you're allowed to avoid.",
+  "Your character never retreats. Ever.",
+];
+const PLAY_GOALS = [
+  "Reach somewhere on the map you have never been.",
+  "Beat your own best at one specific thing.",
+  "Do the in-game thing you've been putting off for weeks.",
+  "Use three mechanics you have never touched.",
+  "Get one screenshot worth keeping.",
+  "Learn one system well enough to explain it to someone.",
+  "Finish the quest you abandoned and can't remember the end of.",
+];
+const PLAY_NOVEL = [
+  "Change the rule right now, mid-session. Don't wait for a good moment.",
+  "Switch to a build, class or loadout you're actively bad at.",
+  "Difficulty up one notch, this second.",
+  "Set a timer: next section in under ten minutes.",
+  "Turn the HUD off, or the music off, or both.",
+  "Ignore the objective and go somewhere you've never been.",
+  "Bring a person in — voice chat, or someone in the room.",
+  "Stop here, on a high. Flat means the goal is finished, not that the game is dead.",
+];
+
+let playMin = 45;
+
+function playSessions(game) {
+  return state.sessions.filter((x) => x.mode === "play" && (!game || x.task.toLowerCase() === game.toLowerCase()));
+}
+function timeToFlat(game) {
+  const f = playSessions(game).filter((x) => x.flatAtSec > 0).map((x) => x.flatAtSec);
+  return f.length >= 2 ? median(f) : null;
+}
+function recentGames() {
+  const seen = [], out = [];
+  const ps = playSessions();
+  for (let i = ps.length - 1; i >= 0 && out.length < 5; i--) {
+    const t = ps[i].task;
+    if (t && seen.indexOf(t.toLowerCase()) < 0) { seen.push(t.toLowerCase()); out.push(t); }
+  }
+  return out;
+}
+
+function deal(deck, into, kind) {
+  const d = deck.slice();
+  for (let i = d.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [d[i], d[j]] = [d[j], d[i]]; }
+  let html = d.slice(0, 3).map((x) => '<button class="chip" data-fill="' + esc(x) + '">' + esc(x) + "</button>").join("");
+  html += '<button class="chip q" data-roll="' + kind + '">roll again &#8635;</button>';
+  if (sample) html += '<button class="chip q" data-ask="' + kind + '">for this game &rarr;</button>';
+  $(into).innerHTML = html;
+}
+
+function renderPlay() {
+  $("game-chips").innerHTML = recentGames()
+    .map((g) => '<button class="chip q" data-game="' + esc(g) + '">' + esc(g) + "</button>").join("");
+  deal(PLAY_GOALS, "goal-chips", "goal");
+  deal(PLAY_RULES, "rule-chips", "rule");
+  paintGameHist();
+  $$("#playpick button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.min) === playMin)));
+  refreshPlayLaunch();
+}
+
+function paintGameHist() {
+  const g = $("game-in").value.trim();
+  const flat = timeToFlat(g);
+  const runs = playSessions(g);
+  const withRule = runs.filter((x) => x.rule && x.flatAtSec > 0);
+  const noRule   = runs.filter((x) => !x.rule && x.flatAtSec > 0);
+
+  let t = "";
+  if (flat) {
+    const suggest = Math.max(15, Math.round(flat * 0.75 / 60 / 5) * 5);
+    t = g + " goes flat for you at about " + mins(flat) + ", across " + runs.filter((x) => x.flatAtSec > 0).length +
+        " sessions. Stop around " + suggest + " minutes and you'll never meet that wall.";
+    if (withRule.length >= 2 && noRule.length >= 2) {
+      const a = median(withRule.map((x) => x.flatAtSec)), b = median(noRule.map((x) => x.flatAtSec));
+      if (a > b + 300) t += " With a self-imposed rule it holds for " + mins(a) + "; without one, " + mins(b) + ".";
+    }
+    playMin = suggest;
+  } else if (runs.length) {
+    t = runs.length + " session" + (runs.length === 1 ? "" : "s") + " logged on this. Mark the moment it goes flat a couple of times and it can tell you where your wall is.";
+  } else {
+    t = "Nothing logged yet. Mark the moment it goes flat and it starts learning where your wall sits for this game specifically.";
+  }
+  $("game-hist").textContent = t;
+  $("play-hint").textContent = flat
+    ? "Suggested from your own record: end it before " + mins(timeToFlat(g)) + ", not at it."
+    : "Forty-five is a starting guess. Once it knows your wall for this game it'll pick the number for you.";
+  $$("#playpick button").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.min) === playMin)));
+}
+
+function refreshPlayLaunch() {
+  const ok = $("game-in").value.trim().length > 0 && $("goal-in").value.trim().length > 0;
+  $("play-launch").disabled = !ok;
+  $("play-launch").textContent = !$("game-in").value.trim() ? "Name the game"
+    : !$("goal-in").value.trim() ? "Give it a goal first" : "Start playing";
+}
+
+$("game-in").addEventListener("input", () => { paintGameHist(); refreshPlayLaunch(); });
+$("goal-in").addEventListener("input", refreshPlayLaunch);
+$("game-chips").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-game]");
+  if (!b) return;
+  $("game-in").value = b.dataset.game; paintGameHist(); refreshPlayLaunch();
+});
+$("playpick").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-min]");
+  if (!b) return;
+  playMin = Number(b.dataset.min);
+  $$("#playpick button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+});
+
+async function fillDeck(kind, host) {
+  const target = kind === "goal" ? "goal-in" : "rule-in";
+  const deck   = kind === "goal" ? PLAY_GOALS : PLAY_RULES;
+  const into   = kind === "goal" ? "goal-chips" : "rule-chips";
+  if (host.dataset.fill !== undefined) { $(target).value = host.dataset.fill; refreshPlayLaunch(); return; }
+  if (host.dataset.roll !== undefined) { deal(deck, into, kind); return; }
+
+  const game = $("game-in").value.trim();
+  if (!game) { host.textContent = "name the game first"; return; }
+  host.textContent = "thinking…"; host.disabled = true;
+  try {
+    const r = await sample.json(
+      'Game: "' + game + '". A player with ADHD knows this game well and is bored of it. Give exactly 3 ' +
+      (kind === "goal"
+        ? 'session goals: specific, nameable objectives achievable in under an hour, referencing real content, systems or places in this game.'
+        : 'self-imposed challenge rules of the kind experienced players use to keep a game alive — restrictions, handicaps or style constraints that raise the difficulty, referencing this game\'s real mechanics.') +
+      ' Under 12 words each. No preamble. Return JSON only: {"items":["...","...","..."]}',
+      { modelTier: "quick", cache: true });
+    const items = (r && Array.isArray(r.items) ? r.items : []).slice(0, 3);
+    if (items.length)
+      $(into).innerHTML = items.map((x) => '<button class="chip" data-fill="' + esc(x) + '">' + esc(x) + "</button>").join("") +
+        '<button class="chip q" data-roll="' + kind + '">generic ones &#8635;</button>';
+    else { host.textContent = "nothing came back"; host.disabled = false; }
+  } catch (err) {
+    host.textContent = (err && err.code === "rate_limited") ? "rate limited" : "couldn't reach it";
+    host.disabled = false;
+  }
+}
+$("goal-chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) fillDeck("goal", b); });
+$("rule-chips").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) fillDeck("rule", b); });
+
+$("play-launch").addEventListener("click", () => {
+  const game = $("game-in").value.trim(), goal = $("goal-in").value.trim();
+  if (!game || !goal) return;
+  armAudio();
+  const rule = $("rule-in").value.trim();
+  state.live = {
+    id: uid(), mode: "play",
+    task: game, move: goal, moveDone: false,
+    rule, constraints: rule ? [rule] : [],
+    unit: "", target: null, count: 0,
+    inAt: null, flatAt: null,
+    tollSec: timeToFlat(game) || 0,
+    pre: [],
+    plannedMin: playMin, plannedSec: playMin * 60, addedSec: 0,
+    startedAt: now(), via: "play", parked: 0, chimed: false,
+  };
+  save();
+  go("run");
+});
+
 function median(a) {
   if (!a.length) return 0;
   const v = a.slice().sort((x, y) => x - y), h = Math.floor(v.length / 2);
@@ -1428,7 +1660,7 @@ function median(a) {
 /* How long it actually takes THIS person to get in, from their own taps —
    not a rule of thumb. Falls back to null until there's enough to mean it. */
 function typicalTimeToIn() {
-  const ins = state.sessions.filter((x) => x.timeToInSec > 0).map((x) => x.timeToInSec);
+  const ins = state.sessions.filter((x) => x.mode !== "play" && x.timeToInSec > 0).map((x) => x.timeToInSec);
   return ins.length >= 3 ? median(ins) : null;
 }
 
@@ -1436,19 +1668,26 @@ function paintRun() {
   const L = state.live;
   if (!L) { if (screen === "run") go("home"); return; }
 
+  const isPlay = L.mode === "play";
+  $("s-run").classList.toggle("nocount", !L.unit);
   $("run-task").textContent = L.task;
 
   const bar = $("run-movebar");
   if (!L.move) bar.hidden = true;
   else {
     bar.hidden = false;
+    bar.querySelector(".mv b").textContent = isPlay ? "This session is for" : "Start here";
     $("run-move").textContent = L.move;
     bar.classList.toggle("done", !!L.moveDone);
-    $("move-done").textContent = L.moveDone ? "Done" : "Did it";
+    $("move-done").textContent = L.moveDone ? "Done" : (isPlay ? "Got it" : "Did it");
     $("move-done").disabled = !!L.moveDone;
   }
 
   $("run-rules").innerHTML = (L.constraints || []).map((c) => '<span class="rule">' + esc(c) + "</span>").join("");
+  $("run-dial").textContent = isPlay ? "Change something" : "This isn't working";
+  $("run-done").textContent = isPlay ? "Stop on a high" : "Finished";
+  $("run-stop").textContent = isPlay ? "Quit, it's flat" : "Stop";
+  $("run-drift").hidden = isPlay;
 
   const total   = L.plannedSec + L.addedSec;
   const elapsed = (now() - L.startedAt) / 1000;
@@ -1483,11 +1722,13 @@ function paintRun() {
   const tickN = total / 60 <= 15 ? Math.max(1, Math.round(total / 60)) : Math.round(total / 300);
   $("rw").style.setProperty("--tick", (100 / tickN) + "%");
 
-  const showToll = !L.inAt && L.tollSec < total;
+  const showToll = L.tollSec > 0 && L.tollSec < total && !(isPlay ? L.flatAt : L.inAt);
   $("toll").hidden = !showToll;
   if (showToll) {
     $("toll").style.left = clamp(L.tollSec / total * 100, 4, 96) + "%";
-    $("toll-lab").textContent = (typicalTimeToIn() ? "your usual in · " : "the toll · ") + Math.round(L.tollSec / 60) + "m";
+    $("toll-lab").textContent = isPlay
+      ? "usually flat · " + Math.round(L.tollSec / 60) + "m"
+      : (typicalTimeToIn() ? "your usual in · " : "the toll · ") + Math.round(L.tollSec / 60) + "m";
   }
 
   if (rem > 0) {
@@ -1505,7 +1746,17 @@ function paintRun() {
     $("rw-fill").style.width = "100%";
     if (!L.chimed) {
       L.chimed = true; chime(); save();
-      $("expired-note").innerHTML = L.inAt
+      $("expired-row").innerHTML = isPlay
+        ? '<button class="btn prime" data-wrap>Stop while it\'s good</button>' +
+          '<button class="btn" data-add="10">+10, still in the good part</button>'
+        : '<button class="btn prime" data-add="5">Keep going +5</button>' +
+          '<button class="btn prime" data-add="12">+12</button>' +
+          '<button class="btn" data-wrap>Wrap it up</button>';
+      $("expired-note").innerHTML = isPlay
+        ? (L.flatAt
+            ? "It already went flat, so there's nothing here to protect. Stop, and change the rule before the next session rather than during this one."
+            : "<b>Stop now, mid-thing.</b> It's still good, which is exactly why this is the moment &mdash; an unfinished session pulls you back tomorrow, and a session you played into the ground makes the game feel dead next time you look at it. Leaving on a high is the whole technique.")
+        : L.inAt
         ? "You are <b>in</b>, and the runway just ran out. Stopping now is the expensive move &mdash; this state took " +
           mins((L.inAt - L.startedAt) / 1000) + " to reach and it will not come back on demand. Extend."
         : "Runway's up and you owe it nothing else. But you never marked getting in, which usually means you stopped " +
@@ -1520,6 +1771,26 @@ function paintRun() {
 function paintIn(elapsed) {
   const L = state.live;
   const slot = $("in-slot");
+
+  if (L.mode === "play") {
+    if (L.flatAt) {
+      const at = (L.flatAt - L.startedAt) / 1000;
+      slot.innerHTML = '<div class="instamp"><b>Went flat at ' + mmss(at) + "</b>" +
+        "Logged. Flat means the goal is finished, not that the game is finished &mdash; that's the reading almost " +
+        "everyone gets wrong and it's why games you loved end up uninstalled. Change the rule now, or stop here.</div>";
+      return;
+    }
+    slot.innerHTML = '<button class="inbtn" id="im-flat"><span class="t">It just went flat</span>' +
+      '<span class="d">The moment the interest drains out. Tap it then, not twenty minutes later &mdash; ' +
+      "it's how the app learns where your wall is in this specific game.</span></button>";
+    $("im-flat").addEventListener("click", () => {
+      state.live.flatAt = now(); save(); paintRun();
+      openDial();
+      flashPark("Marked. Don't quit yet — change something first.");
+    });
+    return;
+  }
+
   if (L.inAt) {
     const at = (L.inAt - L.startedAt) / 1000;
     slot.innerHTML = '<div class="instamp"><b>In &mdash; crossed at ' + mmss(at) + '</b>' +
@@ -1582,21 +1853,32 @@ function pick3(deck) {
   return d.slice(0, 3);
 }
 
-$("run-dial").addEventListener("click", () => {
+function openDial() {
+  if (state.live && state.live.mode === "play") {
+    $("dial-slot").innerHTML = '<div class="dial"><p>Flat is the novelty running out, not the game being over. ' +
+      'Put some back &mdash; and do it now, mid-session, rather than deciding tomorrow that you\'re "done with" it.</p>' +
+      pick3(PLAY_NOVEL).map((x) => '<button class="card easier" data-rule="' + esc(x) + '">' + esc(x) + "</button>").join("") +
+      '<button class="btn ghost" data-dir="close" style="margin-top:4px">none of these</button></div>';
+    $("dial-slot").scrollIntoView({ block: "nearest" });
+    return;
+  }
   $("dial-slot").innerHTML =
     '<div class="dial"><p>Absorption only happens in a narrow band. Off the band in either direction and your ' +
     'attention leaves &mdash; and the two directions need opposite fixes. Which is it?</p>' +
     '<button class="card" data-dir="easy">It\'s boring. My mind keeps sliding off to something more interesting.</button>' +
     '<button class="card easier" data-dir="hard">It\'s too much. I don\'t know where to put my hands and I want out.</button>' +
     '<button class="btn ghost" data-dir="close" style="margin-top:4px">never mind</button></div>';
-});
+}
+$("run-dial").addEventListener("click", openDial);
 
 $("dial-slot").addEventListener("click", (e) => {
   const b = e.target.closest("[data-dir]"), c = e.target.closest("[data-rule]");
   if (c) {
     state.live.constraints = (state.live.constraints || []).concat(c.dataset.rule);
     save(); $("dial-slot").innerHTML = ""; paintRun();
-    flashPark("Rule applied. Restart the task under it right now, this second.");
+    flashPark(state.live.mode === "play"
+      ? "New rule. Apply it this second, before the boredom decides for you."
+      : "Rule applied. Restart the task under it right now, this second.");
     return;
   }
   if (!b) return;
@@ -1679,7 +1961,10 @@ $("sndvol").addEventListener("input", (e) => {
 $("move-done").addEventListener("click", () => {
   if (!state.live) return;
   state.live.moveDone = true; save(); paintRun();
-  flashPark("That was the hard part. Everything after this is downhill.");
+  if (state.live.mode === "play") {
+    openDial();
+    flashPark("Goal done. Pick the next one now — the gap after finishing is where boredom gets in.");
+  } else flashPark("That was the hard part. Everything after this is downhill.");
 });
 
 function flashPark(msg) {
@@ -1712,13 +1997,13 @@ function doPark() {
 }
 
 $("expired").addEventListener("click", (e) => {
+  if (e.target.closest("[data-wrap]")) { finishRun("wrapped"); return; }
   const b = e.target.closest("[data-add]");
   if (!b || !state.live) return;
   state.live.addedSec += Number(b.dataset.add) * 60;
   state.live.chimed = false;
   save(); paintRun();
 });
-$("wrap").addEventListener("click", () => finishRun("wrapped"));
 $("run-done").addEventListener("click", () => finishRun("finished"));
 $("run-stop").addEventListener("click", () => finishRun("stopped"));
 $("run-drift").addEventListener("click", () => { go("drift"); renderDrift(); });
@@ -1731,6 +2016,8 @@ function finishRun(reason) {
   const elapsed = (now() - L.startedAt) / 1000;
   pending = {
     id: L.id, task: L.task, move: L.move, moveDone: !!L.moveDone,
+    mode: L.mode || "work", rule: L.rule || "",
+    flatAtSec: L.flatAt ? Math.round((L.flatAt - L.startedAt) / 1000) : 0,
     unit: L.unit, target: L.target, count: L.count || 0,
     timeToInSec: L.inAt ? Math.round((L.inAt - L.startedAt) / 1000) : 0,
     constraints: L.constraints || [], pre: L.pre || [],
@@ -1741,6 +2028,15 @@ function finishRun(reason) {
     via: L.via, parked: L.parked || 0, reason,
   };
   state.live = null; save();
+  const isPlay = pending.mode === "play";
+  $("s-debrief").querySelector("h2").textContent = isPlay ? "How did that end?" : "How'd that actually go?";
+  $("s-debrief").querySelector(".sub").textContent = isPlay
+    ? "The question is not whether you enjoyed it. It's whether you got out before it went flat, because that decides whether you can come back to it tomorrow."
+    : "Answer honestly — it's the only input the pattern readout has, and a flattering log tells you nothing.";
+  const outs = $$("#s-debrief .outcomes button"), labels = isPlay
+    ? [["Left on a high", "still good when I stopped"], ["Played it flat", "rode it into the ground"], ["Never got going", "flat from the start"]]
+    : [["Landed", "I was in it"], ["Partial", "in and out"], ["Nope", "never got in"]];
+  outs.forEach((b, i) => { b.childNodes[0].nodeValue = labels[i][0]; b.querySelector("small").textContent = labels[i][1]; });
   $("debrief-note").value = "";
   $("debrief-after").hidden = true;
   $("wire-offer").hidden = true;
@@ -1763,6 +2059,27 @@ $$("#s-debrief .outcomes button").forEach((b) => b.addEventListener("click", () 
   const sameFails = sameTask.filter((x) => x.outcome !== "landed").length;
 
   let read = "";
+  if (s.mode === "play") {
+    const flat = timeToFlat(s.task);
+    let r = "";
+    if (s.outcome === "landed")
+      r = "<b>" + mins(s.elapsedSec) + " and you stopped while it was still good.</b> That is the hard version of this " +
+          "and it's the one that keeps a game alive: you left an open loop, so tomorrow it pulls rather than nags." +
+          (s.rule ? " Rule you played under: <b>" + esc(s.rule) + "</b>." : " Next time add a self-imposed rule — that's the lever that moves the wall furthest.");
+    else if (s.outcome === "partial")
+      r = "You played it into the flat part" + (s.flatAtSec ? ", which arrived at <b>" + mmss(s.flatAtSec) + "</b>" : "") +
+          ". That's the ending that makes a game feel dead next time you look at it. " +
+          (flat ? "Your wall on this one sits around " + mins(flat) + " — book " + Math.round(flat * 0.75 / 60) + " minutes next time and get out early." :
+                  "Mark the flat moment a couple more times and it can tell you exactly when to book the exit.");
+    else
+      r = "Never got going at all. That's usually the goal, not the game: " +
+          (s.move ? '"' + esc(s.move) + '" ' : "the goal ") + "may have been too vague or too big for one sitting, or the " +
+          "game has nothing new left to give and needs a rule imposed on it before it's worth loading.";
+    $("debrief-read").innerHTML = r;
+    $("debrief-after").hidden = false;
+    return;
+  }
+
   const scoreLine = s.count > 0
     ? "<b>" + s.count + " " + esc(s.unit) + "</b> in " + mins(s.elapsedSec) +
       " (" + (s.count / (s.elapsedSec / 60)).toFixed(1) + " a minute" +
@@ -1817,7 +2134,10 @@ $("wire-save").addEventListener("click", () => {
     '.</b> It\'s on the home screen now. Say it to yourself once, in those exact words &mdash; the wording is what does the work.</p>';
 });
 
-$("debrief-again").addEventListener("click", () => openStart(pending ? pending.task : "", pending ? pending.move : ""));
+$("debrief-again").addEventListener("click", () => {
+  if (pending && pending.mode === "play") { go("play"); $("game-in").value = pending.task; paintGameHist(); refreshPlayLaunch(); return; }
+  openStart(pending ? pending.task : "", pending ? pending.move : "");
+});
 
 /* ---------- offload ---------- */
 
@@ -2031,7 +2351,7 @@ function groups(list, keyFn, min) {
 }
 
 function findings() {
-  const s = state.sessions, out = [];
+  const s = state.sessions.filter((x) => x.mode !== "play"), out = [];
   if (!s.length) return out;
 
   const len = groups(s, (x) => x.plannedMin, 3);
@@ -2129,7 +2449,7 @@ function findings() {
 }
 
 function renderRecord() {
-  const s = state.sessions;
+  const s = state.sessions.filter((x) => x.mode !== "play");
   const focused = s.reduce((a, x) => a + x.elapsedSec, 0);
   const over    = s.reduce((a, x) => a + (x.overtimeSec || 0), 0);
   const landed  = s.filter((x) => x.outcome === "landed").length;
@@ -2150,12 +2470,36 @@ function renderRecord() {
               : '<p class="empty">Run a few and this fills in. It only reports differences big enough to be real.</p>') +
     "</div>";
 
+  const ps = playSessions();
+  if (ps.length) {
+    const games = Array.from(new Set(ps.map((x) => x.task)));
+    const good = ps.filter((x) => x.outcome === "landed").length;
+    h += '<div class="sec"><h3>Play <span>' + ps.length + " sessions</span></h3>" +
+      '<p class="note" style="margin:14px 0 0">You left on a high <b>' + good + " of " + ps.length +
+      ' times.</b> That ratio is the one that matters here — it predicts whether a game survives contact with you.</p>' +
+      games.map((g) => {
+        const runs  = ps.filter((x) => x.task === g);
+        const flat  = timeToFlat(g);
+        const ruled = runs.filter((x) => x.rule && x.flatAtSec > 0);
+        const bare  = runs.filter((x) => !x.rule && x.flatAtSec > 0);
+        let note = flat ? "goes flat at ~" + mins(flat) : runs.length + " session" + (runs.length === 1 ? "" : "s") + ", wall not measured yet";
+        if (ruled.length >= 2 && bare.length >= 2) {
+          const a = median(ruled.map((x) => x.flatAtSec)), b = median(bare.map((x) => x.flatAtSec));
+          note += " · with a rule " + mins(a) + ", without " + mins(b);
+        }
+        return '<div class="item"><span class="txt">' + esc(g) + '<span class="meta">' + note + "</span></span>" +
+               '<span class="acts"><span class="pill ' + (runs[runs.length - 1].outcome) + '">' +
+               runs.length + " run" + (runs.length === 1 ? "" : "s") + "</span></span></div>";
+      }).join("") + "</div>";
+  }
+
   h += '<div class="sec"><h3>Log <span>' + s.length + " total</span></h3>" +
     (s.length
       ? s.slice(-25).reverse().map((x) =>
           '<div class="item"><span class="txt">' + esc(x.task) +
             '<span class="meta">' + when(x.startedAt) + " · " + mins(x.elapsedSec) + " of " + x.plannedMin + "m" +
             (x.count ? " · " + x.count + " " + esc(x.unit) : "") +
+            (x.flatAtSec ? " · flat at " + mmss(x.flatAtSec) : "") +
             (x.timeToInSec ? " · in at " + mmss(x.timeToInSec) : "") +
             (x.overtimeSec > 60 ? " · +" + mins(x.overtimeSec) + " over" : "") +
             (x.parked ? " · " + x.parked + " caught" : "") + "</span>" +
