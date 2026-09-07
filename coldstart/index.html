@@ -1975,7 +1975,7 @@ $("work-back").addEventListener("click", () => {
 $("work-run").addEventListener("click", (e) => {
   if (e.target.closest("[data-brback]")) { stopWork(); toolBreak(); return; }
   const br = e.target.closest("[data-br]");
-  if (br) { stopWork(); ({ timer: brTimer, told: brTold, rsd: brRSD, grind: brGrind, rot: brRotate })[br.dataset.br](); return; }
+  if (br) { stopWork(); ({ timer: brTimer, told: brTold, rsd: brRSD, grind: brGrind, rot: brRotate, reset: brReset })[br.dataset.br](); return; }
   const gk = e.target.closest("[data-gk]");
   if (gk) { grindDeck(gk.dataset.gk); return; }
   const g = e.target.closest("[data-g]");
@@ -2119,6 +2119,7 @@ function toolBreak() {
       '<button class="big" data-br="told"><span class="t">Dump what I was told</span><span class="d">Instructions arrive once, verbally, while your hands are full. Get it down now — asking twice is what makes people think you\'re not trying.</span></button>' +
       '<button class="big go" data-br="rsd"><span class="t">I got told off / a customer was vile</span><span class="d">Ninety seconds so it doesn\'t eat the rest of the shift and then the evening.</span></button>' +
       '<button class="big go" data-br="grind"><span class="t">I\'m bored out of my mind</span><span class="d">The task can\'t change. What you do inside it can — but only if the challenge sits on something you actually control.</span></button>' +
+      '<button class="big go" data-br="reset"><span class="t">Stepping out for two minutes</span><span class="d">The bathroom trip after a big push. It\'s doing a real job — this makes the two minutes actually count, and tracks what they\'re telling you.</span></button>' +
       '<button class="big" data-br="rot"><span class="t">Which station kills me fastest</span><span class="d">If you rotate positions, they don\'t all go flat at the same rate. Log it a few times and you\'ll know which to take while you\'re fresh.</span></button>' +
     "</div></div>";
 }
@@ -2236,6 +2237,90 @@ function grindDeck(kind) {
     d.slice(0, 4).map((x) => '<button class="card" data-g="' + esc(x) + '">' + esc(x) + "</button>").join("") +
     '<div class="row" style="margin-top:10px"><button class="btn ghost" data-gk="' + kind + '">Different ones</button>' +
     '<button class="btn" data-brback>Back</button></div></div>';
+}
+
+/* --- the two-minute reset ---
+   The bathroom trip after a hard push is usually not about the bladder.
+   It's the only exit nobody questions in a job where you can't otherwise
+   stop, and a stall is the only quiet enclosed place in a loud wet room.
+   The gaps between them are a decent read on real segment length. */
+
+const RESET_STEPS = [
+  "Three sighs. In through the nose, sip a bit more in on top, then a long slow out.",
+  "Unclench your jaw. Drop your shoulders — they're up by your ears and have been for an hour.",
+  "Look at the furthest thing you can see for twenty seconds. Your eyes have been at arm's length all shift.",
+  "Roll your wrists and shake your hands out.",
+  "Water, if there's any to be had.",
+];
+const RESET_STATION = [
+  "Both feet flat, weight even. You've been standing on one hip.",
+  "One long exhale, longer than the breath in.",
+  "Drop your shoulders and unclench your jaw.",
+  "Look up and across the room for ten seconds.",
+];
+
+function segmentLength() {
+  const r = ((state.shift && state.shift.resets) || []).slice().sort((a, b) => a - b);
+  const gaps = [];
+  for (let i = 1; i < r.length; i++) {
+    const g = (r[i] - r[i - 1]) / 1000;
+    if (g > 300 && g < 4 * 3600) gaps.push(g);   // same-shift gaps only
+  }
+  return gaps.length >= 3 ? median(gaps) : null;
+}
+
+function brReset() {
+  const sh = shift();
+  if (!Array.isArray(sh.resets)) sh.resets = [];
+  const seg = segmentLength();
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">Two minutes out</span>' +
+    '<p class="sub" style="margin:0 0 12px">Going to the bathroom after a big segment is usually not about your bladder. ' +
+    "It's the <b>only exit nobody questions</b> — you can't stand outside for three minutes or just stop, but no one has ever asked why someone went to the loo. " +
+    "And a stall is the one quiet, enclosed, still place in a loud wet room. That's a real reset your nervous system is going looking for after a push. " +
+    "<b>It's a coping strategy that works, not slacking.</b> So use the two minutes properly instead of scrolling, which resets nothing.</p>" +
+    '<div id="rx-steps"></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn prime" id="rx-go">Run it — two minutes</button>' +
+    '<button class="btn" id="rx-log">Just log it</button>' +
+    '<button class="btn ghost" id="rx-station">Can\'t leave the floor</button></div>' +
+    '<div id="rx-out" style="margin-top:14px"></div></div>';
+
+  const list = (arr) => arr.map((x) => '<div class="check"><span class="box">&middot;</span><span class="t">' + esc(x) + "</span></div>").join("");
+  $("rx-steps").innerHTML = list(RESET_STEPS);
+
+  const readout = () => {
+    const g = segmentLength();
+    $("rx-out").innerHTML = g
+      ? '<p class="note finding" style="margin:0">You step out about every <b>' + mins(g) + "</b>. " +
+        "That isn't a bladder telling you something — it's your <b>real segment length</b>, the same number this whole app is built around, and your body worked it out without being asked. " +
+        "Push hard for that long and take the reset deliberately at the end of it, rather than pushing to breaking point and then needing rescuing. " +
+        "It's also the honest answer to how long you can hold a station before rotating.</p>"
+      : '<p class="sub" style="margin:0;font-size:12.5px">' + sh.resets.length + " logged. Four in a shift and it can tell you your real segment length.</p>";
+  };
+  const log = () => { sh.resets.push(now()); sh.resets = sh.resets.slice(-300); save(); readout(); };
+
+  $("rx-log").addEventListener("click", () => { log(); $("rx-log").textContent = "Logged"; $("rx-log").disabled = true; });
+  $("rx-station").addEventListener("click", () => {
+    $("rx-steps").innerHTML = list(RESET_STATION);
+    $("rx-station").textContent = "Thirty seconds, where you stand";
+    $("rx-station").disabled = true;
+  });
+  $("rx-go").addEventListener("click", () => {
+    log();
+    armAudio(); keepAwake(true);
+    const end = now() + 120000;
+    $("rx-go").disabled = true; $("rx-log").disabled = true;
+    stopWork();
+    const paint = () => {
+      const rem = (end - now()) / 1000;
+      $("rx-out").innerHTML = '<p class="repcount">' + mmss(Math.max(0, rem)) + '</p><span class="repunit">' +
+        (rem > 0 ? "no phone. that's the whole trick." : "that's two. back to it.") + "</span>";
+      if (rem <= 0) { stopWork(); chime(); keepAwake(false); readout(); }
+    };
+    paint();
+    workTimer = setInterval(paint, 500);
+  });
+  readout();
 }
 
 /* --- which station goes flat fastest --- */
