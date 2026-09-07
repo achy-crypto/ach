@@ -475,7 +475,7 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 
 <header class="mast">
   <h1><span class="lamp" id="lamp"></span>Cold Start</h1>
-  <p>Gets you moving, then engineers the conditions absorption actually needs. Not a tracker. Nothing here to keep alive.</p>
+  <p>For the part of you that won't turn over &mdash; work, games, or a Tuesday afternoon with nothing in it. Not a tracker. Nothing here to keep alive.</p>
   <div class="strip" id="strip">
     <div class="cell"><span class="k">State</span><span class="v" id="rd-state">idle</span></div>
     <div class="cell"><span class="k">Parked</span><span class="v" id="rd-parked">0</span></div>
@@ -506,8 +506,12 @@ input[type="range"]{accent-color:var(--signal);width:92px}
       <span class="d">You were on it forty seconds ago and you have no idea where you went.</span>
     </button>
     <button class="big go" data-go="play">
-      <span class="t">A game keeps going flat.</span>
-      <span class="d">You want to enjoy it. It holds you for a while, then the interest just drains out.</span>
+      <span class="t">Can't get into anything, even fun stuff.</span>
+      <span class="d">Games, shows, hobbies. You want to want it. It reads as flat from the first minute, or drains out fast.</span>
+    </button>
+    <button class="big go" data-go="now">
+      <span class="t">Don't know what to do with myself.</span>
+      <span class="d">Task's done, or there was never one. Empty time, and the scroll is about to eat it.</span>
     </button>
   </div>
 
@@ -627,16 +631,30 @@ input[type="range"]{accent-color:var(--signal);width:92px}
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
 </section>
 
+<!-- ============ WHAT NOW ============ -->
+<section class="screen" id="s-now" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Don't decide. Pick one.</h2>
+  <p class="sub">The void after a task isn't laziness, it's a transition with nothing on the other side &mdash; and choosing what goes there is the exact function that's hard. So it's dealt for you: three things, different kinds, all startable this minute. Not much to do is fine. The point is that the next twelve minutes are chosen, not defaulted into.</p>
+  <div class="stack" id="now-hand"></div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn" id="now-deal">Deal again</button>
+    <button class="btn ghost" data-go="parked">See everything parked</button>
+  </div>
+  <p class="sub" id="now-note" style="margin:12px 0 0;font-size:12.5px"></p>
+</section>
+
 <!-- ============ PLAY ============ -->
 <section class="screen" id="s-play" hidden>
   <button class="back" data-go="home">&larr; back</button>
-  <h2 class="ask">Give it something to be about.</h2>
-  <p class="sub">A game stops holding you when it runs out of goals it hands you and the novelty is spent &mdash; then staying interested becomes your job, which is the one thing that's hard. So you bring the goal and the rule, and you stop before it goes flat rather than after.</p>
+  <h2 class="ask">Interest comes after, not before.</h2>
+  <p class="sub">You're waiting to feel like it. For an ADHD brain the feeling isn't a precondition, it's a product &mdash; of roughly ten minutes of doing the thing under some stakes. Nobody feels like Elden Ring from the sofa. So: a goal, a rule, a ten-minute toll, and only then a verdict. And when it does hook you, you stop before it goes flat rather than after.</p>
 
   <div class="blk">
     <span class="lab">What are you playing</span>
-    <input class="field" id="game-in" placeholder="the game" autocomplete="off">
+    <input class="field" id="game-in" placeholder="game, show, book, hobby — anything you want to want" autocomplete="off">
     <div class="chips" id="game-chips" style="margin-top:7px"></div>
+    <div class="chips" id="game-ideas" style="margin-top:6px"></div>
     <p class="sub" id="game-hist" style="margin:8px 0 0;font-size:12.5px"></p>
   </div>
 
@@ -749,9 +767,9 @@ input[type="range"]{accent-color:var(--signal);width:92px}
         <span class="t">Put me on something.</span>
         <span class="d">The loop is quieter when there's a task in the foreground.</span>
       </button>
-      <button class="big go" data-go="home">
-        <span class="t">That's enough for now.</span>
-        <span class="d">Offloading was the job. You did the job.</span>
+      <button class="big go" data-go="now">
+        <span class="t">Deal me something.</span>
+        <span class="d">Offloading was the job and you did it. Now the next twelve minutes get chosen rather than defaulted into.</span>
       </button>
     </div>
   </div>
@@ -818,8 +836,9 @@ input[type="range"]{accent-color:var(--signal);width:92px}
     <button class="btn ghost" id="run-undo">&minus;1</button>
     <button class="btn ghost" id="run-drift">I drifted</button>
     <button class="btn prime" id="run-done">Finished</button>
-    <button class="btn ghost" id="run-stop">Stop</button>
+    <button class="btn" id="run-stop">Stop</button>
   </div>
+  <p class="sub" style="margin:14px 0 0;font-size:12px"><button class="linkish" id="run-abandon" style="color:var(--dim)">Leave without logging this</button></p>
 
   <div id="expired" hidden style="margin-top:18px">
     <p class="note finding" id="expired-note"></p>
@@ -839,6 +858,7 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 
 <!-- ============ DEBRIEF ============ -->
 <section class="screen" id="s-debrief" hidden>
+  <button class="back" id="debrief-skip">&larr; skip this, don't log it</button>
   <h2 class="ask">How'd that actually go?</h2>
   <p class="sub">Answer honestly — it's the only input the pattern readout has, and a flattering log tells you nothing.</p>
   <div class="outcomes">
@@ -862,9 +882,10 @@ input[type="range"]{accent-color:var(--signal);width:92px}
       <button class="btn prime" id="wire-save">Wire it</button>
     </div>
     <div class="row" style="margin-top:14px">
-      <button class="btn prime" id="debrief-again">Go again</button>
-      <button class="btn" data-go="home">Done for now</button>
-      <button class="btn ghost" data-go="record">See the record</button>
+      <button class="btn prime" data-go="now">What now?</button>
+      <button class="btn" id="debrief-again">Go again</button>
+      <button class="btn ghost" data-go="home">Home</button>
+      <button class="btn ghost" data-go="record">The record</button>
     </div>
   </div>
 </section>
@@ -1056,7 +1077,7 @@ function chime() {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1067,6 +1088,7 @@ function go(name) {
   if (name === "home")   renderHome();
   if (name === "start")  renderStart();
   if (name === "play")   renderPlay();
+  if (name === "now")    renderNow();
   if (name === "parked") renderParked();
   if (name === "record") renderRecord();
   if (name === "run")    { paintRun(); setTimeout(() => $("park-in").focus(), 60); }
@@ -1472,6 +1494,84 @@ let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
 
+/* ---------- what now: dealing the next twelve minutes ----------
+   The transition after a task has nothing on the far side of it, and
+   choosing what goes there is the impaired function. So it's dealt: three
+   cards of different kinds, your own parked things first, then everyday
+   life. Re-deals are capped, because re-dealing is itself the avoidance. */
+
+const NOW_DECK = {
+  body:    ["Walk to the end of the street and back. No phone.", "Shower. Now, not in a bit.", "Ten squats, then a big glass of water.", "Lie on the floor for five minutes with your eyes shut.", "Stretch whatever's stiff, badly, for five minutes."],
+  place:   ["One surface. Clear it completely.", "Bin bag, five minutes, anything that's obviously rubbish.", "Make the bed.", "Open a window and put one load in the wash.", "Dishes, but only the ones in the sink right now."],
+  fuel:    ["Eat something with protein in it.", "Make a proper hot drink and drink it sitting down.", "Big glass of water, then re-deal."],
+  people:  ["Text one person a single line. No agenda.", "Reply to the message you've been leaving on read.", "Call the person you keep meaning to call. Two minutes counts."],
+  input:   ["Read fifteen minutes of something you chose, not something the feed chose.", "One long video on something you're actually curious about. Full screen, phone in another room.", "Put on one whole album and do nothing else."],
+  make:    ["Make something bad on purpose — a drawing, a paragraph, a meal, a loop.", "Tinker with a project for twelve minutes with no goal.", "Cook something that takes longer than it needs to."],
+  outside: ["Go outside for ten minutes. Doesn't matter where.", "Walk to buy one thing you don't need to drive for.", "Sit outside with a drink and do nothing, on purpose."],
+  nothing: ["Do nothing for ten minutes, deliberately. Chair, no screen, that's it.", "Nap, with a timer, twenty minutes."],
+};
+let nowDeals = 0, nowHand = [];
+
+function renderNow() { nowDeals = 0; dealNow(); }
+
+function dealNow() {
+  const hand = [];
+  const due   = state.parked.filter((p) => !p.doneAt && p.dueAt && p.dueAt <= now());
+  const tasks = state.parked.filter((p) => !p.doneAt && !p.dueAt && p.kind === "task");
+  const games = recentGames();
+
+  if (due.length)        hand.push({ kind: "yours", text: due[due.length - 1].text, meta: "due · from your parking lot", launch: "task", id: due[due.length - 1].id });
+  else if (tasks.length) hand.push({ kind: "yours", text: tasks[tasks.length - 1].text, meta: "parked task · yours", launch: "task", id: tasks[tasks.length - 1].id });
+  else if (state.wired.length) { const w = state.wired[state.wired.length - 1]; hand.push({ kind: "yours", text: w.action, meta: "wired: when " + w.cue, launch: "task" }); }
+
+  const cats = Object.keys(NOW_DECK).filter((c) => !nowHand.some((h) => h.cat === c));
+  for (let i = cats.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [cats[i], cats[j]] = [cats[j], cats[i]]; }
+  while (hand.length < 3 && cats.length) {
+    const c = cats.pop(), d = NOW_DECK[c];
+    hand.push({ kind: "life", cat: c, text: d[(Math.random() * d.length) | 0], meta: c, launch: "run", min: c === "nothing" ? 10 : 12 });
+  }
+  if (games.length && Math.random() < 0.5 && hand.length === 3)
+    hand[2] = { kind: "play", text: games[0] + " — under a rule", meta: "play · stop before it goes flat", launch: "play", game: games[0] };
+  nowHand = hand;
+
+  $("now-hand").innerHTML = hand.map((h, i) =>
+    '<button class="big' + (h.kind === "play" ? " go" : "") + '" data-card="' + i + '">' +
+    '<span class="t">' + esc(h.text) + '</span><span class="d">' + esc(h.meta) + (h.min ? " · " + h.min + " min" : "") + "</span></button>").join("");
+
+  nowDeals++;
+  const left = 3 - nowDeals;
+  $("now-deal").textContent = left > 0 ? "Deal again (" + left + " left)" : "Take the top one";
+  $("now-note").textContent = left > 0
+    ? "Every card starts a clock the moment you tap it. Nothing here is important; it only needs to be chosen."
+    : "That's the deals. Re-dealing is the same thing as scrolling — take the top one and start the clock.";
+}
+
+$("now-deal").addEventListener("click", () => {
+  if (nowDeals >= 3) { launchCard(nowHand[0]); return; }
+  dealNow();
+});
+$("now-hand").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-card]");
+  if (b) launchCard(nowHand[Number(b.dataset.card)]);
+});
+
+function launchCard(h) {
+  if (!h) return;
+  if (h.launch === "task") {
+    if (h.id) { const p = state.parked.find((x) => x.id === h.id); if (p) { p.doneAt = now(); save(); } }
+    lastVia = "now"; openStart(h.text, ""); return;
+  }
+  if (h.launch === "play") { go("play"); $("game-in").value = h.game; paintGameHist(); refreshPlayLaunch(); return; }
+  armAudio();
+  state.live = {
+    id: uid(), mode: "work", task: h.text, move: "", moveDone: false,
+    unit: "", target: null, count: 0, inAt: null, tollSec: 0, constraints: [], pre: [],
+    plannedMin: h.min, plannedSec: h.min * 60, addedSec: 0,
+    startedAt: now(), via: "now", parked: 0, chimed: false,
+  };
+  save(); go("run");
+}
+
 /* ---------- play: keeping a game alive ----------
    Work mode manufactures engagement that isn't there. Play mode is the
    opposite problem: it arrives on its own and then drains, so the job is
@@ -1509,8 +1609,8 @@ const PLAY_NOVEL = [
   "Turn the HUD off, or the music off, or both.",
   "Ignore the objective and go somewhere you've never been.",
   "Bring a person in — voice chat, or someone in the room.",
-  "Stop here, on a high. Flat means the goal is finished, not that the game is dead.",
 ];
+const PLAY_STOP = "Stop here, on a high. Flat means the goal is finished, not that the game is dead.";
 
 let playMin = 45;
 
@@ -1521,6 +1621,15 @@ function timeToFlat(game) {
   const f = playSessions(game).filter((x) => x.flatAtSec > 0).map((x) => x.flatAtSec);
   return f.length >= 2 ? median(f) : null;
 }
+function timeToHook(game) {
+  const f = playSessions(game).filter((x) => x.hookAtSec > 0).map((x) => x.hookAtSec);
+  return f.length >= 2 ? median(f) : null;
+}
+function timeToHookAny() {
+  const f = playSessions().filter((x) => x.hookAtSec > 0).map((x) => x.hookAtSec);
+  return f.length >= 3 ? median(f) : null;
+}
+
 function recentGames() {
   const seen = [], out = [];
   const ps = playSessions();
@@ -1543,6 +1652,7 @@ function deal(deck, into, kind) {
 function renderPlay() {
   $("game-chips").innerHTML = recentGames()
     .map((g) => '<button class="chip q" data-game="' + esc(g) + '">' + esc(g) + "</button>").join("");
+  $("game-ideas").innerHTML = '<button class="chip q" id="no-idea">no idea what to play &rarr;</button>';
   deal(PLAY_GOALS, "goal-chips", "goal");
   deal(PLAY_RULES, "rule-chips", "rule");
   paintGameHist();
@@ -1587,6 +1697,25 @@ function refreshPlayLaunch() {
 }
 
 $("game-in").addEventListener("input", () => { paintGameHist(); refreshPlayLaunch(); });
+$("game-ideas").addEventListener("click", (e) => {
+  if (e.target.id !== "no-idea") return;
+  const ps = playSessions();
+  const bounced = ps.filter((x) => x.outcome === "nope").map((x) => x.task);
+  const ideas = [
+    bounced.length ? "The one you bounced off hardest: " + bounced[bounced.length - 1] + ". Under a rule this time." : "A genre you never touch. Pick the one you'd be embarrassed to like.",
+    "A game you finished years ago, hardest difficulty, no guides.",
+    "Something under two hours long — a short game, one film, one album start to finish.",
+    "The thing you bought and never opened.",
+  ];
+  $("game-ideas").innerHTML = '<p class="sub" style="margin:4px 0 6px;font-size:12.5px;flex-basis:100%">Choosing is the hard part, so don\'t. Pick the first one that isn\'t a no:</p>' +
+    ideas.map((x) => '<button class="chip" data-idea="' + esc(x) + '">' + esc(x) + "</button>").join("");
+});
+$("game-ideas").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-idea]");
+  if (!b) return;
+  $("game-in").value = b.dataset.idea.replace(/^The one you bounced off hardest: /, "").replace(/\. Under a rule this time\.$/, "");
+  paintGameHist(); refreshPlayLaunch(); $("goal-in").focus();
+});
 $("goal-in").addEventListener("input", refreshPlayLaunch);
 $("game-chips").addEventListener("click", (e) => {
   const b = e.target.closest("[data-game]");
@@ -1641,8 +1770,9 @@ $("play-launch").addEventListener("click", () => {
     task: game, move: goal, moveDone: false,
     rule, constraints: rule ? [rule] : [],
     unit: "", target: null, count: 0,
-    inAt: null, flatAt: null,
-    tollSec: timeToFlat(game) || 0,
+    inAt: null, flatAt: null, hookAt: null,
+    tollSec: timeToFlat(game) || timeToHook(game) || timeToHookAny() || 600,
+    tollKind: timeToFlat(game) ? "flat" : (timeToHook(game) || timeToHookAny()) ? "hook" : "toll",
     pre: [],
     plannedMin: playMin, plannedSec: playMin * 60, addedSec: 0,
     startedAt: now(), via: "play", parked: 0, chimed: false,
@@ -1722,12 +1852,12 @@ function paintRun() {
   const tickN = total / 60 <= 15 ? Math.max(1, Math.round(total / 60)) : Math.round(total / 300);
   $("rw").style.setProperty("--tick", (100 / tickN) + "%");
 
-  const showToll = L.tollSec > 0 && L.tollSec < total && !(isPlay ? L.flatAt : L.inAt);
+  const showToll = L.tollSec > 0 && L.tollSec < total && !(isPlay ? (L.flatAt || (L.hookAt && L.tollKind !== "flat")) : L.inAt);
   $("toll").hidden = !showToll;
   if (showToll) {
     $("toll").style.left = clamp(L.tollSec / total * 100, 4, 96) + "%";
     $("toll-lab").textContent = isPlay
-      ? "usually flat · " + Math.round(L.tollSec / 60) + "m"
+      ? (L.tollKind === "flat" ? "usually flat · " : L.tollKind === "hook" ? "usually hooks you · " : "interest toll · ") + Math.round(L.tollSec / 60) + "m"
       : (typicalTimeToIn() ? "your usual in · " : "the toll · ") + Math.round(L.tollSec / 60) + "m";
   }
 
@@ -1780,13 +1910,28 @@ function paintIn(elapsed) {
         "everyone gets wrong and it's why games you loved end up uninstalled. Change the rule now, or stop here.</div>";
       return;
     }
-    slot.innerHTML = '<button class="inbtn" id="im-flat"><span class="t">It just went flat</span>' +
-      '<span class="d">The moment the interest drains out. Tap it then, not twenty minutes later &mdash; ' +
-      "it's how the app learns where your wall is in this specific game.</span></button>";
+    const preToll = elapsed < L.tollSec && L.tollKind !== "flat";
+    let html = "";
+    if (L.hookAt) {
+      html += '<div class="instamp"><b>It got you at ' + mmss((L.hookAt - L.startedAt) / 1000) + "</b>" +
+        "Interest showed up " + mins((L.hookAt - L.startedAt) / 1000) + " in, not before you started. That's the number to remember " +
+        "next time you're on the sofa waiting to feel like it.</div>";
+    } else {
+      html += '<button class="inbtn" id="im-hook"><span class="t">It\'s got me</span>' +
+        "<span class=\"d\">The moment it stops being a chore and starts pulling. Tap it then &mdash; it's how the app learns how long interest takes to arrive for you.</span></button>";
+    }
+    html += '<p class="sub" style="margin:-4px 0 14px;font-size:12.5px"><button class="linkish" id="im-flat" style="color:var(--dim)">' +
+      (L.hookAt ? "it's gone flat" : "it's flat") + "</button>" +
+      (preToll && !L.hookAt ? " &mdash; before the line that's expected, not information. Give it to the line." : "") + "</p>";
+    slot.innerHTML = html;
+    if ($("im-hook")) $("im-hook").addEventListener("click", () => {
+      state.live.hookAt = now(); save(); paintRun();
+      flashPark("Marked. Now it's about stopping before it drains — watch the clock, not the feeling.");
+    });
     $("im-flat").addEventListener("click", () => {
       state.live.flatAt = now(); save(); paintRun();
       openDial();
-      flashPark("Marked. Don't quit yet — change something first.");
+      flashPark(state.live.hookAt ? "Marked. Change something or stop — don't grind it." : "Marked. Try one change before you call it.");
     });
     return;
   }
@@ -1858,6 +2003,7 @@ function openDial() {
     $("dial-slot").innerHTML = '<div class="dial"><p>Flat is the novelty running out, not the game being over. ' +
       'Put some back &mdash; and do it now, mid-session, rather than deciding tomorrow that you\'re "done with" it.</p>' +
       pick3(PLAY_NOVEL).map((x) => '<button class="card easier" data-rule="' + esc(x) + '">' + esc(x) + "</button>").join("") +
+      '<button class="card" data-stop>' + esc(PLAY_STOP) + "</button>" +
       '<button class="btn ghost" data-dir="close" style="margin-top:4px">none of these</button></div>';
     $("dial-slot").scrollIntoView({ block: "nearest" });
     return;
@@ -1872,6 +2018,7 @@ function openDial() {
 $("run-dial").addEventListener("click", openDial);
 
 $("dial-slot").addEventListener("click", (e) => {
+  if (e.target.closest("[data-stop]")) { finishRun("stopped"); return; }
   const b = e.target.closest("[data-dir]"), c = e.target.closest("[data-rule]");
   if (c) {
     state.live.constraints = (state.live.constraints || []).concat(c.dataset.rule);
@@ -2006,6 +2153,7 @@ $("expired").addEventListener("click", (e) => {
 });
 $("run-done").addEventListener("click", () => finishRun("finished"));
 $("run-stop").addEventListener("click", () => finishRun("stopped"));
+$("run-abandon").addEventListener("click", () => { stopSound(); state.live = null; pending = null; save(); go("home"); });
 $("run-drift").addEventListener("click", () => { go("drift"); renderDrift(); });
 
 let pending = null;
@@ -2018,6 +2166,7 @@ function finishRun(reason) {
     id: L.id, task: L.task, move: L.move, moveDone: !!L.moveDone,
     mode: L.mode || "work", rule: L.rule || "",
     flatAtSec: L.flatAt ? Math.round((L.flatAt - L.startedAt) / 1000) : 0,
+    hookAtSec: L.hookAt ? Math.round((L.hookAt - L.startedAt) / 1000) : 0,
     unit: L.unit, target: L.target, count: L.count || 0,
     timeToInSec: L.inAt ? Math.round((L.inAt - L.startedAt) / 1000) : 0,
     constraints: L.constraints || [], pre: L.pre || [],
@@ -2061,20 +2210,29 @@ $$("#s-debrief .outcomes button").forEach((b) => b.addEventListener("click", () 
   let read = "";
   if (s.mode === "play") {
     const flat = timeToFlat(s.task);
-    let r = "";
+    const hooked = s.hookAtSec ? "It got you at <b>" + mmss(s.hookAtSec) + "</b> &mdash; interest arrived after you started, not before. " : "";
+    const recentPlay = playSessions().slice(-4);
+    const allFlat = recentPlay.length >= 3 && recentPlay.every((x) => x.outcome === "nope");
+    let r = hooked;
     if (s.outcome === "landed")
-      r = "<b>" + mins(s.elapsedSec) + " and you stopped while it was still good.</b> That is the hard version of this " +
+      r += "<b>" + mins(s.elapsedSec) + " and you stopped while it was still good.</b> That is the hard version of this " +
           "and it's the one that keeps a game alive: you left an open loop, so tomorrow it pulls rather than nags." +
           (s.rule ? " Rule you played under: <b>" + esc(s.rule) + "</b>." : " Next time add a self-imposed rule — that's the lever that moves the wall furthest.");
     else if (s.outcome === "partial")
-      r = "You played it into the flat part" + (s.flatAtSec ? ", which arrived at <b>" + mmss(s.flatAtSec) + "</b>" : "") +
+      r += "You played it into the flat part" + (s.flatAtSec ? ", which arrived at <b>" + mmss(s.flatAtSec) + "</b>" : "") +
           ". That's the ending that makes a game feel dead next time you look at it. " +
           (flat ? "Your wall on this one sits around " + mins(flat) + " — book " + Math.round(flat * 0.75 / 60) + " minutes next time and get out early." :
                   "Mark the flat moment a couple more times and it can tell you exactly when to book the exit.");
-    else
-      r = "Never got going at all. That's usually the goal, not the game: " +
-          (s.move ? '"' + esc(s.move) + '" ' : "the goal ") + "may have been too vague or too big for one sitting, or the " +
-          "game has nothing new left to give and needs a rule imposed on it before it's worth loading.";
+    else {
+      r += "Never got going at all. " + (s.elapsedSec < 540
+          ? "You gave it " + mins(s.elapsedSec) + ", which is under the toll &mdash; the verdict came before the point where interest has ever arrived for anyone. That's not a result, it's a false start. "
+          : "That's usually the goal, not the game: " + (s.move ? '"' + esc(s.move) + '" ' : "the goal ") +
+            "may have been too vague for one sitting, or the game has nothing new left and needs a rule imposed before it's worth loading. ");
+      if (allFlat)
+        r += "<b>One honest thing, said once:</b> that's " + recentPlay.length + " in a row where nothing hooked. If it's like this across games, shows, food, people &mdash; " +
+             "everything flat for weeks &mdash; that isn't a game problem or a willpower problem, and no app fixes it. Flat interest across the board is a thing a GP or psychiatrist can actually treat, " +
+             "and it's worth one conversation. This app will keep dealing cards either way.";
+    }
     $("debrief-read").innerHTML = r;
     $("debrief-after").hidden = false;
     return;
@@ -2123,6 +2281,8 @@ $$("#s-debrief .outcomes button").forEach((b) => b.addEventListener("click", () 
   }
   $("debrief-after").hidden = false;
 }));
+
+$("debrief-skip").addEventListener("click", () => { pending = null; go("home"); });
 
 $("wire-save").addEventListener("click", () => {
   const cue = $("wire-cue").value.trim(), act = $("wire-act").value.trim();
@@ -2476,13 +2636,16 @@ function renderRecord() {
     const good = ps.filter((x) => x.outcome === "landed").length;
     h += '<div class="sec"><h3>Play <span>' + ps.length + " sessions</span></h3>" +
       '<p class="note" style="margin:14px 0 0">You left on a high <b>' + good + " of " + ps.length +
-      ' times.</b> That ratio is the one that matters here — it predicts whether a game survives contact with you.</p>' +
+      ' times.</b> That ratio is the one that matters here — it predicts whether a game survives contact with you.' +
+      (timeToHookAny() ? " Across everything, interest takes about <b>" + mins(timeToHookAny()) + "</b> to arrive for you. It has never once arrived at zero." : "") + "</p>" +
       games.map((g) => {
         const runs  = ps.filter((x) => x.task === g);
         const flat  = timeToFlat(g);
         const ruled = runs.filter((x) => x.rule && x.flatAtSec > 0);
         const bare  = runs.filter((x) => !x.rule && x.flatAtSec > 0);
-        let note = flat ? "goes flat at ~" + mins(flat) : runs.length + " session" + (runs.length === 1 ? "" : "s") + ", wall not measured yet";
+        const hook = timeToHook(g);
+        let note = (hook ? "hooks you at ~" + mins(hook) : "") + (hook && flat ? " · " : "") +
+          (flat ? "goes flat at ~" + mins(flat) : (hook ? "" : runs.length + " session" + (runs.length === 1 ? "" : "s") + ", nothing measured yet"));
         if (ruled.length >= 2 && bare.length >= 2) {
           const a = median(ruled.map((x) => x.flatAtSec)), b = median(bare.map((x) => x.flatAtSec));
           note += " · with a rule " + mins(a) + ", without " + mins(b);
