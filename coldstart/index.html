@@ -55,14 +55,16 @@
 }
 
 *{box-sizing:border-box}
+button,input,textarea,select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 body{
+  overscroll-behavior-y:contain;
   background:var(--ground);
   color:var(--ink);
   font-family:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
   font-size:15px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
-.app{max-width:600px;margin:0 auto;padding:0 16px 72px}
+.app{max-width:600px;margin:0 auto;padding:0 16px calc(72px + env(safe-area-inset-bottom,0px))}
 
 .mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
 .disp{font-family:"Bricolage Grotesque","Hanken Grotesk",Arial,sans-serif;font-variation-settings:"wdth" 100}
@@ -465,9 +467,23 @@ input[type="range"]{accent-color:var(--signal);width:92px}
 .pre button[aria-pressed="true"]{border-color:var(--go);color:var(--go);background:var(--go-w)}
 .pre button:hover{border-color:var(--dim)}
 
+.wake{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--go)}
+
 .linkish{
   appearance:none;background:none;border:0;padding:0;cursor:pointer;color:var(--signal);
   font-family:inherit;font-size:inherit;text-decoration:underline;text-underline-offset:2px;
+}
+
+/* Phones: iOS zooms the whole page when a field under 16px takes focus,
+   and a 10px action button is not a thumb target. */
+@media (pointer:coarse){
+  .field,.park input,textarea.field,.tin{font-size:16px}
+  .btn{padding:11px 15px}
+  .chip,.pre button{padding:9px 11px}
+  .seg button{padding:10px 13px}
+  .item .acts button{padding:9px 8px;font-size:10.5px}
+  .back,.linkish{padding:6px 0;display:inline-block}
+  input[type="range"]{width:110px;height:30px}
 }
 </style>
 
@@ -853,6 +869,7 @@ input[type="range"]{accent-color:var(--signal);width:92px}
       <button data-snd="rain" aria-pressed="false">rain</button>
     </div>
     <input type="range" id="sndvol" min="0" max="100" value="35" aria-label="Sound floor volume">
+    <span class="wake" id="wake-state" hidden>screen staying on</span>
   </div>
 </section>
 
@@ -1075,6 +1092,38 @@ function chime() {
   } catch (e) { /* audio is a nicety, never a failure */ }
 }
 
+/* ---------- phones: don't let the screen sleep mid-session ----------
+   The clock is wall-clock based so it survives a lock, but a runway you
+   can't see does none of the work a visible runway does. */
+
+let wakeLock = null;
+
+function paintWake() {
+  const el = $("wake-state");
+  if (el) el.hidden = !wakeLock;
+}
+
+async function keepAwake(on) {
+  try {
+    if (on) {
+      if (!("wakeLock" in navigator) || wakeLock) return;
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; paintWake(); });
+    } else if (wakeLock) {
+      const w = wakeLock; wakeLock = null; await w.release();
+    }
+  } catch (e) { wakeLock = null; }
+  paintWake();
+}
+
+/* The lock is dropped whenever the tab hides, so re-take it on return. */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (state.live && screen === "run") keepAwake(true);
+  if (screen === "run") paintRun();
+  paintStrip();
+});
+
 /* ---------- routing ---------- */
 
 const SCREENS = ["home", "start", "play", "now", "spin", "drift", "run", "debrief", "parked", "record"];
@@ -1091,7 +1140,8 @@ function go(name) {
   if (name === "now")    renderNow();
   if (name === "parked") renderParked();
   if (name === "record") renderRecord();
-  if (name === "run")    { paintRun(); setTimeout(() => $("park-in").focus(), 60); }
+  if (name === "run")    { paintRun(); keepAwake(true); }
+  else keepAwake(false);
   paintStrip();
 }
 
@@ -2114,12 +2164,16 @@ $("move-done").addEventListener("click", () => {
   } else flashPark("That was the hard part. Everything after this is downhill.");
 });
 
+const PARK_HINT = window.matchMedia("(pointer: coarse)").matches
+  ? "Parking never leaves this screen. That's the entire point of it."
+  : "Space bar counts. Parking never leaves this screen.";
+
 function flashPark(msg) {
   const h = $("park-hint");
   h.textContent = msg; h.classList.add("flash");
   clearTimeout(flashPark._t);
   flashPark._t = setTimeout(() => {
-    h.textContent = "Parking does not leave this screen. That's the entire point of it.";
+    h.textContent = PARK_HINT;
     h.classList.remove("flash");
   }, 3500);
 }
@@ -2153,7 +2207,7 @@ $("expired").addEventListener("click", (e) => {
 });
 $("run-done").addEventListener("click", () => finishRun("finished"));
 $("run-stop").addEventListener("click", () => finishRun("stopped"));
-$("run-abandon").addEventListener("click", () => { stopSound(); state.live = null; pending = null; save(); go("home"); });
+$("run-abandon").addEventListener("click", () => { stopSound(); keepAwake(false); state.live = null; pending = null; save(); go("home"); });
 $("run-drift").addEventListener("click", () => { go("drift"); renderDrift(); });
 
 let pending = null;
@@ -2688,6 +2742,7 @@ function boot() {
     : db ? "cloud + this browser"
     : canLocal ? "saved in this browser"
     : "storage blocked — this session only";
+  $("park-hint").textContent = PARK_HINT;
   tickOn();
   go(state.live ? "run" : "home");
   spinStep("spin-1");
