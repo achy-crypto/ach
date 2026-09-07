@@ -1,0 +1,1598 @@
+<title>Cold Start</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+:root{
+  --ground:#e4e5e1;
+  --panel:#f4f4f1;
+  --panel-2:#eaeae6;
+  --ink:#14171b;
+  --ink-soft:#3a4048;
+  --dim:#6c727b;
+  --rule:#cbccc7;
+  --hair:#dcddd8;
+  --signal:#b0500c;
+  --signal-w:#b0500c14;
+  --go:#0e6a56;
+  --go-w:#0e6a5614;
+  --warn:#8a2f22;
+  --shadow:0 1px 0 #0000000d;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#15181d;
+    --panel:#1c2027;
+    --panel-2:#232830;
+    --ink:#e6e7e3;
+    --ink-soft:#bcbfc5;
+    --dim:#868c95;
+    --rule:#333844;
+    --hair:#262b33;
+    --signal:#f0a057;
+    --signal-w:#f0a0571f;
+    --go:#56c4a6;
+    --go-w:#56c4a61f;
+    --warn:#e08573;
+    --shadow:0 1px 0 #0000004d;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#15181d;
+  --panel:#1c2027;
+  --panel-2:#232830;
+  --ink:#e6e7e3;
+  --ink-soft:#bcbfc5;
+  --dim:#868c95;
+  --rule:#333844;
+  --hair:#262b33;
+  --signal:#f0a057;
+  --signal-w:#f0a0571f;
+  --go:#56c4a6;
+  --go-w:#56c4a61f;
+  --warn:#e08573;
+  --shadow:0 1px 0 #0000004d;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
+  font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.app{max-width:600px;margin:0 auto;padding:0 16px 72px}
+
+.mono{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.disp{font-family:"Bricolage Grotesque","Hanken Grotesk",Arial,sans-serif;font-variation-settings:"wdth" 100}
+.lab{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+}
+.num{font-variant-numeric:tabular-nums}
+
+/* ---- masthead + readout strip ---- */
+.mast{padding:22px 0 0}
+.mast h1{
+  margin:0;font-family:"Bricolage Grotesque",Arial,sans-serif;
+  font-variation-settings:"wdth" 88,"opsz" 40;
+  font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1;
+  display:flex;align-items:center;gap:9px;
+}
+.lamp{
+  width:9px;height:9px;border-radius:50%;background:var(--signal);
+  box-shadow:0 0 0 3px var(--signal-w);flex:none;
+}
+.lamp.on{background:var(--go);box-shadow:0 0 0 3px var(--go-w)}
+.mast p{margin:7px 0 0;color:var(--dim);font-size:13px;max-width:44ch}
+/* On the focus surface the chrome comes off: the clock is the state readout. */
+body.running .mast p,body.running .strip{display:none}
+body.running .mast{padding-bottom:2px;border-bottom:1px solid var(--rule)}
+body.running .mast h1{font-size:15px;color:var(--dim)}
+body.running .mast h1 .lamp{width:7px;height:7px}
+
+.strip{
+  display:flex;gap:0;align-items:stretch;margin:16px 0 0;
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);
+}
+.strip .cell{padding:7px 12px 6px;border-right:1px solid var(--hair);flex:1;min-width:0}
+.strip .cell:last-child{border-right:0}
+.strip .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim)}
+.strip .v{
+  display:block;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:500;
+  font-variant-numeric:tabular-nums;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.strip .v.hot{color:var(--signal)}
+.strip .v.good{color:var(--go)}
+
+/* ---- screens ---- */
+.screen{padding:26px 0 0;animation:in .18s ease-out}
+@keyframes in{from{opacity:.3;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.screen{animation:none}}
+
+h2.ask{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;
+  font-variation-settings:"wdth" 92,"opsz" 40;
+  font-size:26px;font-weight:700;letter-spacing:-.025em;line-height:1.12;
+  margin:0 0 4px;text-wrap:balance;
+}
+.sub{color:var(--dim);font-size:13.5px;margin:0 0 20px;max-width:52ch}
+
+/* ---- triage buttons ---- */
+.triage{display:flex;flex-direction:column;gap:9px}
+.big{
+  appearance:none;width:100%;text-align:left;cursor:pointer;
+  background:var(--panel);color:var(--ink);
+  border:1px solid var(--rule);border-left:3px solid var(--signal);
+  padding:15px 16px;font-family:inherit;box-shadow:var(--shadow);
+  display:block;transition:background .12s,border-color .12s,transform .06s;
+}
+.big:hover{background:var(--panel-2);border-color:var(--dim)}
+.big:active{transform:translateY(1px)}
+.big .t{
+  display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;
+  font-variation-settings:"wdth" 95;
+  font-size:18px;font-weight:700;letter-spacing:-.015em;line-height:1.2;
+}
+.big .d{display:block;color:var(--dim);font-size:13px;margin-top:3px}
+.big.go{border-left-color:var(--go)}
+
+/* ---- generic controls ---- */
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,a:focus-visible{
+  outline:2px solid var(--signal);outline-offset:2px;
+}
+.field{
+  width:100%;background:var(--panel);color:var(--ink);
+  border:1px solid var(--rule);border-radius:0;
+  padding:11px 12px;font-family:inherit;font-size:15.5px;line-height:1.45;
+}
+.field::placeholder{color:var(--dim);opacity:.85}
+textarea.field{min-height:96px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stack{display:flex;flex-direction:column;gap:7px}
+.blk{margin-bottom:20px}
+.blk>.lab{display:block;margin-bottom:7px}
+
+.btn{
+  appearance:none;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:600;
+  background:var(--panel);color:var(--ink);border:1px solid var(--rule);
+  padding:9px 14px;transition:background .12s,border-color .12s;
+}
+.btn:hover{background:var(--panel-2);border-color:var(--dim)}
+.btn.prime{background:var(--signal);border-color:var(--signal);color:var(--panel)}
+.btn.prime:hover{filter:brightness(1.08)}
+.btn.ghost{background:none;border-color:transparent;color:var(--dim);padding:9px 6px}
+.btn.ghost:hover{color:var(--ink);background:none}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.wide{width:100%;text-align:center}
+.launch{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;
+  font-size:19px;font-weight:800;letter-spacing:.01em;padding:15px;width:100%;
+  background:var(--signal);border:1px solid var(--signal);color:var(--panel);cursor:pointer;
+}
+.launch:hover{filter:brightness(1.08)}
+.launch:disabled{background:var(--panel-2);border-color:var(--rule);color:var(--dim);filter:none;cursor:not-allowed}
+
+/* chips */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  appearance:none;cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:11.5px;
+  background:var(--signal-w);color:var(--ink);border:1px solid var(--rule);
+  padding:6px 9px;text-align:left;line-height:1.35;
+}
+.chip:hover{border-color:var(--signal);background:var(--panel)}
+.chip.q{background:none;color:var(--dim)}
+.chip.q:hover{color:var(--ink)}
+
+/* runway picker */
+.rwpick{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.rwpick button{
+  appearance:none;cursor:pointer;background:var(--panel);border:1px solid var(--rule);
+  color:var(--ink);padding:10px 4px;font-family:inherit;
+}
+.rwpick button:hover{border-color:var(--dim)}
+.rwpick button[aria-pressed="true"]{background:var(--signal);border-color:var(--signal);color:var(--panel)}
+.rwpick .m{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:20px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.rwpick .u{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;margin-top:3px}
+
+/* ---- focus surface ---- */
+.surface{padding-top:18px}
+.taskname{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90,"opsz" 44;
+  font-size:clamp(22px,6vw,30px);font-weight:700;letter-spacing:-.028em;line-height:1.1;
+  margin:0 0 12px;text-wrap:balance;overflow-wrap:anywhere;
+}
+.movebar{
+  display:flex;gap:10px;align-items:center;justify-content:space-between;
+  border:1px solid var(--rule);border-left:3px solid var(--signal);
+  background:var(--panel);padding:9px 11px;margin-bottom:18px;
+}
+.movebar .mv{font-size:13.5px;line-height:1.35;overflow-wrap:anywhere}
+.movebar .mv b{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--signal);display:block;margin-bottom:2px;font-weight:500}
+.movebar.done{border-left-color:var(--go);opacity:.62}
+.movebar.done .mv{text-decoration:line-through;text-decoration-color:var(--dim)}
+
+.clock{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 84,"opsz" 96;
+  font-size:clamp(62px,19vw,104px);font-weight:700;letter-spacing:-.05em;line-height:.86;
+  font-variant-numeric:tabular-nums;margin:0;display:flex;align-items:baseline;gap:10px;
+}
+.clock .tag{
+  font-family:"JetBrains Mono",monospace;font-size:10px;font-weight:500;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--dim);letter-spacing:.15em;
+}
+.clock.over{color:var(--go)}
+.clock.over .tag{color:var(--go)}
+
+.rw{position:relative;height:44px;background:var(--panel-2);border:1px solid var(--rule);overflow:hidden;margin:12px 0 20px}
+.rw-fill{position:absolute;top:0;left:0;bottom:0;width:100%;background:var(--signal);transition:width .5s linear}
+@media (prefers-reduced-motion:reduce){.rw-fill{transition:none}}
+.rw-tick{position:absolute;inset:0;pointer-events:none;
+  background-image:repeating-linear-gradient(to right,currentColor 0 1px,transparent 1px var(--tick,25%));}
+.rw>.rw-tick{color:var(--rule)}
+.rw-fill>.rw-tick{color:#00000033}
+.rw.over .rw-fill{background:var(--go)}
+
+.park{display:flex;gap:0;margin-bottom:14px;border:1px solid var(--rule);background:var(--panel)}
+.park input{
+  flex:1;min-width:0;background:none;border:0;color:var(--ink);
+  font-family:inherit;font-size:15px;padding:12px;
+}
+.park input:focus{outline:none}
+.park:focus-within{border-color:var(--signal)}
+.park button{
+  appearance:none;cursor:pointer;background:none;border:0;border-left:1px solid var(--rule);
+  color:var(--dim);font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;padding:0 13px;
+}
+.park button:hover{color:var(--signal)}
+.parkhint{font-size:12px;color:var(--dim);margin:-8px 0 18px}
+.parkhint.flash{color:var(--go)}
+
+/* ---- breathing ---- */
+.breath{display:flex;flex-direction:column;align-items:center;gap:16px;padding:12px 0 4px}
+.orb{
+  width:170px;height:170px;border-radius:50%;
+  border:1px solid var(--rule);background:var(--signal-w);
+  display:flex;align-items:center;justify-content:center;
+  transform:scale(.5);transition:transform 1.6s ease-in-out,background .6s;
+}
+.orb.big{background:var(--go-w)}
+@media (prefers-reduced-motion:reduce){.orb{transition:none;transform:scale(.82)}}
+.orb .c{
+  font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);
+}
+.bcount{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+/* ---- lists ---- */
+.item{
+  display:flex;gap:10px;align-items:flex-start;justify-content:space-between;
+  border-bottom:1px solid var(--hair);padding:11px 0;
+}
+.item:last-child{border-bottom:0}
+.item .txt{flex:1;min-width:0;font-size:14.5px;line-height:1.4;overflow-wrap:anywhere}
+.item .meta{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+.item .meta.due{color:var(--signal)}
+.item .acts{display:flex;gap:2px;flex:none}
+.item .acts button{
+  appearance:none;cursor:pointer;background:none;border:0;color:var(--dim);
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 6px;
+}
+.item .acts button:hover{color:var(--ink)}
+.item .acts button.pri:hover{color:var(--signal)}
+.empty{color:var(--dim);font-size:13.5px;padding:12px 0;font-style:italic}
+
+.sec{margin-bottom:26px}
+.sec>h3{
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin:0 0 2px;padding-bottom:6px;border-bottom:1px solid var(--ink);
+  display:flex;justify-content:space-between;align-items:baseline;
+}
+.sec>h3 span{color:var(--dim)}
+
+/* record */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule);margin-bottom:22px}
+.tile{background:var(--panel);padding:13px 14px}
+.tile .n{
+  display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 86;
+  font-size:32px;font-weight:700;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+}
+.tile .n.good{color:var(--go)}
+.tile .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:6px}
+.tile .k em{font-style:normal;text-transform:none;letter-spacing:0;display:block;margin-top:3px;font-size:10.5px;opacity:.8}
+
+.note{
+  border-left:3px solid var(--rule);padding:2px 0 2px 12px;color:var(--ink-soft);
+  font-size:13.5px;line-height:1.5;margin:0 0 18px;
+}
+.note b{color:var(--ink);font-weight:600}
+.finding{border-left-color:var(--signal)}
+.pill{
+  display:inline-block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.12em;
+  text-transform:uppercase;padding:2px 6px;border:1px solid var(--rule);color:var(--dim);
+}
+.pill.landed{color:var(--go);border-color:var(--go)}
+.pill.nope{color:var(--dim)}
+.pill.partial{color:var(--signal);border-color:var(--signal)}
+
+/* outcome buttons */
+.outcomes{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px}
+.outcomes button{
+  appearance:none;cursor:pointer;background:var(--panel);border:1px solid var(--rule);color:var(--ink);
+  padding:14px 6px;font-family:inherit;font-size:14px;font-weight:600;
+}
+.outcomes button:hover{border-color:var(--dim)}
+.outcomes button small{display:block;font-weight:400;font-size:11px;color:var(--dim);margin-top:3px}
+
+details.why{border-top:1px solid var(--hair);margin-top:26px;padding-top:12px}
+details.why summary{
+  cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);list-style:none;
+}
+details.why summary::-webkit-details-marker{display:none}
+details.why summary:before{content:"+ ";color:var(--signal)}
+details.why[open] summary:before{content:"– "}
+details.why summary:hover{color:var(--ink)}
+.why dl{margin:14px 0 0;font-size:13.5px;line-height:1.55}
+.why dt{font-weight:700;margin-top:12px}
+.why dt:first-child{margin-top:0}
+.why dd{margin:2px 0 0;color:var(--ink-soft)}
+.why cite{font-style:normal;color:var(--dim);font-size:12px;display:block;margin-top:2px}
+
+.foot{
+  margin-top:34px;padding-top:12px;border-top:1px solid var(--hair);
+  display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.foot .lab{font-size:9.5px}
+.back{
+  appearance:none;background:none;border:0;cursor:pointer;padding:0;
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:14px;
+}
+.back:hover{color:var(--signal)}
+.linkish{
+  appearance:none;background:none;border:0;padding:0;cursor:pointer;color:var(--signal);
+  font-family:inherit;font-size:inherit;text-decoration:underline;text-underline-offset:2px;
+}
+</style>
+
+<div class="app">
+
+<header class="mast">
+  <h1><span class="lamp" id="lamp"></span>Cold Start</h1>
+  <p>A launcher for the part of you that won't turn over. Not a tracker. Nothing here to keep alive.</p>
+  <div class="strip" id="strip">
+    <div class="cell"><span class="k">State</span><span class="v" id="rd-state">idle</span></div>
+    <div class="cell"><span class="k">Parked</span><span class="v" id="rd-parked">0</span></div>
+    <div class="cell"><span class="k">Past runway</span><span class="v" id="rd-over">0m</span></div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============ HOME ============ -->
+<section class="screen" id="s-home">
+  <h2 class="ask">What's happening right now?</h2>
+  <p class="sub">Pick the one that's true this second. Each one goes somewhere different.</p>
+
+  <div id="resume-slot"></div>
+
+  <div class="triage">
+    <button class="big" data-go="start">
+      <span class="t">Can't start.</span>
+      <span class="d">You know exactly what to do. You are not doing it. It's been a while.</span>
+    </button>
+    <button class="big" data-go="spin">
+      <span class="t">Can't stop thinking.</span>
+      <span class="d">A loop is running and it's loud. Trying to work through it isn't working.</span>
+    </button>
+    <button class="big" data-go="drift">
+      <span class="t">Started, then drifted.</span>
+      <span class="d">You were on it forty seconds ago and you have no idea where you went.</span>
+    </button>
+  </div>
+
+  <div id="wired-slot"></div>
+
+  <div class="foot">
+    <button class="back" data-go="parked" style="margin:0">Parking lot <span id="foot-parked"></span></button>
+    <button class="back" data-go="record" style="margin:0">The record</button>
+  </div>
+
+  <details class="why">
+    <summary>Why these three and not a points system</summary>
+    <p class="note" style="margin-top:14px">Streaks and coins stop working in about four days, because an abstract number going up is not a reward an ADHD dopamine system reliably answers to — and once you break the streak, the app becomes a thing you're avoiding too. The bottleneck was never <b>knowing</b> or <b>wanting</b>. It's the gap between deciding and moving. So this only ever works on that gap.</p>
+    <dl>
+      <dt>Shrink the first move until it's stupid</dt>
+      <dd>Initiation is the whole fight; continuation usually takes care of itself once you're in. So the app refuses to let you plan. It makes you name one physical action under sixty seconds, then starts the clock immediately.</dd>
+      <dd><cite>Behavioural activation; the "just five minutes" rule.</cite></dd>
+
+      <dt>Make time physical</dt>
+      <dd>The core deficit is time blindness — time doesn't <em>feel</em> like it's passing. Digits don't fix that. A visible quantity draining across the screen does. That's why the bar is the biggest thing on the focus screen.</dd>
+      <dd><cite>Barkley: ADHD as impaired self-regulation across time.</cite></dd>
+
+      <dt>Catch thoughts without leaving</dt>
+      <dd>Sessions don't die from boredom, they die because something popped into your head and you chased it. An open loop keeps re-firing until it's written down somewhere. So there's a catch field on the focus screen and it never navigates away.</dd>
+      <dd><cite>Zeigarnik effect; externalising working memory.</cite></dd>
+
+      <dt>Give the worry an appointment</dt>
+      <dd>Rumination isn't solved by arguing with it. Scheduling it to a specific later time — and writing it down so your brain trusts it won't be lost — measurably cuts how much you worry the rest of the day. That's what parking a worry does here.</dd>
+      <dd><cite>Borkovec: stimulus control for worry. Defusion wording is from ACT.</cite></dd>
+
+      <dt>Two breaths in, one long breath out</dt>
+      <dd>The double-inhale sigh is the fastest voluntary way to bring arousal down in real time. It's forty seconds and it works on the body, not the argument.</dd>
+      <dd><cite>Physiological sigh; cyclic sighing trials.</cite></dd>
+
+      <dt>When something keeps sliding, wire it to a cue</dt>
+      <dd>"When <em>X happens</em>, I will <em>Y</em>" moves the trigger out of your executive function and into the environment. It's one of the best-evidenced behaviour-change moves there is, and almost no ADHD app uses it. Offered here after a task fails twice.</dd>
+      <dd><cite>Gollwitzer: implementation intentions.</cite></dd>
+    </dl>
+  </details>
+</section>
+
+<!-- ============ COLD START ============ -->
+<section class="screen" id="s-start" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Name it, shrink it, go.</h2>
+  <p class="sub">Three fields. No planning. The clock starts the second you hit the button.</p>
+
+  <div class="blk">
+    <span class="lab">1 — The thing you're avoiding</span>
+    <input class="field" id="task-in" placeholder="say it the way you'd say it out loud" autocomplete="off">
+    <div class="chips" id="task-chips" style="margin-top:7px"></div>
+  </div>
+
+  <div class="blk">
+    <span class="lab">2 — The first physical move (under 60 seconds)</span>
+    <input class="field" id="move-in" placeholder="not a plan. a body movement." autocomplete="off">
+    <div class="chips" id="move-chips" style="margin-top:7px"></div>
+  </div>
+
+  <div class="blk">
+    <span class="lab">3 — How long you owe it</span>
+    <div class="rwpick" id="rwpick">
+      <button data-min="5" aria-pressed="false"><span class="m">5</span><span class="u">min</span></button>
+      <button data-min="12" aria-pressed="true"><span class="m">12</span><span class="u">min</span></button>
+      <button data-min="25" aria-pressed="false"><span class="m">25</span><span class="u">min</span></button>
+      <button data-min="45" aria-pressed="false"><span class="m">45</span><span class="u">min</span></button>
+    </div>
+    <p class="sub" id="rw-hint" style="margin:8px 0 0;font-size:12.5px"></p>
+  </div>
+
+  <button class="launch" id="launch" disabled>Start the clock</button>
+  <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ OFFLOAD ============ -->
+<section class="screen" id="s-spin" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+
+  <div id="spin-1">
+    <h2 class="ask">Get it out of your head first.</h2>
+    <p class="sub">It keeps re-firing because nothing outside your skull is holding it. Type it badly. Nobody reads this.</p>
+    <textarea class="field" id="spin-in" placeholder="what's on the loop?"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn prime" id="spin-next" disabled>Next</button>
+      <button class="btn ghost" data-go="home">Not now</button>
+    </div>
+  </div>
+
+  <div id="spin-2" hidden>
+    <h2 class="ask">Look at the shape of it.</h2>
+    <p class="sub">Same words, one step back. You're not arguing with it — you're noticing it's a sentence rather than a fact.</p>
+    <p class="note finding" id="defuse-1"></p>
+    <p class="note" id="defuse-2"></p>
+    <div class="row" style="margin-top:14px">
+      <button class="btn prime" id="spin-to-3">Alright, next</button>
+    </div>
+  </div>
+
+  <div id="spin-3" hidden>
+    <h2 class="ask">Is there anything to actually do?</h2>
+    <p class="sub">This is the only fork that matters. A problem gets an action. A worry gets an appointment. Neither one gets to stay in your head.</p>
+    <div class="stack">
+      <button class="big" id="spin-problem">
+        <span class="t">There's something I could do.</span>
+        <span class="d">Even one small thing. It becomes a task with a first move.</span>
+      </button>
+      <button class="big go" id="spin-worry">
+        <span class="t">There's nothing to do right now.</span>
+        <span class="d">Then it doesn't get today. Give it a time slot and put it down.</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="spin-4a" hidden>
+    <h2 class="ask">What's the one action?</h2>
+    <p class="sub">Physical, small, and something you could do today.</p>
+    <input class="field" id="spin-action" placeholder="e.g. text her one line asking to talk sunday" autocomplete="off">
+    <div class="row" style="margin-top:10px">
+      <button class="btn prime" id="spin-action-go">Do it now</button>
+      <button class="btn" id="spin-action-park">Park it for later</button>
+    </div>
+  </div>
+
+  <div id="spin-4b" hidden>
+    <h2 class="ask">When does it get your attention?</h2>
+    <p class="sub">Pick a real time. It goes in the parking lot with that time on it, and it will still be there. Your head can let go of something it knows is written down.</p>
+    <div class="stack" id="worry-slots"></div>
+    <div class="row" style="margin-top:10px">
+      <input class="field" type="time" id="worry-time" style="width:auto">
+      <button class="btn" id="worry-custom">Use this time today</button>
+    </div>
+  </div>
+
+  <div id="spin-5" hidden>
+    <h2 class="ask">Now bring the body down.</h2>
+    <p class="sub">Two breaths in through the nose, one long breath out through the mouth. Four rounds, about forty seconds. This is the fastest thing that works, and it works whether or not you believe it.</p>
+    <div class="breath">
+      <div class="orb" id="orb"><span class="c" id="orb-cue">ready</span></div>
+      <span class="bcount" id="breath-count">round 0 of 4</span>
+    </div>
+    <div class="row" style="margin-top:18px;justify-content:center">
+      <button class="btn prime" id="breath-go">Start breathing</button>
+      <button class="btn ghost" id="breath-skip">Skip</button>
+    </div>
+  </div>
+
+  <div id="spin-6" hidden>
+    <h2 class="ask">Parked. It'll keep.</h2>
+    <p class="note" id="spin-done-note"></p>
+    <div class="stack">
+      <button class="big" id="spin-launch">
+        <span class="t">Put me on something.</span>
+        <span class="d">The loop is quieter when there's a task in the foreground.</span>
+      </button>
+      <button class="big go" data-go="home">
+        <span class="t">That's enough for now.</span>
+        <span class="d">Offloading was the job. You did the job.</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ RE-ANCHOR ============ -->
+<section class="screen" id="s-drift" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Where'd you go?</h2>
+  <p class="sub">Name it so it stops pulling. Getting it out costs less than resisting it, and you get to come back with it written down instead of half-remembered.</p>
+  <input class="field" id="drift-in" placeholder="the tab, the thought, the thing you suddenly had to look up" autocomplete="off">
+  <div class="row" style="margin-top:10px">
+    <button class="btn prime" id="drift-park">Park it and get back in</button>
+    <button class="btn" id="drift-skip">Nothing to park, just get me back</button>
+  </div>
+  <p class="note" id="drift-note" style="margin-top:20px"></p>
+</section>
+
+<!-- ============ FOCUS SURFACE ============ -->
+<section class="screen surface" id="s-run" hidden>
+  <h2 class="taskname" id="run-task">—</h2>
+  <div class="movebar" id="run-movebar">
+    <span class="mv"><b>Start here</b><span id="run-move"></span></span>
+    <button class="btn" id="move-done" style="flex:none">Did it</button>
+  </div>
+  <p class="clock num" id="run-clock"><span id="run-time">00:00</span><span class="tag" id="run-tag">left</span></p>
+  <div class="rw" id="rw"><div class="rw-tick"></div><div class="rw-fill" id="rw-fill"><div class="rw-tick"></div></div></div>
+
+  <div class="park">
+    <input id="park-in" placeholder="something popped into your head? put it here" autocomplete="off">
+    <button id="park-btn">Park</button>
+  </div>
+  <p class="parkhint" id="park-hint">Parking does not leave this screen. That's the entire point of it.</p>
+
+  <div class="row" id="run-actions">
+    <button class="btn prime" id="run-done">Finished</button>
+    <button class="btn" id="run-stop">Stop here</button>
+    <button class="btn ghost" id="run-drift">I drifted</button>
+  </div>
+
+  <div id="expired" hidden style="margin-top:18px">
+    <p class="note finding" id="expired-note"></p>
+    <div class="row">
+      <button class="btn prime" data-add="5">Keep going +5</button>
+      <button class="btn prime" data-add="12">+12</button>
+      <button class="btn" id="wrap">Wrap it up</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DEBRIEF ============ -->
+<section class="screen" id="s-debrief" hidden>
+  <h2 class="ask">How'd that actually go?</h2>
+  <p class="sub">Answer honestly — it's the only input the pattern readout has, and a flattering log tells you nothing.</p>
+  <div class="outcomes">
+    <button data-out="landed">Landed<small>I was in it</small></button>
+    <button data-out="partial">Partial<small>in and out</small></button>
+    <button data-out="nope">Nope<small>never got in</small></button>
+  </div>
+  <input class="field" id="debrief-note" placeholder="one line on what helped or got in the way (optional)" autocomplete="off">
+  <div id="debrief-after" hidden style="margin-top:18px">
+    <p class="note finding" id="debrief-read"></p>
+    <div id="wire-offer" hidden>
+      <span class="lab" style="display:block;margin-bottom:7px">Wire it to a cue instead</span>
+      <div class="row" style="margin-bottom:10px">
+        <span style="font-size:14px">When</span>
+        <input class="field" id="wire-cue" placeholder="I sit down with coffee" style="flex:1;min-width:150px">
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <span style="font-size:14px">I will</span>
+        <input class="field" id="wire-act" placeholder="open the doc and read the last line" style="flex:1;min-width:150px">
+      </div>
+      <button class="btn prime" id="wire-save">Wire it</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn prime" id="debrief-again">Go again</button>
+      <button class="btn" data-go="home">Done for now</button>
+      <button class="btn ghost" data-go="record">See the record</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PARKING LOT ============ -->
+<section class="screen" id="s-parked" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Parking lot</h2>
+  <p class="sub">Everything you put down instead of chasing. Nothing here is overdue and nothing here is nagging you — that's what it's for.</p>
+  <div id="parked-body"></div>
+</section>
+
+<!-- ============ RECORD ============ -->
+<section class="screen" id="s-record" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">The record</h2>
+  <p class="sub">There is no streak here and nothing to protect. A three-week gap costs you exactly nothing. This counts what happened, and tells you what your own sessions say about you.</p>
+  <div id="record-body"></div>
+</section>
+
+</main>
+
+<div class="foot">
+  <span class="lab" id="save-state">local only</span>
+  <button class="back" id="sound-toggle" style="margin:0">Sound: on</button>
+</div>
+
+</div>
+
+<script>
+/* ================= Cold Start =================
+   One panel, several modes. Everything the app knows lives in `state`;
+   the screens only ever read it and the writers all go through save().
+   ============================================== */
+
+const $  = (id) => document.getElementById(id);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+const LS_KEY = "coldstart:state:v1";
+const DOC    = "state/coldstart";
+
+let db = null, dbErr = "", canLocal = false, sample = null;
+
+/* Outside the artifact viewer there is no `claude` at all, so route every
+   capability lookup through one shim that just resolves null. */
+const CL = (typeof claude !== "undefined" && claude && claude.use)
+  ? claude
+  : { use: () => Promise.resolve(null) };
+
+const state = {
+  sessions: [],   // finished runs
+  parked:   [],   // thoughts, worries, tasks
+  wired:    [],   // implementation intentions
+  live:     null, // the run in progress, if any
+  sound:    true,
+  loaded:   false,
+};
+
+/* ---------- persistence ---------- */
+
+function payload() {
+  return {
+    sessions: state.sessions.slice(-400),
+    parked:   state.parked.slice(-300),
+    wired:    state.wired.slice(-60),
+    live:     state.live,
+    sound:    state.sound,
+  };
+}
+
+function adopt(d) {
+  if (!d || typeof d !== "object") return false;
+  if (Array.isArray(d.sessions)) state.sessions = d.sessions;
+  if (Array.isArray(d.parked))   state.parked   = d.parked;
+  if (Array.isArray(d.wired))    state.wired    = d.wired;
+  if (typeof d.sound === "boolean") state.sound = d.sound;
+  state.live = d.live && typeof d.live === "object" ? d.live : null;
+  return true;
+}
+
+async function load() {
+  let got = false;
+  try {
+    db = await CL.use("db");
+    if (db) {
+      const snap = await db.doc(DOC).get();
+      if (snap.exists) got = adopt(snap.data());
+    }
+  } catch (e) { db = null; dbErr = (e && (e.code || e.message)) || "unknown"; }
+
+  try {
+    localStorage.setItem(LS_KEY + ":probe", "1");
+    localStorage.removeItem(LS_KEY + ":probe");
+    canLocal = true;
+  } catch (e) { canLocal = false; }
+
+  if (!got && canLocal) {
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) adopt(JSON.parse(raw)); }
+    catch (e) { /* blocked or corrupt — carry on in memory */ }
+  }
+
+  state.loaded = true;
+  boot();
+}
+
+let saveTimer = null;
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    const body = payload();
+    let local = false, cloud = false;
+    try { localStorage.setItem(LS_KEY, JSON.stringify(body)); local = true; } catch (e) {}
+    if (db) {
+      try { await db.doc(DOC).set(body); cloud = true; dbErr = ""; }
+      catch (e) { dbErr = (e && (e.code || e.message)) || "unknown"; }
+    }
+    $("save-state").textContent =
+      cloud ? "saved · cloud + this browser"
+    : local ? (db ? "saved here only · cloud: " + dbErr : "saved in this browser")
+    : "not saving — storage is blocked";
+  }, 350);
+}
+
+/* ---------- small helpers ---------- */
+
+const uid   = () => Math.random().toString(36).slice(2, 10);
+const now   = () => Date.now();
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+function mmss(sec) {
+  sec = Math.max(0, Math.round(sec));
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+function mins(sec) {
+  const m = Math.round(sec / 60);
+  return m >= 60 ? (Math.floor(m / 60) + "h " + (m % 60) + "m") : (m + "m");
+}
+function when(ts) {
+  const d = new Date(ts), t = now() - ts;
+  if (t < 36e5) return Math.max(1, Math.round(t / 6e4)) + " min ago";
+  const sameDay = new Date().toDateString() === d.toDateString();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (sameDay) return time;
+  return d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }) + ", " + time;
+}
+function clockLabel(ts) {
+  const d = new Date(ts);
+  const day = new Date().toDateString() === d.toDateString() ? ""
+            : d.toLocaleDateString([], { weekday: "long" }) + " ";
+  return day + d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function bucket(ts) {
+  const h = new Date(ts).getHours();
+  return h < 6 ? "the small hours" : h < 11 ? "mornings" : h < 15 ? "middays"
+       : h < 19 ? "afternoons" : h < 23 ? "evenings" : "late nights";
+}
+
+/* ---------- sound ---------- */
+
+let audio = null;
+function armAudio() {
+  if (audio) return;
+  try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+}
+function chime() {
+  if (!state.sound || !audio) return;
+  try {
+    if (audio.state === "suspended") audio.resume();
+    [0, 0.16].forEach((delay, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      const t = audio.currentTime + delay;
+      o.type = "sine";
+      o.frequency.setValueAtTime(i ? 523.25 : 392, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+      o.connect(g); g.connect(audio.destination);
+      o.start(t); o.stop(t + 0.6);
+    });
+  } catch (e) { /* audio is a nicety, never a failure */ }
+}
+
+/* ---------- routing ---------- */
+
+const SCREENS = ["home", "start", "spin", "drift", "run", "debrief", "parked", "record"];
+let screen = "home";
+
+function go(name) {
+  screen = name;
+  SCREENS.forEach((s) => { $("s-" + s).hidden = s !== name; });
+  document.body.classList.toggle("running", name === "run");
+  window.scrollTo(0, 0);
+  if (name === "home")   renderHome();
+  if (name === "start")  renderStart();
+  if (name === "parked") renderParked();
+  if (name === "record") renderRecord();
+  if (name === "run")    { paintRun(); setTimeout(() => $("park-in").focus(), 60); }
+  paintStrip();
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-go]");
+  if (b) { go(b.getAttribute("data-go")); }
+});
+
+/* ---------- the readout strip ---------- */
+
+function paintStrip() {
+  const live = state.live;
+  const dueCount = state.parked.filter((p) => !p.doneAt && p.dueAt && p.dueAt <= now()).length;
+  const openCount = state.parked.filter((p) => !p.doneAt).length;
+
+  const st = $("rd-state"), lamp = $("lamp");
+  if (live) {
+    const rem = (live.startedAt + (live.plannedSec + live.addedSec) * 1000 - now()) / 1000;
+    st.textContent = rem > 0 ? "running · " + mmss(rem) : "past runway · " + mmss(-rem);
+    st.className = "v " + (rem > 0 ? "hot" : "good");
+    lamp.className = "lamp" + (rem > 0 ? "" : " on");
+  } else {
+    st.textContent = "idle";
+    st.className = "v";
+    lamp.className = "lamp";
+  }
+
+  $("rd-parked").textContent = openCount + (dueCount ? " · " + dueCount + " due" : "");
+  $("rd-parked").className = "v" + (dueCount ? " hot" : "");
+
+  const over = state.sessions.reduce((a, s) => a + (s.overtimeSec || 0), 0);
+  $("rd-over").textContent = over ? mins(over) : "0m";
+  $("rd-over").className = "v" + (over ? " good" : "");
+
+  $("foot-parked").textContent = openCount ? "(" + openCount + ")" : "";
+}
+
+/* ---------- home ---------- */
+
+function renderHome() {
+  const live = state.live;
+  const slot = $("resume-slot");
+  if (live) {
+    const rem = (live.startedAt + (live.plannedSec + live.addedSec) * 1000 - now()) / 1000;
+    slot.innerHTML =
+      '<button class="big go" id="resume" style="margin-bottom:9px">' +
+        '<span class="t">Back into it &mdash; ' + esc(live.task) + '</span>' +
+        '<span class="d">' + (rem > 0 ? mmss(rem) + " left on the clock." : mmss(-rem) + " past the runway and still going.") +
+        ' You left it running.</span></button>';
+    $("resume").addEventListener("click", () => go("run"));
+  } else slot.innerHTML = "";
+
+  const due = state.parked.filter((p) => !p.doneAt && p.dueAt && p.dueAt <= now());
+  const w = $("wired-slot");
+  let html = "";
+  if (due.length) {
+    html += '<div class="sec" style="margin-top:26px"><h3>Due now <span>' + due.length + '</span></h3>' +
+      due.slice(0, 3).map((p) =>
+        '<div class="item"><span class="txt">' + esc(p.text) +
+        '<span class="meta due">' + (p.kind === "worry" ? "worry appointment" : "task") + " · " + clockLabel(p.dueAt) + '</span></span>' +
+        '<span class="acts"><button class="pri" data-act="launch" data-id="' + p.id + '">Work it</button>' +
+        '<button data-act="done" data-id="' + p.id + '">Clear</button></span></div>').join("") +
+      "</div>";
+  }
+  if (state.wired.length) {
+    html += '<div class="sec" style="margin-top:22px"><h3>Wired cues <span>' + state.wired.length + '</span></h3>' +
+      state.wired.slice(-3).reverse().map((c) =>
+        '<div class="item"><span class="txt">When <b>' + esc(c.cue) + '</b>, I will <b>' + esc(c.action) + '</b>' +
+        '<span class="meta">set ' + when(c.createdAt) + '</span></span>' +
+        '<span class="acts"><button class="pri" data-act="wirego" data-id="' + c.id + '">Go</button>' +
+        '<button data-act="unwire" data-id="' + c.id + '">Drop</button></span></div>').join("") +
+      "</div>";
+  }
+  w.innerHTML = html;
+}
+
+/* list actions, shared by home / parking lot */
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const id = b.getAttribute("data-id"), act = b.getAttribute("data-act");
+  const p = state.parked.find((x) => x.id === id);
+  const c = state.wired.find((x) => x.id === id);
+
+  if (act === "done" && p)   { p.doneAt = now(); save(); }
+  if (act === "delete" && p) { state.parked = state.parked.filter((x) => x.id !== id); save(); }
+  if (act === "launch" && p) { p.doneAt = now(); save(); openStart(p.text); return; }
+  if (act === "promote" && p){ p.kind = "task"; save(); }
+  if (act === "unwire" && c) { state.wired = state.wired.filter((x) => x.id !== id); save(); }
+  if (act === "wirego" && c) { openStart(c.task || c.action, c.action); return; }
+
+  if (screen === "home") renderHome();
+  if (screen === "parked") renderParked();
+  paintStrip();
+});
+
+/* ---------- cold start ---------- */
+
+const MOVE_RULES = [
+  { re: /\b(e?mail|reply|inbox|respond|message|dm|text)\b/i,
+    moves: ["open the reply box and type 'hi'", "find it and just read it once", "write the worst possible first line"] },
+  { re: /\b(write|writing|essay|draft|report|chapter|blog|post|paper|thesis|article|notes)\b/i,
+    moves: ["open the doc and read the last sentence", "write one deliberately bad sentence", "type the heading, then stop"] },
+  { re: /\b(code|coding|bug|refactor|pr|ticket|deploy|test|repo|merge|build)\b/i,
+    moves: ["open the file and put the cursor in it", "reproduce it once, don't fix it", "write the failing test's name only"] },
+  { re: /\b(clean|tidy|dish|laundry|room|kitchen|desk|wash|hoover|vacuum|bin|trash)\b/i,
+    moves: ["pick up three things, that's all", "fill the sink with hot water", "put one item where it lives"] },
+  { re: /\b(call|phone|ring|dentist|doctor|appointment|book|schedule)\b/i,
+    moves: ["find the number and put it on screen", "write the first sentence you'll say", "open the booking page and stop"] },
+  { re: /\b(gym|run|walk|workout|exercise|stretch|yoga|swim)\b/i,
+    moves: ["put the shoes on, nothing else", "get changed and stand by the door", "put the mat on the floor"] },
+  { re: /\b(admin|tax|form|invoice|bill|insurance|bank|receipt|expense|renew)\b/i,
+    moves: ["get the papers out onto the table", "open the form and read question one", "log in, fill in nothing"] },
+  { re: /\b(study|revise|read|learn|course|lecture|exam|revision)\b/i,
+    moves: ["open it to the right page", "read one paragraph out loud", "copy one line out by hand"] },
+  { re: /\b(apply|cv|resume|application|job|cover letter|interview)\b/i,
+    moves: ["open the old version and change the date", "paste the job title in", "open the tab and leave it open"] },
+  { re: /\b(pack|move|move out|box|sort|declutter|wardrobe|closet)\b/i,
+    moves: ["fill one box, badly", "clear one shelf onto the bed", "put four things in a bag"] },
+];
+const GENERIC = [
+  "sit down where it happens",
+  "open the thing and just look at it",
+  "get the stuff out onto the table",
+  "set it up like you're about to start, then stop",
+  "say the first step out loud",
+];
+const SMALLER = [
+  "just open it, nothing else",
+  "just sit in the chair facing it",
+  "just put it on the screen and look at it",
+  "just get it out of the bag",
+  "just touch it for ten seconds",
+];
+
+let runwayMin = 12, smallerIx = 0;
+
+function openStart(task, move) {
+  go("start");
+  $("task-in").value = task || "";
+  $("move-in").value = move || "";
+  suggestMoves();
+  refreshLaunch();
+  setTimeout(() => $(task ? "move-in" : "task-in").focus(), 60);
+}
+
+function suggestMoves() {
+  const t = $("task-in").value.trim();
+  let picks = [];
+  if (t) for (const r of MOVE_RULES) if (r.re.test(t)) { picks = picks.concat(r.moves); break; }
+  picks = picks.concat(GENERIC).filter((v, i, a) => a.indexOf(v) === i).slice(0, 5);
+
+  let html = picks.map((m) => '<button class="chip" data-move="' + esc(m) + '">' + esc(m) + "</button>").join("");
+  html += '<button class="chip q" id="smaller">make it smaller &darr;</button>';
+  if (sample && t) html += '<button class="chip q" id="ask-shrink">shrink it for me &rarr;</button>';
+  $("move-chips").innerHTML = html;
+}
+
+function recentTasks() {
+  const seen = [], out = [];
+  for (let i = state.sessions.length - 1; i >= 0 && out.length < 3; i--) {
+    const t = state.sessions[i].task;
+    if (t && seen.indexOf(t.toLowerCase()) < 0) { seen.push(t.toLowerCase()); out.push(t); }
+  }
+  state.parked.filter((p) => !p.doneAt && p.kind === "task").slice(-3).forEach((p) => {
+    if (out.length < 6 && seen.indexOf(p.text.toLowerCase()) < 0) { seen.push(p.text.toLowerCase()); out.push(p.text); }
+  });
+  return out;
+}
+
+function renderStart() {
+  $("task-chips").innerHTML = recentTasks()
+    .map((t) => '<button class="chip q" data-task="' + esc(t) + '">' + esc(t) + "</button>").join("");
+  suggestMoves();
+  $$("#rwpick button").forEach((b) =>
+    b.setAttribute("aria-pressed", String(Number(b.dataset.min) === runwayMin)));
+  $("rw-hint").textContent = runwayHint();
+  refreshLaunch();
+}
+
+function runwayHint() {
+  const g = groups(state.sessions.filter((s) => s.plannedMin), (s) => s.plannedMin, 3);
+  if (g.length < 2) return "Twelve is the default because it's short enough that starting doesn't need a decision.";
+  const best = g[0], worst = g[g.length - 1];
+  if (best.rate - worst.rate < 0.2) return "Your record doesn't favour any length yet — they all land about the same.";
+  return "Your record: " + best.key + "-minute runs land " + pct(best.rate) + " of the time (" + best.n +
+         " of them), " + worst.key + "-minute runs land " + pct(worst.rate) + ".";
+}
+
+function refreshLaunch() {
+  const ok = $("task-in").value.trim().length > 0;
+  $("launch").disabled = !ok;
+  $("launch").textContent = ok ? "Start the clock" : "Name it first";
+}
+
+$("task-in").addEventListener("input", () => { suggestMoves(); refreshLaunch(); });
+$("task-in").addEventListener("keydown", (e) => { if (e.key === "Enter") $("move-in").focus(); });
+$("move-in").addEventListener("keydown", (e) => { if (e.key === "Enter" && $("task-in").value.trim()) launch(); });
+
+$("task-chips").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-task]");
+  if (!b) return;
+  $("task-in").value = b.dataset.task; suggestMoves(); refreshLaunch(); $("move-in").focus();
+});
+
+$("move-chips").addEventListener("click", async (e) => {
+  const pick = e.target.closest("[data-move]");
+  if (pick) { $("move-in").value = pick.dataset.move; $("move-in").focus(); return; }
+  if (e.target.id === "smaller") {
+    $("move-in").value = SMALLER[smallerIx % SMALLER.length];
+    smallerIx++;
+    return;
+  }
+  if (e.target.id === "ask-shrink") {
+    const btn = e.target, task = $("task-in").value.trim();
+    btn.textContent = "thinking…"; btn.disabled = true;
+    try {
+      const r = await sample.json(
+        'Task someone with ADHD is avoiding: "' + task + '". Give exactly 4 first physical moves that would ' +
+        'get them started. Each must be a single concrete physical action taking under 60 seconds, specific to ' +
+        'this task, requiring no decisions and no planning. Never "think", "plan", "decide" or "make a list". ' +
+        'Under 9 words each, lowercase, imperative. Return JSON only: {"moves":["...","...","...","..."]}',
+        { modelTier: "quick", cache: true });
+      const moves = (r && Array.isArray(r.moves) ? r.moves : []).slice(0, 4);
+      if (moves.length) {
+        $("move-chips").innerHTML =
+          moves.map((m) => '<button class="chip" data-move="' + esc(m) + '">' + esc(m) + "</button>").join("") +
+          '<button class="chip q" id="smaller">make it smaller &darr;</button>';
+      } else { btn.textContent = "nothing came back — pick one above"; btn.disabled = false; }
+    } catch (err) {
+      btn.textContent = (err && err.code === "rate_limited") ? "rate limited — pick one above" : "couldn't reach it — pick one above";
+      btn.disabled = false;
+    }
+  }
+});
+
+$("rwpick").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-min]");
+  if (!b) return;
+  runwayMin = Number(b.dataset.min);
+  $$("#rwpick button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+});
+
+$("launch").addEventListener("click", launch);
+
+function launch() {
+  const task = $("task-in").value.trim();
+  if (!task) return;
+  armAudio();
+  state.live = {
+    id: uid(),
+    task,
+    move: $("move-in").value.trim(),
+    moveDone: false,
+    plannedMin: runwayMin,
+    plannedSec: runwayMin * 60,
+    addedSec: 0,
+    startedAt: now(),
+    via: lastVia,
+    parked: 0,
+    chimed: false,
+  };
+  lastVia = "start";
+  save();
+  go("run");
+}
+
+let lastVia = "start";
+
+/* ---------- the focus surface ---------- */
+
+let ticker = null;
+function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
+function tickOff() { clearInterval(ticker); ticker = null; }
+
+function paintRun() {
+  const L = state.live;
+  if (!L) { if (screen === "run") go("home"); return; }
+
+  $("run-task").textContent = L.task;
+
+  const bar = $("run-movebar");
+  if (!L.move) bar.hidden = true;
+  else {
+    bar.hidden = false;
+    $("run-move").textContent = L.move;
+    bar.classList.toggle("done", !!L.moveDone);
+    $("move-done").textContent = L.moveDone ? "Done" : "Did it";
+    $("move-done").disabled = !!L.moveDone;
+  }
+
+  const total   = L.plannedSec + L.addedSec;
+  const elapsed = (now() - L.startedAt) / 1000;
+  const rem     = total - elapsed;
+  const tickN   = total / 60 <= 15 ? Math.max(1, Math.round(total / 60)) : Math.round(total / 300);
+  $("rw").style.setProperty("--tick", (100 / tickN) + "%");
+
+  if (rem > 0) {
+    $("run-time").textContent = mmss(rem);
+    $("run-tag").textContent  = "left of " + Math.round(total / 60) + " min";
+    $("run-clock").classList.remove("over");
+    $("rw").classList.remove("over");
+    $("rw-fill").style.width = clamp(rem / total * 100, 0, 100) + "%";
+    $("expired").hidden = true;
+  } else {
+    $("run-time").textContent = mmss(-rem);
+    $("run-tag").textContent  = "past the runway";
+    $("run-clock").classList.add("over");
+    $("rw").classList.add("over");
+    $("rw-fill").style.width = "100%";
+    if (!L.chimed) {
+      L.chimed = true; chime(); save();
+      $("expired-note").innerHTML =
+        "Runway's up, so the deal is done &mdash; you owe it nothing else. " +
+        "But if you're actually <b>in</b> it, stopping now is the expensive move. That absorption is the thing you " +
+        "were trying to get to, and it doesn't come back on demand. Ride it.";
+      $("expired").hidden = false;
+    } else {
+      $("expired").hidden = false;
+    }
+  }
+}
+
+$("move-done").addEventListener("click", () => {
+  if (!state.live) return;
+  state.live.moveDone = true; save(); paintRun();
+  flashPark("That was the hard part. Everything after this is downhill.");
+});
+
+function flashPark(msg) {
+  const h = $("park-hint");
+  h.textContent = msg; h.classList.add("flash");
+  clearTimeout(flashPark._t);
+  flashPark._t = setTimeout(() => {
+    h.textContent = "Parking does not leave this screen. That's the entire point of it.";
+    h.classList.remove("flash");
+  }, 3500);
+}
+
+function parkIt(text, kind, dueAt) {
+  text = (text || "").trim();
+  if (!text) return null;
+  const p = { id: uid(), kind: kind || "thought", text, createdAt: now(), dueAt: dueAt || null, doneAt: null };
+  state.parked.push(p); save(); paintStrip();
+  return p;
+}
+
+$("park-btn").addEventListener("click", doPark);
+$("park-in").addEventListener("keydown", (e) => { if (e.key === "Enter") doPark(); });
+function doPark() {
+  const v = $("park-in").value;
+  if (!v.trim()) return;
+  parkIt(v, "thought");
+  if (state.live) { state.live.parked = (state.live.parked || 0) + 1; save(); }
+  $("park-in").value = "";
+  flashPark("Caught. It's in the parking lot and it'll still be there. Back to the thing.");
+}
+
+$("expired").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-add]");
+  if (!b || !state.live) return;
+  state.live.addedSec += Number(b.dataset.add) * 60;
+  state.live.chimed = false;
+  save(); paintRun();
+});
+$("wrap").addEventListener("click", () => finishRun("wrapped"));
+$("run-done").addEventListener("click", () => finishRun("finished"));
+$("run-stop").addEventListener("click", () => finishRun("stopped"));
+$("run-drift").addEventListener("click", () => { go("drift"); renderDrift(); });
+
+let pending = null;
+
+function finishRun(reason) {
+  const L = state.live;
+  if (!L) { go("home"); return; }
+  const elapsed = (now() - L.startedAt) / 1000;
+  pending = {
+    id: L.id, task: L.task, move: L.move, moveDone: !!L.moveDone,
+    plannedMin: L.plannedMin, plannedSec: L.plannedSec,
+    elapsedSec: Math.round(elapsed),
+    overtimeSec: Math.max(0, Math.round(elapsed - L.plannedSec)),
+    startedAt: L.startedAt, endedAt: now(),
+    via: L.via, parked: L.parked || 0, reason,
+  };
+  state.live = null; save();
+  $("debrief-note").value = "";
+  $("debrief-after").hidden = true;
+  $("wire-offer").hidden = true;
+  go("debrief");
+}
+
+/* ---------- debrief ---------- */
+
+$$("#s-debrief .outcomes button").forEach((b) => b.addEventListener("click", () => {
+  if (!pending) { go("home"); return; }
+  pending.outcome = b.dataset.out;
+  pending.note = $("debrief-note").value.trim();
+  state.sessions.push(pending);
+  save();
+
+  const s = pending;
+  const week = state.sessions.filter((x) => x.endedAt > now() - 6048e5);
+  const landedWeek = week.filter((x) => x.outcome === "landed").length;
+  const sameTask = state.sessions.filter((x) => x.task.toLowerCase() === s.task.toLowerCase());
+  const sameFails = sameTask.filter((x) => x.outcome !== "landed").length;
+
+  let read = "";
+  if (s.outcome === "landed") {
+    read = "<b>" + mins(s.elapsedSec) + " on it</b>" +
+      (s.overtimeSec > 60 ? ", " + mins(s.overtimeSec) + " of that past the runway &mdash; that's the absorption, and it only ever shows up <em>after</em> you'd already started. " : ". ") +
+      "That's " + landedWeek + " landed in the last seven days.";
+  } else if (s.outcome === "partial") {
+    read = "In and out still put <b>" + mins(s.elapsedSec) + "</b> on it that wouldn't otherwise exist" +
+      (s.parked ? ", and you caught " + s.parked + " thing" + (s.parked > 1 ? "s" : "") + " without leaving." : ".") +
+      " Partial is the normal outcome, not the failure case.";
+  } else {
+    read = "Fine. Nothing is deducted, because there's nothing here to deduct from. " +
+      (s.moveDone
+        ? "You did do the first move, which means the block is somewhere after starting &mdash; try a shorter runway next time."
+        : "You never got the first move done, which means it was still too big. Halve it.");
+  }
+  $("debrief-read").innerHTML = read;
+
+  if (s.outcome !== "landed" && sameFails >= 2) {
+    $("wire-offer").hidden = false;
+    $("wire-cue").value = "";
+    $("wire-act").value = s.move || "";
+    $("debrief-read").innerHTML = read +
+      ' <b>"' + esc(s.task) + '" has now slid ' + sameFails + " times.</b> That's not a motivation problem, " +
+      "it's a trigger problem &mdash; nothing in your day is reliably pointing at it. Attach it to something that already happens.";
+  }
+  $("debrief-after").hidden = false;
+}));
+
+$("wire-save").addEventListener("click", () => {
+  const cue = $("wire-cue").value.trim(), act = $("wire-act").value.trim();
+  if (!cue || !act) return;
+  state.wired.push({ id: uid(), cue, action: act, task: pending ? pending.task : act, createdAt: now() });
+  save();
+  $("wire-offer").innerHTML =
+    '<p class="note finding" style="margin:0">Wired. <b>When ' + esc(cue) + ', I will ' + esc(act) +
+    '.</b> It\'s on the home screen now. Say it to yourself once, in those exact words &mdash; the wording is what does the work.</p>';
+});
+
+$("debrief-again").addEventListener("click", () => openStart(pending ? pending.task : "", pending ? pending.move : ""));
+
+/* ---------- offload ---------- */
+
+let spinText = "", spinWorry = null;
+
+function spinStep(n) {
+  ["spin-1", "spin-2", "spin-3", "spin-4a", "spin-4b", "spin-5", "spin-6"].forEach((k) => { $(k).hidden = true; });
+  $(n).hidden = false;
+}
+
+$("spin-in").addEventListener("input", () => {
+  $("spin-next").disabled = $("spin-in").value.trim().length < 2;
+});
+
+$("spin-next").addEventListener("click", () => {
+  spinText = $("spin-in").value.trim();
+  const one = spinText.replace(/\s+/g, " ").replace(/^["']|["']$/g, "");
+  $("defuse-1").innerHTML = "I'm having the thought that <b>" + esc(one) + "</b>";
+  $("defuse-2").innerHTML = "And I notice I'm having the thought that " + esc(one.slice(0, 120)) + (one.length > 120 ? "&hellip;" : "") +
+    " &mdash; which is a different position to be standing in. You're not trying to stop it or win the argument. " +
+    "You just moved from inside the sentence to outside it.";
+  spinStep("spin-2");
+});
+
+$("spin-to-3").addEventListener("click", () => spinStep("spin-3"));
+
+$("spin-problem").addEventListener("click", () => { spinStep("spin-4a"); setTimeout(() => $("spin-action").focus(), 60); });
+
+$("spin-action-go").addEventListener("click", () => {
+  const a = $("spin-action").value.trim();
+  lastVia = "spin";
+  openStart(spinText.slice(0, 90), a);
+});
+$("spin-action-park").addEventListener("click", () => {
+  const a = $("spin-action").value.trim() || spinText;
+  parkIt(a, "task");
+  spinWorry = null;
+  $("spin-done-note").innerHTML = "Filed as a task with an action on it: <b>" + esc(a) +
+    "</b>. It's out of working memory and into a list, which is the only place it stops re-firing from.";
+  spinStep("spin-5");
+});
+
+$("spin-worry").addEventListener("click", () => {
+  const d = new Date(), slots = [];
+  const mk = (dt, label) => slots.push({ ts: dt.getTime(), label });
+
+  const today = new Date(d); today.setSeconds(0, 0);
+  if (d.getHours() < 18) { const t = new Date(d); t.setHours(18, 40, 0, 0); mk(t, "Later today"); }
+  else { const t = new Date(d); t.setHours(d.getHours() + 2, 0, 0, 0); mk(t, "In a couple of hours"); }
+  const tm = new Date(d); tm.setDate(tm.getDate() + 1); tm.setHours(9, 0, 0, 0); mk(tm, "Tomorrow morning");
+  const sat = new Date(d); sat.setDate(sat.getDate() + ((6 - sat.getDay() + 7) % 7 || 7)); sat.setHours(11, 0, 0, 0);
+  mk(sat, "Saturday");
+
+  $("worry-slots").innerHTML = slots.map((s) =>
+    '<button class="big" data-ts="' + s.ts + '"><span class="t">' + s.label +
+    '</span><span class="d">' + clockLabel(s.ts) + " &mdash; it waits there until then.</span></button>").join("");
+  spinStep("spin-4b");
+});
+
+$("worry-slots").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-ts]");
+  if (b) bookWorry(Number(b.dataset.ts));
+});
+$("worry-custom").addEventListener("click", () => {
+  const v = $("worry-time").value;
+  if (!v) return;
+  const [h, m] = v.split(":").map(Number);
+  const t = new Date(); t.setHours(h, m, 0, 0);
+  if (t.getTime() < now()) t.setDate(t.getDate() + 1);
+  bookWorry(t.getTime());
+});
+
+function bookWorry(ts) {
+  parkIt(spinText, "worry", ts);
+  $("spin-done-note").innerHTML =
+    "It has an appointment at <b>" + esc(clockLabel(ts)) + "</b> and it is written down, so nothing is being " +
+    "lost by not thinking about it. When it comes back &mdash; and it will &mdash; the answer is " +
+    "&ldquo;not now, we're doing that at " + esc(clockLabel(ts)) + "&rdquo;. That sentence is the whole technique.";
+  spinStep("spin-5");
+}
+
+/* physiological sigh pacer */
+const PHASES = [
+  { cue: "in through the nose", ms: 1600, s: 0.92 },
+  { cue: "sip a little more in", ms: 900,  s: 1 },
+  { cue: "long, slow out",       ms: 5500, s: 0.5 },
+  { cue: "rest",                 ms: 900,  s: 0.5 },
+];
+let breathTimer = null;
+
+$("breath-go").addEventListener("click", () => {
+  armAudio();
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  $("breath-go").disabled = true;
+  let round = 0, ix = 0;
+  const orb = $("orb");
+
+  const step = () => {
+    if (ix === 0) {
+      round++;
+      if (round > 4) {
+        $("orb-cue").textContent = "done";
+        $("breath-count").textContent = "four rounds · that's the body handled";
+        $("breath-go").disabled = false; $("breath-go").textContent = "Again";
+        setTimeout(() => spinStep("spin-6"), 900);
+        return;
+      }
+      $("breath-count").textContent = "round " + round + " of 4";
+    }
+    const p = PHASES[ix];
+    $("orb-cue").textContent = p.cue;
+    if (!reduced) {
+      orb.style.transitionDuration = p.ms + "ms";
+      orb.style.transform = "scale(" + p.s + ")";
+      orb.classList.toggle("big", p.s > 0.8);
+    }
+    ix = (ix + 1) % PHASES.length;
+    breathTimer = setTimeout(step, p.ms);
+  };
+  step();
+});
+
+$("breath-skip").addEventListener("click", () => { clearTimeout(breathTimer); spinStep("spin-6"); });
+$("spin-launch").addEventListener("click", () => { lastVia = "spin"; openStart("", ""); });
+
+/* ---------- re-anchor ---------- */
+
+function renderDrift() {
+  const L = state.live;
+  $("drift-in").value = "";
+  $("drift-note").innerHTML = L
+    ? "Your session is still running: <b>" + esc(L.task) + "</b>. The clock kept going, which is fine &mdash; " +
+      "drifting mid-session is the default state, not a relapse. Park what pulled you and step back in."
+    : "Nothing's running. Once it's parked you'll go straight into naming the next thing, which is easier than " +
+      "deciding from cold.";
+  setTimeout(() => $("drift-in").focus(), 60);
+}
+
+$("drift-park").addEventListener("click", () => {
+  const v = $("drift-in").value.trim();
+  if (v) { parkIt(v, "thought"); if (state.live) { state.live.parked = (state.live.parked || 0) + 1; save(); } }
+  backIn();
+});
+$("drift-skip").addEventListener("click", backIn);
+
+function backIn() {
+  if (state.live) { go("run"); flashPark("You're back. That cost you nothing."); }
+  else {
+    const last = state.sessions.length ? state.sessions[state.sessions.length - 1] : null;
+    openStart(last ? last.task : "", last ? last.move : "");
+  }
+}
+
+/* ---------- parking lot ---------- */
+
+function renderParked() {
+  const open = state.parked.filter((p) => !p.doneAt);
+  const due  = open.filter((p) => p.dueAt && p.dueAt <= now());
+  const appt = open.filter((p) => p.dueAt && p.dueAt > now());
+  const task = open.filter((p) => !p.dueAt && p.kind === "task");
+  const thou = open.filter((p) => !p.dueAt && p.kind !== "task");
+  const done = state.parked.filter((p) => p.doneAt).slice(-8).reverse();
+
+  const list = (arr, meta) => arr.length
+    ? arr.slice().reverse().map((p) =>
+        '<div class="item"><span class="txt">' + esc(p.text) +
+        '<span class="meta' + (p.dueAt && p.dueAt <= now() ? " due" : "") + '">' + meta(p) + "</span></span>" +
+        '<span class="acts">' +
+          '<button class="pri" data-act="launch" data-id="' + p.id + '">Work it</button>' +
+          '<button data-act="done" data-id="' + p.id + '">Clear</button>' +
+          '<button data-act="delete" data-id="' + p.id + '">&times;</button>' +
+        "</span></div>").join("")
+    : '<p class="empty">Nothing here.</p>';
+
+  let h = "";
+  if (due.length)
+    h += '<div class="sec"><h3>Due now <span>' + due.length + '</span></h3>' +
+         list(due, (p) => (p.kind === "worry" ? "worry appointment" : "task") + " · " + clockLabel(p.dueAt)) + "</div>";
+  h += '<div class="sec"><h3>Caught mid-session <span>' + thou.length + '</span></h3>' +
+       '<p class="sub" style="margin:8px 0 0;font-size:12.5px">The things that tried to end a session and didn\'t. ' +
+       'Most of these turn out not to matter, which is the useful bit.</p>' +
+       list(thou, (p) => "caught " + when(p.createdAt)) + "</div>";
+  h += '<div class="sec"><h3>Tasks <span>' + task.length + '</span></h3>' + list(task, (p) => "filed " + when(p.createdAt)) + "</div>";
+  h += '<div class="sec"><h3>Worry appointments <span>' + appt.length + '</span></h3>' +
+       (appt.length ? '<p class="sub" style="margin:8px 0 0;font-size:12.5px">Booked in. Not your problem until then.</p>' : "") +
+       list(appt, (p) => "due " + clockLabel(p.dueAt)) + "</div>";
+  if (done.length)
+    h += '<div class="sec"><h3>Cleared <span>last ' + done.length + '</span></h3>' +
+         done.map((p) => '<div class="item"><span class="txt" style="color:var(--dim)">' + esc(p.text) +
+           '<span class="meta">cleared ' + when(p.doneAt) + "</span></span></div>").join("") + "</div>";
+
+  $("parked-body").innerHTML = h;
+}
+
+/* ---------- the record ---------- */
+
+const score = (o) => (o === "landed" ? 1 : o === "partial" ? 0.5 : 0);
+const pct   = (r) => Math.round(r * 100) + "%";
+
+function groups(list, keyFn, min) {
+  const m = new Map();
+  list.forEach((s) => {
+    const k = keyFn(s);
+    if (k == null) return;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(s);
+  });
+  const out = [];
+  m.forEach((v, k) => { if (v.length >= min) out.push({ key: k, n: v.length, rate: v.reduce((a, s) => a + score(s.outcome), 0) / v.length }); });
+  return out.sort((a, b) => b.rate - a.rate);
+}
+
+function findings() {
+  const s = state.sessions, out = [];
+  if (!s.length) return out;
+
+  const len = groups(s, (x) => x.plannedMin, 3);
+  if (len.length >= 2 && len[0].rate - len[len.length - 1].rate >= 0.2)
+    out.push("<b>" + len[0].key + "-minute runways are your ones.</b> They land " + pct(len[0].rate) + " of the time over " +
+      len[0].n + " sessions; your " + len[len.length - 1].key + "-minute ones land " + pct(len[len.length - 1].rate) +
+      ". Stop booking the long ones and just extend when you're already in.");
+
+  const tod = groups(s, (x) => bucket(x.startedAt), 3);
+  if (tod.length >= 2 && tod[0].rate - tod[tod.length - 1].rate >= 0.25)
+    out.push("<b>Your " + tod[0].key + " work.</b> " + pct(tod[0].rate) + " landed across " + tod[0].n +
+      " sessions, against " + pct(tod[tod.length - 1].rate) + " in the " + tod[tod.length - 1].key +
+      ". Put the thing you're dreading in the first window, not the second.");
+
+  const withMove = s.filter((x) => x.move), md = groups(withMove, (x) => (x.moveDone ? "yes" : "no"), 3);
+  if (md.length === 2) {
+    const y = md.find((g) => g.key === "yes"), n = md.find((g) => g.key === "no");
+    if (y && n && y.rate - n.rate >= 0.2)
+      out.push("<b>Ticking off the first move is the whole game.</b> When you finished it you landed " + pct(y.rate) +
+        " of the time (" + y.n + " sessions). When you didn't, " + pct(n.rate) + ". If a move isn't getting ticked, it was too big.");
+  }
+
+  const via = groups(s, (x) => x.via, 3);
+  if (via.length >= 2 && via[0].rate - via[via.length - 1].rate >= 0.2 && via[0].key === "spin")
+    out.push("<b>You start better after offloading.</b> Sessions launched straight out of the offload flow land " +
+      pct(via[0].rate) + "; cold ones land " + pct(via[via.length - 1].rate) + ". Dumping the loop first isn't a detour, it's your ramp.");
+
+  const over = s.filter((x) => x.overtimeSec > 60);
+  if (over.length >= 2) {
+    const total = over.reduce((a, x) => a + x.overtimeSec, 0);
+    out.push("<b>You've run past the runway " + over.length + " times, " + mins(total) + " in total.</b> " +
+      "Every one of those started as a session you didn't want to start. The absorption is real and it is reliably on the far side of beginning &mdash; never before it.");
+  }
+
+  const parkedTotal = s.reduce((a, x) => a + (x.parked || 0), 0);
+  if (parkedTotal >= 5)
+    out.push("<b>" + parkedTotal + " thoughts caught mid-session</b> without leaving the screen. Go and read the parking lot: " +
+      "the proportion of those that turned out to be worth chasing is the number worth knowing.");
+
+  if (s.length < 5)
+    out.unshift("<b>" + s.length + " session" + (s.length === 1 ? "" : "s") + " logged.</b> Not enough to say anything true yet &mdash; " +
+      "patterns start showing up around five, and this won't invent one before then.");
+
+  return out;
+}
+
+function renderRecord() {
+  const s = state.sessions;
+  const focused = s.reduce((a, x) => a + x.elapsedSec, 0);
+  const over    = s.reduce((a, x) => a + (x.overtimeSec || 0), 0);
+  const landed  = s.filter((x) => x.outcome === "landed").length;
+
+  let h = '<div class="tiles">' +
+    '<div class="tile"><span class="n">' + (focused ? mins(focused) : "0m") + '</span><span class="k">Time on task<em>that otherwise wasn\'t happening</em></span></div>' +
+    '<div class="tile"><span class="n good">' + (over ? mins(over) : "0m") + '</span><span class="k">Past the runway<em>the absorption, measured</em></span></div>' +
+    '<div class="tile"><span class="n">' + s.length + '</span><span class="k">Sessions started<em>started is the metric, not finished</em></span></div>' +
+    '<div class="tile"><span class="n">' + landed + '</span><span class="k">Landed<em>' +
+      (s.length ? pct(landed / s.length) + " of them" : "nothing yet") + '</em></span></div>' +
+    "</div>";
+
+  const f = findings();
+  h += '<div class="sec"><h3>What your own sessions say</h3>' +
+    (f.length ? f.map((x) => '<p class="note finding" style="margin:14px 0 0">' + x + "</p>").join("")
+              : '<p class="empty">Run a few and this fills in. It only reports differences big enough to be real.</p>') +
+    "</div>";
+
+  h += '<div class="sec"><h3>Log <span>' + s.length + " total</span></h3>" +
+    (s.length
+      ? s.slice(-25).reverse().map((x) =>
+          '<div class="item"><span class="txt">' + esc(x.task) +
+            '<span class="meta">' + when(x.startedAt) + " · " + mins(x.elapsedSec) + " of " + x.plannedMin + "m" +
+            (x.overtimeSec > 60 ? " · +" + mins(x.overtimeSec) + " over" : "") +
+            (x.parked ? " · " + x.parked + " caught" : "") + "</span>" +
+            (x.note ? '<span class="meta" style="text-transform:none;letter-spacing:0;font-size:11.5px">&ldquo;' + esc(x.note) + "&rdquo;</span>" : "") +
+          "</span>" +
+          '<span class="acts"><span class="pill ' + x.outcome + '">' + x.outcome + "</span></span></div>").join("")
+      : '<p class="empty">Nothing logged yet.</p>') + "</div>";
+
+  $("record-body").innerHTML = h;
+}
+
+/* ---------- boot ---------- */
+
+$("sound-toggle").addEventListener("click", () => {
+  state.sound = !state.sound; save();
+  $("sound-toggle").textContent = "Sound: " + (state.sound ? "on" : "off");
+});
+
+function boot() {
+  $("sound-toggle").textContent = "Sound: " + (state.sound ? "on" : "off");
+  $("save-state").textContent = !state.loaded ? "checking storage"
+    : db ? "cloud + this browser"
+    : canLocal ? "saved in this browser"
+    : "storage blocked — this session only";
+  tickOn();
+  go(state.live ? "run" : "home");
+  spinStep("spin-1");
+}
+
+/* Render immediately from memory so the panel is never a blank shell,
+   then load and re-render once storage answers. */
+boot();
+load();
+
+/* The `sample` capability is optional garnish — the shrink chips work without it. */
+CL.use("sample").then((s) => { sample = s; if (screen === "start") suggestMoves(); }).catch(() => {});
+</script>
