@@ -1328,23 +1328,38 @@ async function load() {
   boot();
 }
 
-let saveTimer = null;
+let saveTimer = null, savedLocal = false;
+
+function paintSaveState(cloud) {
+  $("save-state").textContent =
+    cloud       ? "saved · cloud + this browser"
+  : savedLocal  ? (db ? "saved here · cloud: " + (dbErr || "pending") : "saved in this browser")
+  :               "not saving — storage is blocked";
+}
+
+/* Browser storage is synchronous and cheap, so it is never deferred:
+   a tap followed by pocketing the phone suspends the page, and anything
+   still sitting on a timer is simply lost. Only the cloud write waits. */
+function writeLocal() {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(payload())); savedLocal = true; }
+  catch (e) { savedLocal = false; }
+  return savedLocal;
+}
+
 function save() {
+  writeLocal();
+  paintSaveState(false);
   clearTimeout(saveTimer);
+  if (!db) return;
   saveTimer = setTimeout(async () => {
-    const body = payload();
-    let local = false, cloud = false;
-    try { localStorage.setItem(LS_KEY, JSON.stringify(body)); local = true; } catch (e) {}
-    if (db) {
-      try { await db.doc(DOC).set(body); cloud = true; dbErr = ""; }
-      catch (e) { dbErr = (e && (e.code || e.message)) || "unknown"; }
-    }
-    $("save-state").textContent =
-      cloud ? "saved · cloud + this browser"
-    : local ? (db ? "saved here only · cloud: " + dbErr : "saved in this browser")
-    : "not saving — storage is blocked";
+    try { await db.doc(DOC).set(payload()); dbErr = ""; paintSaveState(true); }
+    catch (e) { dbErr = (e && (e.code || e.message)) || "unknown"; paintSaveState(false); }
   }, 350);
 }
+
+/* Last line of defence: flush before the page is frozen or discarded. */
+addEventListener("pagehide", writeLocal);
+addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") writeLocal(); });
 
 /* ---------- small helpers ---------- */
 
