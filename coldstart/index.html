@@ -2288,18 +2288,33 @@ function brReset() {
   const list = (arr) => arr.map((x) => '<div class="check"><span class="box">&middot;</span><span class="t">' + esc(x) + "</span></div>").join("");
   $("rx-steps").innerHTML = list(RESET_STEPS);
 
+  /* The button's "Logged" state is gone on the next visit, so the count
+     has to be the confirmation — big, and with a time you can check
+     against your own memory of stepping out. */
   const readout = () => {
+    const today = sh.resets.filter((t) => dayKey(t) === dayKey());
+    const last  = sh.resets.length ? sh.resets[sh.resets.length - 1] : null;
     const g = segmentLength();
-    $("rx-out").innerHTML = g
-      ? '<p class="note finding" style="margin:0">You step out about every <b>' + mins(g) + "</b>. " +
+    let h = '<p class="repcount">' + today.length + "</p>" +
+      '<span class="repunit">logged today' + (last ? " · last at " + hhmm(last) : "") + "</span>";
+    h += g
+      ? '<p class="note finding" style="margin-top:14px">You step out about every <b>' + mins(g) + "</b>. " +
         "That isn't a bladder telling you something — it's your <b>real segment length</b>, the same number this whole app is built around, and your body worked it out without being asked. " +
         "Push hard for that long and take the reset deliberately at the end of it, rather than pushing to breaking point and then needing rescuing. " +
         "It's also the honest answer to how long you can hold a station before rotating.</p>"
-      : '<p class="sub" style="margin:0;font-size:12.5px">' + sh.resets.length + " logged. Four in a shift and it can tell you your real segment length.</p>";
+      : '<p class="sub" style="margin-top:12px;font-size:12.5px">' + sh.resets.length + " logged in total. " +
+        "Four spread across a shift and it can tell you your real segment length.</p>";
+    $("rx-out").innerHTML = h;
   };
+
   const log = () => { sh.resets.push(now()); sh.resets = sh.resets.slice(-300); save(); readout(); };
 
-  $("rx-log").addEventListener("click", () => { log(); $("rx-log").textContent = "Logged"; $("rx-log").disabled = true; });
+  $("rx-log").addEventListener("click", () => {
+    log();
+    $("rx-log").textContent = "Logged ✓";
+    $("rx-log").disabled = true;
+    chime();
+  });
   $("rx-station").addEventListener("click", () => {
     $("rx-steps").innerHTML = list(RESET_STATION);
     $("rx-station").textContent = "Thirty seconds, where you stand";
