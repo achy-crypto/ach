@@ -201,6 +201,7 @@ td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;w
 .addrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .addrow input[type=text]{flex:2;min-width:150px}
 .addrow input.sc{flex:0 0 74px;min-width:74px;text-align:center}
+.justadded td{background:var(--pen-soft)}
 .empty{color:var(--dim);font-size:13.5px;margin-top:12px;font-style:italic}
 .readout{
   margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
@@ -355,6 +356,7 @@ const DOC = "aura/state";
 // working one looked identical, which is exactly what "I pressed it and
 // nothing happened" looks like from the outside.
 const saveStatus = {};
+let justAdded = null, addErr = "";
 let dbUnavailable = false;
 let dbErr = "";
 let lastSave = { cloud: null, local: null };
@@ -881,8 +883,8 @@ function calPanel() {
     <p class="subtle">Your scale, sent with every request. Change a number you disagree with, or add one — that is the fastest way to move its judgement.</p>
     <div class="tablewrap"><table>
       <thead><tr><th>Title</th><th>Score</th><th>Note</th><th></th></tr></thead><tbody>
-      ${state.anchors.slice().sort((a,b) => b.score - a.score).map(a => `<tr>
-        <td>${esc(a.title)}</td>
+      ${state.anchors.slice().sort((a,b) => b.score - a.score).map(a => `<tr${a.title === justAdded ? ` class="justadded" id="justadded"` : ""}>
+        <td>${esc(a.title)}${a.title === justAdded ? ` <span class="eyebrow" style="color:var(--pen)">just added</span>` : ""}</td>
         <td class="num"><input type="text" class="sc anchsc" data-t="${esc(a.title)}" value="${a.score}" style="width:56px;padding:4px 6px;font-size:13px" inputmode="decimal"></td>
         <td class="prose" style="font-size:13.5px;color:var(--dim)">${esc(a.note || "")}</td>
         <td class="num"><button class="del" data-act="delanch" data-t="${esc(a.title)}" aria-label="Remove ${esc(a.title)}">&times;</button></td>
@@ -936,10 +938,19 @@ async function mutateAnchors(fn) {
   const ok = await saveState();
   saveStatus.anchors = ok ? "ok" : "failed";
   render();
+  // The table is sorted by score, so a new row lands wherever its number puts
+  // it in a list of twenty-odd. Take the eye there.
+  const row = document.getElementById("justadded");
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function anchorSaveLine() {
+  if (addErr) return `<p class="err">${esc(addErr)}</p>`;
   const s = saveStatus.anchors;
+  if (s === "ok" && justAdded) {
+    const a = state.anchors.find(x => x.title === justAdded);
+    if (a) return `<p class="saved">Added ${esc(a.title)} at ${Number(a.score).toFixed(1)} — it's in the list below, and goes out with every request from now on.</p>`;
+  }
   if (s === "saving") return `<p class="note"><span class="status" style="display:inline-flex"><span class="dot"></span>Saving…</span></p>`;
   if (s === "failed")  return `<p class="err">That change reached nothing — reload now and you'll lose it.</p>`;
   if (s === "ok")      return `<p class="saved">${lastSave.cloud ? "Saved." : "Saved to this browser."}</p>`;
@@ -1013,11 +1024,18 @@ document.addEventListener("click", ev => {
   });
   if (act === "addanch") {
     const ti = document.getElementById("na"), sc = document.getElementById("ns");
-    const title = (ti.value || "").trim(), score = Number(sc.value);
-    if (!title || !isFinite(score)) return;
+    const title = (ti.value || "").trim();
+    const raw = (sc.value || "").trim();
+    // Number("") is 0, which passes isFinite — so a blank score used to add the
+    // title at 1 and sort it silently to the bottom of a 22-row table.
+    if (!title) { addErr = "Type a title first."; return render(); }
+    if (!raw || !isFinite(Number(raw))) { addErr = "Give it a score out of 10 — that's what the scale is."; return render(); }
+    addErr = "";
+    const score = clamp(Number(raw), 1, 10);
+    justAdded = title;
     return void mutateAnchors(() => {
       state.anchors = state.anchors.filter(a => a.title.toLowerCase() !== title.toLowerCase());
-      state.anchors.push({ title, score: clamp(score, 1, 10), note: "" });
+      state.anchors.push({ title, score, note: "" });
     });
   }
 });
