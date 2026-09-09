@@ -159,10 +159,12 @@ ul.rules li{margin-bottom:3px}
   <div class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="write" aria-selected="true">Write</button>
     <button class="tab" role="tab" data-tab="cards" aria-selected="false">Voice</button>
+    <button class="tab" role="tab" data-tab="pattern" aria-selected="false">Pattern</button>
   </div>
 
   <section id="panel-write" role="tabpanel"></section>
   <section id="panel-cards" role="tabpanel" hidden></section>
+  <section id="panel-pattern" role="tabpanel" hidden></section>
 </div>
 
 <script>
@@ -227,6 +229,15 @@ const DEFAULT_CARD = {
   ],
 };
 
+// A fixed vocabulary so the same failure gets the same label across drafts.
+// Without it every audit invents its own wording and nothing can be counted.
+const FAULT_KINDS = [
+  "stated-emotion", "thematic-summary", "one-beat-too-many", "over-explained",
+  "resolved-too-neatly", "motivation-announced", "on-the-nose-dialogue",
+  "decorative-detail", "weak-verb", "filter-word", "adverb-tag",
+  "uniform-pacing", "everyone-likeable", "autopilot-sentence",
+];
+
 const LENGTHS = [
   ["flash", "Flash",  "about 250 words"],
   ["short", "Short",  "about 700 words"],
@@ -235,19 +246,79 @@ const LENGTHS = [
 
 /* ---------- state ---------- */
 
-const state = { cards: [DEFAULT_CARD], active: "plain", loaded: false };
+const state = { cards: [DEFAULT_CARD], active: "plain", history: [], loaded: false };
 let db = null, sample = null;
 let tab = "write";
 let dbUnavailable = false, lastSave = { cloud:null, local:null }, saveMsg = "";
 const DOC = "workbench/state";
 const LS = "bluepencil:v1";
 
-function payload() { return { cards: state.cards, active: state.active }; }
+function payload() {
+  return { cards: state.cards, active: state.active, history: state.history.slice(-60) };
+}
 function adopt(d) {
   if (!d) return false;
   if (Array.isArray(d.cards) && d.cards.length) state.cards = d.cards;
   if (typeof d.active === "string") state.active = d.active;
+  if (Array.isArray(d.history)) state.history = d.history;
   return true;
+}
+
+/* ---------- what it keeps getting wrong ---------- */
+
+function historyFor(cardId) {
+  return state.history.filter(h => h.card === cardId);
+}
+
+// Per-axis means and a tally of repeated failure kinds for one voice.
+function pattern(cardId) {
+  const hs = historyFor(cardId);
+  if (!hs.length) return null;
+  const means = {};
+  for (const a of AXES) {
+    const vals = hs.map(h => ax05(h.scores && h.scores[a.key]));
+    means[a.key] = vals.reduce((x, y) => x + y, 0) / vals.length;
+  }
+  const tally = {};
+  for (const h of hs) for (const f of (h.faults || [])) {
+    if (!f.kind) continue;
+    (tally[f.kind] = tally[f.kind] || { kind: f.kind, n: 0, examples: [] }).n++;
+    if (f.problem && tally[f.kind].examples.length < 3) tally[f.kind].examples.push(f.problem);
+  }
+  const worstAxis = AXES.slice().sort((a, b) => means[a.key] - means[b.key])[0];
+  return {
+    n: hs.length, means, worstAxis,
+    repeats: Object.values(tally).sort((a, b) => b.n - a.n),
+    recent: hs.slice(-6).map(h => h.score),
+  };
+}
+
+// Injected into the write prompt once there is enough history to mean anything.
+function learningBlock(cardId) {
+  const p = pattern(cardId);
+  if (!p || p.n < 3) return "";
+  const repeats = p.repeats.filter(r => r.n >= 2).slice(0, 4);
+  let s = `\nWHAT THIS WRITER KEEPS GETTING MARKED FOR — across the last ${p.n} drafts in\nthis voice. These are measured failures, not general advice. Do not repeat them:\n`;
+  s += `- Weakest axis: ${p.worstAxis.label.toLowerCase()}, averaging ${p.means[p.worstAxis.key].toFixed(1)} out of 5. ${p.worstAxis.hint}\n`;
+  for (const r of repeats) {
+    s += `- Marked ${r.n} times for ${r.kind.replace(/-/g, " ")}${r.examples[0] ? `: ${r.examples[0]}` : ""}\n`;
+  }
+  s += `Write this one so those marks cannot be made again.`;
+  return s;
+}
+
+function recordAudit(cardId, out) {
+  const faults = (out.violations || []).map(v => ({
+    kind: String(v.kind || "unlabelled"),
+    problem: String(v.problem || "").slice(0, 160),
+  }));
+  state.history.push({
+    card: cardId, at: Date.now(),
+    score: Number(composite(out.scores).toFixed(2)),
+    scores: out.scores || {}, faults,
+  });
+  state.history = state.history.slice(-60);
+  saveState();
 }
 
 async function loadState() {
@@ -527,6 +598,7 @@ async function doWrite() {
 BRIEF: ${b}
 
 ${voiceBlock(activeCard())}
+${learningBlock(state.active)}
 
 Output the prose only. No title, no preamble, no notes, no commentary afterwards.`;
 
@@ -609,6 +681,11 @@ text EXACTLY as it appears — the quote must be a verbatim substring of the dra
 it can be found. Say what is wrong in one sentence, then the fix in one sentence.
 Order them worst first. At most 8. If the draft is genuinely clean, return fewer.
 
+Tag each one with a "kind" — the FAILURE TYPE, so repeats can be counted across
+drafts. Use one of these wherever it fits, spelled exactly:
+${FAULT_KINDS.join(", ")}
+Only invent a new kebab-case slug if none of those describe it.
+
 DRAFT:
 ---
 ${text.slice(0, 24000)}
@@ -616,12 +693,17 @@ ${text.slice(0, 24000)}
 
 Reply with only this JSON:
 {"scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},
-"violations":[{"quote":"","axis":"one of the six keys","problem":"","fix":""}],
+"violations":[{"quote":"","axis":"one of the six keys","kind":"","problem":"","fix":""}],
 "worst":"one sentence naming the single biggest problem with the piece"}`;
 
   try {
     const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
-    if (which === "revision") work.reaudit = out; else { work.audit = out; work.example = false; }
+    if (which === "revision") work.reaudit = out;
+    else {
+      work.audit = out; work.example = false;
+      // Only your own drafts count as evidence about your writing.
+      if (!foreign) recordAudit(state.active, out);
+    }
   } catch (e) {
     if (!(e && e.code === "cancelled")) err = errCopy(e);
   }
@@ -770,7 +852,90 @@ function cardsPanel() {
   return h;
 }
 
-let editing = null, takeout = null;
+let editing = null, takeout = null, ruleBusy = "";
+
+function patternPanel() {
+  const card = activeCard();
+  const p = pattern(state.active);
+
+  let h = `<h2 class="sec">${esc(card.name)}</h2>
+    <p class="sub">Every pass on a draft in this voice is kept. Once there are three, what you keep getting marked for is sent with the next brief, so it writes against your actual failures instead of generic advice.</p>`;
+
+  if (!p) {
+    return h + `<p class="note" style="margin-top:18px">Nothing marked in this voice yet. Write something and run the pass.</p>`;
+  }
+
+  h += `<div class="axes" style="margin-top:18px">
+    ${AXES.map(x => {
+      const m = p.means[x.key];
+      const worst = x.key === p.worstAxis.key;
+      return `<div class="ax ${m <= 2.5 ? "low" : ""}">
+        <span class="k">${x.ab}</span>
+        <div class="v">${m.toFixed(1)}</div>
+        <div class="m"><i style="width:${m / 5 * 100}%"></i></div>
+        ${worst ? `<span class="k" style="color:var(--pencil);margin-top:5px">weakest</span>` : ""}
+      </div>`;
+    }).join("")}
+  </div>
+  <p class="note">Mean of ${p.n} draft${p.n === 1 ? "" : "s"}. Recent scores: <span class="mono">${p.recent.map(s => s.toFixed(1)).join("  ")}</span></p>`;
+
+  const rep = p.repeats.filter(r => r.n >= 2);
+  h += `<h2 class="sec">What it keeps doing</h2>`;
+  if (!rep.length) {
+    h += `<p class="note">No fault has come up twice yet.</p>`;
+  } else {
+    h += `<p class="sub">A fault marked three times or more is a habit, not an accident. Promote it and it becomes a standing rule on this card — carried into every draft and into the block you paste in chat.</p>`;
+    for (const r of rep) {
+      const already = (card.rules || []).some(x => x.toLowerCase().includes("[" + r.kind + "]"));
+      h += `<div class="cardrow">
+        <div>
+          <div class="cardname">${esc(r.kind.replace(/-/g, " "))} <span class="mono" style="color:var(--dim);font-size:12px">×${r.n}</span></div>
+          <div class="cardmeta">${esc(r.examples[0] || "")}</div>
+        </div>
+        <div class="bar" style="margin-top:0">
+          ${already
+            ? `<span class="eyebrow" style="color:var(--good)">rule added</span>`
+            : `<button class="ghost" data-act="promote" data-v="${esc(r.kind)}" ${ruleBusy ? "disabled" : ""}>${ruleBusy === r.kind ? "Writing…" : "Make it a rule"}</button>`}
+        </div>
+      </div>`;
+    }
+  }
+
+  h += `<div class="bar" style="margin-top:20px">
+      <button class="ghost" data-act="clearhist">Clear this voice's history</button>
+    </div>
+    ${err && tab === "pattern" ? `<div class="err">${esc(err)}</div>` : ""}
+    ${saveMsg ? `<p class="saved">${esc(saveMsg)}</p>` : ""}`;
+  return h;
+}
+
+async function promoteRule(kind) {
+  const card = activeCard();
+  const p = pattern(state.active);
+  const r = p && p.repeats.find(x => x.kind === kind);
+  if (!r) return;
+  err = ""; ruleBusy = kind; render();
+  try {
+    const out = await sample.json(
+`A writer keeps being marked for the same fault. Write ONE rule that would prevent it.
+
+The fault: ${kind.replace(/-/g, " ")}
+How it has shown up: ${r.examples.join(" / ")}
+
+The rule must be a single imperative sentence, concrete enough that an editor could
+check a page against it. Not advice, not encouragement. "Show don't tell" is useless.
+"Cut any sentence naming what a character feels" is useful.
+
+Reply with only: {"rule":""}`, { modelTier:"quick", cache:false });
+    const rule = String((out && out.rule) || "").trim();
+    if (rule) {
+      card.rules = (card.rules || []).concat(rule + " [" + kind + "]");
+      await saveState();
+      flash("Added to " + card.name + ".");
+    }
+  } catch (e) { err = errCopy(e); }
+  ruleBusy = ""; render();
+}
 
 async function deriveRules(samples) {
   const prompt =
@@ -812,7 +977,8 @@ function paras(t) {
 
 function render() {
   document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
-  const m = { write:["panel-write", writePanel], cards:["panel-cards", cardsPanel] };
+  const m = { write:["panel-write", writePanel], cards:["panel-cards", cardsPanel],
+              pattern:["panel-pattern", patternPanel] };
   for (const k of Object.keys(m)) {
     const el = document.getElementById(m[k][0]);
     el.hidden = k !== tab;
@@ -875,6 +1041,12 @@ document.addEventListener("click", async ev => {
       t.textContent = "Selected — copy it";
     }
     return;
+  }
+  if (act === "promote") return void promoteRule(v);
+  if (act === "clearhist") {
+    state.history = state.history.filter(h => h.card !== state.active);
+    await saveState(); render();
+    return flash("History cleared for this voice.");
   }
   if (act === "editcard") { editing = editing === v ? null : v; return render(); }
   if (act === "delcard") {
