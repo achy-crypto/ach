@@ -213,6 +213,8 @@ const HOUSE = [
   "The important thing goes unsaid. Dialogue is evasive; people talk past each other.",
   "Vary the pacing. Compress what doesn't matter, slow down for what does.",
   "Nobody has to be likeable.",
+  "Not every sentence is doing work. Let some go plain, so the ones that land have something to land against.",
+  "Take one risk that might not come off.",
 ];
 
 const DEFAULT_CARD = {
@@ -246,7 +248,7 @@ const LENGTHS = [
 
 /* ---------- state ---------- */
 
-const state = { cards: [DEFAULT_CARD], active: "plain", history: [], loaded: false };
+const state = { cards: [DEFAULT_CARD], active: "plain", history: [], anchors: [], loaded: false };
 let db = null, sample = null;
 let tab = "write";
 let dbUnavailable = false, lastSave = { cloud:null, local:null }, saveMsg = "";
@@ -254,14 +256,34 @@ const DOC = "workbench/state";
 const LS = "bluepencil:v1";
 
 function payload() {
-  return { cards: state.cards, active: state.active, history: state.history.slice(-60) };
+  return { cards: state.cards, active: state.active,
+           history: state.history.slice(-60), anchors: state.anchors };
 }
 function adopt(d) {
   if (!d) return false;
   if (Array.isArray(d.cards) && d.cards.length) state.cards = d.cards;
   if (typeof d.active === "string") state.active = d.active;
   if (Array.isArray(d.history)) state.history = d.history;
+  if (Array.isArray(d.anchors)) state.anchors = d.anchors;
   return true;
+}
+
+// Passages you scored yourself, sent with every pass. Without these the scale
+// floats against the model's own idea of good writing, which is exactly where
+// its own output already sits — so it marks itself well.
+function anchorBlock() {
+  if (!state.anchors.length) return "";
+  const rows = state.anchors.slice().sort((a, b) => b.score - a.score).map(a =>
+    `[${Number(a.score).toFixed(1)}]${a.note ? " " + a.note : ""}\n"${String(a.text).slice(0, 700).trim()}"`
+  ).join("\n\n");
+  return `
+THE SCALE, FIXED BY THE READER YOU ARE MARKING FOR. These are passages he has
+scored himself. His numbers are final and they define what each score means here.
+Place this passage against them. If it is not as good as what he called an 8, it
+is not an 8, however clean it is.
+
+${rows}
+`;
 }
 
 /* ---------- what it keeps getting wrong ---------- */
@@ -627,30 +649,44 @@ async function doAudit(which) {
   err = ""; busy = "audit"; render();
   ctl = new AbortController();
 
-  // Someone else's prose gets judged on the rubric only. Marking it down for
-  // failing to match the voice card would be measuring the wrong thing, and a
-  // passage you admire needs its strengths named, not an empty fault list.
-  const prompt = foreign
-? `Read this passage closely and judge it against a fixed rubric. Someone else wrote
-it. You are reading it, not correcting it, and you must not fault it for failing to
-match any particular house style.
+  // ONE prompt, whatever the text is. The marker is never told whether the
+  // passage was generated here or pasted in, and is never shown the rules the
+  // draft was written to. Both were leniency channels: knowing a draft was
+  // written to a checklist turns the pass into a compliance check, and clearing
+  // a floor then reads as excellence.
+  const prompt =
+`Read this passage closely and judge it against a fixed rubric.
 
 THE RUBRIC — score each 0-5:
 ${rubricBlock()}
+${anchorBlock()}
+CALIBRATION. Be severe. A 4 is rare and a 5 is almost never given.
 
-CALIBRATION. Be severe but fair. Genuinely good published prose does reach 4s, and
-occasionally a 5 — say so when it earns it. Competent, flat, explain-everything prose
-does not, however professional it looks. Prose that states emotion outright, resolves
-cleanly, or performs its own seriousness scores low on the axes it offends, whoever
-wrote it.
+Judge the prose in front of you, not whether it obeys any rule. Following the
+conventions of good writing is not the same as being good: prose can avoid every
+known fault — never name a feeling, never summarise, never over-explain — and still
+be lifeless, even, and authorless, with no sentence that risks anything and no
+sentence a particular person would have written. That prose scores 2, not 4.
+Compliance is a floor. Ask what the writing DOES, not what it avoids.
+
+Marks of the real thing, and what actually earns a 4 or 5: unevenness — flat
+sentences that let the good ones land; a rhythm that is somebody's; a risk that
+might not have come off; an obsession the writer cannot leave alone; something
+withheld that costs the reader.
 
 Name BOTH:
-- What it is doing right — the specific moves that earn the score. This matters most.
-  What is being withheld, what the rhythm is doing, where the subtext sits.
-- Where it fails the rubric, if anywhere. It is fine to return none.
+- What it is doing right — the specific moves that earn the score. What is
+  withheld, what the rhythm is doing, where the subtext sits. Return none if there
+  is genuinely nothing.
+- Where it fails the rubric. Return none if it is genuinely clean.
 
 Quote EXACTLY as the text appears — every quote must be a verbatim substring.
 At most 5 of each, best and worst first.
+
+Tag each fault with a "kind" — the FAILURE TYPE, so repeats can be counted across
+passages. Use one of these wherever it fits, spelled exactly:
+${FAULT_KINDS.join(", ")}
+Only invent a new kebab-case slug if none of those describe it.
 
 PASSAGE:
 ---
@@ -660,41 +696,8 @@ ${text.slice(0, 24000)}
 Reply with only this JSON:
 {"scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},
 "strengths":[{"quote":"","axis":"one of the six keys","move":"what this is doing, in one sentence"}],
-"violations":[{"quote":"","axis":"one of the six keys","problem":"","fix":""}],
-"worst":"one sentence naming what most defines this passage, good or bad"}`
-: `You are marking up a piece of fiction against a fixed rubric. Be a hard marker.
-
-THE RUBRIC — score each 0-5:
-${rubricBlock()}
-
-CALIBRATION. Be severe. Most drafts, and nearly all drafts written by a language
-model, sit at 1-2 on most axes. A 4 is rare. A 5 is almost never given. Do not be
-generous because the prose is competent — competent is the failure mode being
-measured. Prose that explains itself, resolves cleanly, states emotion, or performs
-its own seriousness scores 1 on the axes it offends.
-
-THE STANDARDS THE PIECE WAS WRITTEN TO:
-${HOUSE.map(r => "- " + r).join("\n")}
-
-Find every place the draft breaks the rubric or those standards. Quote the offending
-text EXACTLY as it appears — the quote must be a verbatim substring of the draft, so
-it can be found. Say what is wrong in one sentence, then the fix in one sentence.
-Order them worst first. At most 8. If the draft is genuinely clean, return fewer.
-
-Tag each one with a "kind" — the FAILURE TYPE, so repeats can be counted across
-drafts. Use one of these wherever it fits, spelled exactly:
-${FAULT_KINDS.join(", ")}
-Only invent a new kebab-case slug if none of those describe it.
-
-DRAFT:
----
-${text.slice(0, 24000)}
----
-
-Reply with only this JSON:
-{"scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},
 "violations":[{"quote":"","axis":"one of the six keys","kind":"","problem":"","fix":""}],
-"worst":"one sentence naming the single biggest problem with the piece"}`;
+"worst":"one sentence naming what most defines this passage, good or bad"}`;
 
   try {
     const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
@@ -862,7 +865,10 @@ function patternPanel() {
     <p class="sub">Every pass on a draft in this voice is kept. Once there are three, what you keep getting marked for is sent with the next brief, so it writes against your actual failures instead of generic advice.</p>`;
 
   if (!p) {
-    return h + `<p class="note" style="margin-top:18px">Nothing marked in this voice yet. Write something and run the pass.</p>`;
+    // Anchors are independent of history — they must be settable before the
+    // first draft, since they are what the first score gets measured against.
+    return h + `<p class="note" style="margin-top:18px">Nothing marked in this voice yet. Write something and run the pass.</p>`
+             + anchorsSection();
   }
 
   h += `<div class="axes" style="margin-top:18px">
@@ -903,11 +909,40 @@ function patternPanel() {
 
   h += `<div class="bar" style="margin-top:20px">
       <button class="ghost" data-act="clearhist">Clear this voice's history</button>
+    </div>`;
+  return h + anchorsSection();
+}
+
+function anchorsSection() {
+  let h = `<h2 class="sec">Your scale</h2>
+    <p class="sub">Without these, "good" means whatever the model thinks good is — which is where its own writing already sits, so it marks itself well. Paste passages and score them yourself. They ride along with every pass and the number has to answer to them.</p>`;
+
+  if (!state.anchors.length) {
+    h += `<p class="note">Nothing set. Two is enough to start: something you'd call a 9, something you'd call a 3.</p>`;
+  } else {
+    for (const a of state.anchors.slice().sort((x, y) => y.score - x.score)) {
+      h += `<div class="mark" style="border-left-color:var(--ink);background:transparent">
+        <span class="tag" style="color:var(--ink)">${Number(a.score).toFixed(1)}${a.note ? " · " + esc(a.note) : ""}
+          <button class="del" data-act="delanchor" data-v="${esc(a.id)}" style="float:right" aria-label="Remove">&times;</button></span>
+        <div class="q">${esc(String(a.text).slice(0, 300))}${String(a.text).length > 300 ? "…" : ""}</div>
+      </div>`;
+    }
+  }
+
+  h += `
+    <label class="fld eyebrow" for="apassage">Passage</label>
+    <textarea id="apassage" class="big" placeholder="Paste a passage. A paragraph or two is plenty.">${esc(newAnchorText)}</textarea>
+    <div class="addrow">
+      <input type="text" id="ascore" class="sc" placeholder="9" inputmode="decimal" value="${esc(newAnchorScore)}">
+      <input type="text" id="anote" placeholder="Whose it is, or why — optional" value="${esc(newAnchorNote)}">
+      <button class="go" data-act="addanchor">Set it</button>
     </div>
     ${err && tab === "pattern" ? `<div class="err">${esc(err)}</div>` : ""}
     ${saveMsg ? `<p class="saved">${esc(saveMsg)}</p>` : ""}`;
   return h;
 }
+
+let newAnchorText = "", newAnchorScore = "", newAnchorNote = "";
 
 async function promoteRule(kind) {
   const card = activeCard();
@@ -1042,6 +1077,21 @@ document.addEventListener("click", async ev => {
     }
     return;
   }
+  if (act === "addanchor") {
+    const txt = (document.getElementById("apassage").value || "").trim();
+    const sc = Number(document.getElementById("ascore").value);
+    if (!txt) { err = "Paste a passage first."; return render(); }
+    if (!isFinite(sc)) { err = "Give it a score out of 10."; return render(); }
+    state.anchors.push({ id: "a" + Date.now().toString(36), text: txt.slice(0, 1200),
+      score: clamp(sc, 1, 10), note: (document.getElementById("anote").value || "").trim() });
+    newAnchorText = ""; newAnchorScore = ""; newAnchorNote = ""; err = "";
+    const ok = await saveState(); render();
+    return flash(ok ? "Set. It'll ride along with every pass." : "Added, but it couldn't be saved.");
+  }
+  if (act === "delanchor") {
+    state.anchors = state.anchors.filter(a => a.id !== v);
+    await saveState(); return render();
+  }
   if (act === "promote") return void promoteRule(v);
   if (act === "clearhist") {
     state.history = state.history.filter(h => h.card !== state.active);
@@ -1097,6 +1147,9 @@ document.addEventListener("click", async ev => {
 document.addEventListener("input", ev => {
   if (ev.target.id === "brief")    brief = ev.target.value;
   if (ev.target.id === "paste")    pasted = ev.target.value;
+  if (ev.target.id === "apassage") newAnchorText = ev.target.value;
+  if (ev.target.id === "ascore")   newAnchorScore = ev.target.value;
+  if (ev.target.id === "anote")    newAnchorNote = ev.target.value;
   if (ev.target.id === "nname")    newName = ev.target.value;
   if (ev.target.id === "nsamples") newSamples = ev.target.value;
 });
