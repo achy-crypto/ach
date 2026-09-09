@@ -616,10 +616,20 @@ function cardsPanel() {
       </div>
       <div class="bar" style="margin-top:0">
         ${on ? "" : `<button class="ghost" data-act="pick" data-v="${esc(c.id)}">Use</button>`}
+        <button class="ghost" data-act="takeout" data-v="${esc(c.id)}">${takeout === c.id ? "Hide" : "Take it to chat"}</button>
         <button class="ghost" data-act="editcard" data-v="${esc(c.id)}">${editing === c.id ? "Close" : "Edit"}</button>
         ${state.cards.length > 1 ? `<button class="del" data-act="delcard" data-v="${esc(c.id)}" aria-label="Delete ${esc(c.name)}">&times;</button>` : ""}
       </div>
     </div>`;
+
+    if (takeout === c.id) {
+      h += `<div class="leaf" style="margin-top:12px;border-color:var(--pencil)">
+        <div class="leafhead"><span class="eyebrow" style="color:var(--pencil)">The whole voice, ready to paste</span>
+          <button class="ghost" data-act="copyvoice" data-v="${esc(c.id)}">Copy</button></div>
+        <p class="sub" style="margin:0 0 10px">Paste this into a custom Style, a Project's instructions, or the top of a chat. It carries the samples, this card's rules, and the house rules together — the samples matter most, so keep them in.</p>
+        <textarea id="takeoutbox" style="min-height:220px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5">${esc(voiceBlock(c))}</textarea>
+      </div>`;
+    }
 
     if (editing === c.id) {
       h += `<div class="leaf" style="margin-top:12px">
@@ -660,7 +670,7 @@ function cardsPanel() {
   return h;
 }
 
-let editing = null;
+let editing = null, takeout = null;
 
 async function deriveRules(samples) {
   const prompt =
@@ -740,6 +750,25 @@ document.addEventListener("click", async ev => {
     return;
   }
 
+  if (act === "takeout") {
+    takeout = takeout === v ? null : v;
+    render();
+    // Select it as well as copying — clipboard access can be refused inside the
+    // viewer frame, and a selected textarea always leaves a manual way out.
+    const box = document.getElementById("takeoutbox");
+    if (box) { box.focus(); box.select(); }
+    return;
+  }
+  if (act === "copyvoice") {
+    const c = state.cards.find(x => x.id === v); if (!c) return;
+    try { await navigator.clipboard.writeText(voiceBlock(c)); t.textContent = "Copied"; setTimeout(render, 1400); }
+    catch (e) {
+      const box = document.getElementById("takeoutbox");
+      if (box) { box.focus(); box.select(); }
+      t.textContent = "Selected — copy it";
+    }
+    return;
+  }
   if (act === "editcard") { editing = editing === v ? null : v; return render(); }
   if (act === "delcard") {
     state.cards = state.cards.filter(c => c.id !== v);
