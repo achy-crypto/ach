@@ -757,6 +757,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
       <span style="font-size:14px;color:var(--dim)">get to</span>
       <input class="field tin" id="target-in" type="number" min="1" max="999" inputmode="numeric">
       <button class="btn ghost" id="no-target">no target, just count</button>
+      <button class="btn ghost" id="no-counter">just the clock</button>
     </div>
     <p class="sub" id="best-hint" style="margin:8px 0 0;font-size:12.5px"></p>
   </div>
@@ -1686,12 +1687,13 @@ const UNIT_RULES = [
   { re: /\b(write|writing|essay|draft|report|chapter|blog|post|paper|thesis|article)\b/i, units: ["paragraphs", "bad sentences", "pages"], target: 6 },
   { re: /\b(e?mail|reply|inbox|respond|message|dm)\b/i, units: ["replies sent", "threads cleared"], target: 12 },
   { re: /\b(code|coding|bug|refactor|pr|ticket|deploy|test|repo|merge|build)\b/i, units: ["tests green", "functions touched", "chunks"], target: 8 },
-  { re: /\b(clean|tidy|dish|laundry|room|kitchen|desk|wash|hoover|vacuum|bin|trash)\b/i, units: ["things put away", "surfaces cleared"], target: 25 },
+  { re: /\b(clean|tidy|dish|laundry|room|kitchen|desk|wash|hoover|vacuum|bin|trash)\b/i, units: ["zones done", "surfaces cleared", "bin bags filled"], target: 5, coarse: true },
   { re: /\b(call|phone|ring|dentist|doctor|appointment|book|schedule)\b/i, units: ["calls made"], target: 3 },
   { re: /\b(admin|tax|form|invoice|bill|insurance|bank|receipt|expense|renew)\b/i, units: ["fields filled", "items done"], target: 10 },
   { re: /\b(study|revise|read|learn|course|lecture|exam|revision)\b/i, units: ["pages", "cards", "problems"], target: 10 },
   { re: /\b(apply|cv|resume|application|job|cover letter)\b/i, units: ["applications", "sections rewritten"], target: 4 },
-  { re: /\b(pack|move|box|sort|declutter|wardrobe|closet)\b/i, units: ["boxes filled", "shelves cleared"], target: 5 },
+  { re: /\b(pack|move|box|sort|declutter|wardrobe|closet)\b/i, units: ["boxes filled", "shelves cleared"], target: 5, coarse: true },
+  { re: /\b(gym|run|walk|workout|exercise|stretch|yoga|swim|garden|mow|paint|diy|fix)\b/i, units: ["sets done", "rounds", "sections"], target: 5, coarse: true },
 ];
 const UNIT_FALLBACK = { units: ["chunks", "small wins"], target: 8 };
 
@@ -1723,11 +1725,12 @@ const NOVEL = [
   "Change the time — this window isn't working, take it later.",
 ];
 
-let runwayMin = 12, smallerIx = 0, unitTarget = null, preflight = [], unitDirty = false;
+let runwayMin = 12, smallerIx = 0, unitTarget = null, preflight = [], unitDirty = false, noCounter = false;
 
 function openStart(task, move) {
   preflight = [];
   unitDirty = false;
+  setCounter(true);
   go("start");
   $("task-in").value = task || "";
   $("move-in").value = move || "";
@@ -1744,6 +1747,7 @@ function unitDeck() {
 }
 
 function bestRate(unit) {
+  if (!unit) return null;
   const runs = state.sessions.filter((x) => x.unit === unit && x.count > 0 && x.elapsedSec > 120);
   if (!runs.length) return null;
   return runs.reduce((m, x) => Math.max(m, x.count / (x.elapsedSec / 60)), 0);
@@ -1762,10 +1766,18 @@ function suggestUnits() {
 }
 
 function paintBestHint() {
+  if (noCounter) {
+    $("best-hint").textContent = "No counter. Just the task, the clock and the catch field — right for anything where you're " +
+      "moving around and the room itself already shows you how far you've got.";
+    return;
+  }
   const u = $("unit-in").value.trim(), b = bestRate(u);
-  $("best-hint").textContent = b
+  const coarse = unitDeck().coarse
+    ? "Tap this when you finish a whole one, not for every item — the phone stays in your pocket while you work. "
+    : "";
+  $("best-hint").textContent = coarse + (b
     ? "Your best on " + u + " is " + b.toFixed(1) + " a minute. Beating your own number is the only honest way to make a boring task harder."
-    : "No history on this unit yet, so the first run sets the bar you race afterwards.";
+    : "No history on this unit yet, so the first run sets the bar you race afterwards.");
 }
 
 function suggestMoves() {
@@ -1879,6 +1891,16 @@ $("unitpick").addEventListener("click", (e) => {
   paintBestHint();
 });
 $("unit-in").addEventListener("input", () => { unitDirty = true; paintBestHint(); });
+function setCounter(on) {
+  noCounter = !on;
+  $("unit-in").disabled = noCounter;
+  $("target-in").disabled = noCounter;
+  $("unitpick").style.opacity = noCounter ? ".4" : "1";
+  $("no-counter").textContent = noCounter ? "put the counter back" : "just the clock";
+  paintBestHint();
+}
+$("no-counter").addEventListener("click", () => setCounter(noCounter));
+
 $("no-target").addEventListener("click", () => {
   $("target-in").value = "";
   $("best-hint").textContent = "No target. You still get the count and the rate — you just aren't racing a line.";
@@ -1918,7 +1940,7 @@ function launch() {
     task,
     move: $("move-in").value.trim(),
     moveDone: false,
-    unit: $("unit-in").value.trim() || "chunks",
+    unit: noCounter ? "" : ($("unit-in").value.trim() || "chunks"),
     target: target > 0 ? target : null,
     count: 0,
     inAt: null,
