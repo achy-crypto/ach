@@ -368,6 +368,11 @@ function payload() {
     anchors: state.anchors,
     log: state.log.slice(-300),
     seen: state.seen.slice(-300),
+    // The reading and the picks are kept too. Losing them on reload meant a
+    // verdict you had just logged left no trace where you logged it: the Read
+    // tab reset to the example, and the marked chip vanished with it.
+    last: (typeof reading !== "undefined" && reading && !reading.example) ? reading : null,
+    lastPicks: (typeof picks !== "undefined" && picks && picks.length) ? picks.slice(0, 8) : null,
   };
 }
 
@@ -376,6 +381,8 @@ function adopt(d) {
   if (Array.isArray(d.anchors)) state.anchors = d.anchors;
   if (Array.isArray(d.log))     state.log     = d.log;
   if (Array.isArray(d.seen))    state.seen    = d.seen;
+  if (d.last && d.last.name)      { reading = d.last; readTitle = d.last.name; }
+  if (Array.isArray(d.lastPicks)) picks = d.lastPicks;
   return true;
 }
 
@@ -915,9 +922,8 @@ async function logVerdict(title, score, verdict) {
 }
 
 function whereSaved() {
-  if (lastSave.cloud) return "Saved. It'll weigh on what comes next.";
-  if (lastSave.local) return "Saved to this browser. It'll weigh on what comes next.";
-  return "Saved. It'll weigh on what comes next.";
+  const where = lastSave.cloud ? "Saved" : (lastSave.local ? "Saved to this browser" : "Saved");
+  return where + " — it's in Calibration → Verdict log, and it goes out with every request from now on.";
 }
 
 function saveLine(title, fallbackDone) {
