@@ -615,6 +615,28 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 .crumb b{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--go);display:block;margin-bottom:3px;font-weight:500}
 .bucket{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 @media (max-width:420px){.bucket{grid-template-columns:1fr}}
+/* ---- eye reset: runs dark, because a bright screen is the last thing
+   tired eyes need, and half the steps are done with them shut ---- */
+.eyeover{
+  position:fixed;inset:0;z-index:9998;background:#07070a;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:36px 22px;text-align:center;gap:16px;
+}
+.eyeover h3{
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(26px,7.5vw,40px);font-weight:600;line-height:1.15;margin:0;color:#c08a5e;
+  text-wrap:balance;
+}
+.eyeover p{margin:0;max-width:30ch;font-size:15.5px;line-height:1.5;color:#8a6a50}
+.eyeover .bar{position:absolute;left:0;right:0;bottom:0;height:3px;background:#171009}
+.eyeover .bar i{display:block;height:100%;background:#c2703c;width:0;transition:width .4s linear}
+.eyeover .x{
+  position:absolute;top:14px;right:14px;background:none;border:0;cursor:pointer;
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:#4d3a2c;padding:10px 12px;
+}
+.eyeover .x:hover{color:#c08a5e}
+@media (prefers-reduced-motion:reduce){.eyeover .bar i{transition:none}}
 </style>
 
 <div class="app">
@@ -2035,7 +2057,7 @@ $("work-back").addEventListener("click", () => {
 $("work-run").addEventListener("click", (e) => {
   if (e.target.closest("[data-brback]")) { stopWork(); toolBreak(); return; }
   const br = e.target.closest("[data-br]");
-  if (br) { stopWork(); ({ timer: brTimer, told: brTold, rsd: brRSD, grind: brGrind, rot: brRotate, reset: brReset })[br.dataset.br](); return; }
+  if (br) { stopWork(); ({ timer: brTimer, told: brTold, rsd: brRSD, grind: brGrind, rot: brRotate, reset: brReset, eyes: brEyes })[br.dataset.br](); return; }
   const gk = e.target.closest("[data-gk]");
   if (gk) { grindDeck(gk.dataset.gk); return; }
   const g = e.target.closest("[data-g]");
@@ -2179,6 +2201,7 @@ function toolBreak() {
       '<button class="big" data-br="told"><span class="t">Dump what I was told</span><span class="d">Instructions arrive once, verbally, while your hands are full. Get it down now — asking twice is what makes people think you\'re not trying.</span></button>' +
       '<button class="big go" data-br="rsd"><span class="t">I got told off / a customer was vile</span><span class="d">Ninety seconds so it doesn\'t eat the rest of the shift and then the evening.</span></button>' +
       '<button class="big go" data-br="grind"><span class="t">I\'m bored out of my mind</span><span class="d">The task can\'t change. What you do inside it can — but only if the challenge sits on something you actually control.</span></button>' +
+      '<button class="big" data-br="eyes"><span class="t">My eyes are killing me</span><span class="d">Ninety seconds, run dark, half of it with them shut. The steam and the strip lights are only part of why.</span></button>' +
       '<button class="big go" data-br="reset"><span class="t">Stepping out for two minutes</span><span class="d">The bathroom trip after a big push. It\'s doing a real job — this makes the two minutes actually count, and tracks what they\'re telling you.</span></button>' +
       '<button class="big" data-br="rot"><span class="t">Which station kills me fastest</span><span class="d">If you rotate positions, they don\'t all go flat at the same rate. Log it a few times and you\'ll know which to take while you\'re fresh.</span></button>' +
     "</div></div>";
@@ -2297,6 +2320,79 @@ function grindDeck(kind) {
     d.slice(0, 4).map((x) => '<button class="card" data-g="' + esc(x) + '">' + esc(x) + "</button>").join("") +
     '<div class="row" style="margin-top:10px"><button class="btn ghost" data-gk="' + kind + '">Different ones</button>' +
     '<button class="btn" data-brback>Back</button></div></div>';
+}
+
+/* --- eyes ---
+   Two things do most of the damage and neither is obvious: blink rate
+   collapses from ~15/min to ~5 when you're concentrating, so the tear
+   film dries out; and everything in a dishroom sits within a metre, so
+   the focusing muscle never lets go. Both are relieved by the opposite
+   action, deliberately. */
+
+const EYE_STEPS = [
+  { t: "Look at the furthest thing you can see", d: "Down the corridor, out a door, across the room. Hold it there — the focusing muscle has been clenched for hours.", ms: 20000, say: "Look as far away as you can" },
+  { t: "Now blink. Slow, all the way shut", d: "Ten of them, full closes, not flutters. You've been blinking about a third as often as you should.", ms: 20000, say: "Blink slowly, all the way shut" },
+  { t: "Squeeze them shut. Hard", d: "Hold it — this one wrings the oil glands along your lid margins, which is what stops the tears evaporating.", ms: 6000, say: "Squeeze them shut, hard" },
+  { t: "Open. Palms over your eyes", d: "Warm hands, no pressure on the eyeball itself. Just dark and warm. Keep breathing out slowly.", ms: 30000, say: "Palms over your eyes. Warm and dark" },
+  { t: "Look far away one more time", d: "Furthest point again. Twenty seconds and you're done.", ms: 20000, say: "Look far away again" },
+  { t: "Done", d: "Focusing muscle unclenched, tear film back. If it helped, it's the blinking and the distance doing it — not the rest.", ms: 0, say: "Done" },
+];
+
+function runEyes(voice) {
+  const o = document.createElement("div");
+  o.className = "eyeover";
+  o.innerHTML = '<button class="x">stop</button><h3 id="ey-t"></h3><p id="ey-d"></p><div class="bar"><i id="ey-b"></i></div>';
+  document.body.appendChild(o);
+  keepAwake(true);
+
+  const total = EYE_STEPS.reduce((a, x) => a + x.ms, 0);
+  let i = 0, done = 0, timer = null;
+
+  const close = () => {
+    clearTimeout(timer);
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+    keepAwake(false);
+    o.remove();
+  };
+  o.querySelector(".x").addEventListener("click", close);
+
+  const step = () => {
+    const st = EYE_STEPS[i];
+    o.querySelector("#ey-t").textContent = st.t;
+    o.querySelector("#ey-d").textContent = st.d;
+    o.querySelector("#ey-b").style.width = (done / total * 100) + "%";
+    if (voice && "speechSynthesis" in window) {
+      try {
+        const u = new SpeechSynthesisUtterance(st.say);
+        u.rate = 0.8; u.pitch = 0.95; u.volume = 0.6;
+        speechSynthesis.speak(u);
+      } catch (e) {}
+    }
+    if (!st.ms) { chime(); keepAwake(false); timer = setTimeout(close, 6000); return; }
+    done += st.ms; i++;
+    timer = setTimeout(step, st.ms);
+  };
+  step();
+}
+
+function brEyes() {
+  $("work-run").innerHTML =
+    '<div class="drill"><span class="lab">Eyes &middot; ninety seconds</span>' +
+    '<p class="sub" style="margin:0 0 10px">Two things do nearly all of it, and neither is obvious. ' +
+    "<b>Your blink rate collapses when you concentrate</b> &mdash; from about fifteen a minute down to five &mdash; so the tear film dries out and the surface starts to burn. " +
+    "And <b>everything in that room is within a metre of your face</b>, so the muscle that focuses your eyes never gets to let go all shift. " +
+    "The steam, the strip lights and the chemical in the air make both worse, but they aren't the cause.</p>" +
+    '<p class="sub" style="margin:0 0 12px">It runs on a black screen and half of it is done with your eyes shut, so take the voice if you can.</p>' +
+    '<div class="row"><button class="btn prime" id="ey-voice">Start with voice</button>' +
+    '<button class="btn" id="ey-silent">Start silent</button></div>' +
+    '<p class="sub" style="margin:14px 0 0;font-size:12.5px">Between times: blink hard and deliberately whenever the steam hits, don\'t rub them, ' +
+    "and drink something &mdash; tear production drops when you're short of water, and a hot wet room takes plenty off you.</p>" +
+    '<p class="note" style="margin-top:14px">One worth knowing: <b>convergence insufficiency</b> &mdash; eyes that struggle to hold the inward turn for close work &mdash; ' +
+    "turns up more often in people with ADHD than in the general population, and it produces exactly this: tired sore eyes, strain on anything near, sometimes headaches or print that swims. " +
+    "It's easily tested and often correctable with exercises. You're in a VA already, so an optometry referral costs you a conversation. " +
+    "Worth ruling in or out rather than assuming it's just the job.</p></div>";
+  $("ey-voice").addEventListener("click", () => { armAudio(); runEyes(true); });
+  $("ey-silent").addEventListener("click", () => { armAudio(); runEyes(false); });
 }
 
 /* --- the two-minute reset ---
@@ -2468,6 +2564,8 @@ function toolAfter() {
     '<p class="sub" style="margin:0 0 12px">You are not tired in the way sleep fixes &mdash; you\'re <b>overstimulated</b>. Hours of noise, lights, people and being watched. ' +
     "Reaching straight for the phone adds more input to a system that's already full, which is why an hour of scrolling leaves you worse than before it. " +
     "Ten minutes of less, first. Then the evening is actually available.</p>" +
+    '<p class="sub" style="margin:0 0 12px;font-size:12.5px">If your eyes are the loudest thing right now, do the eye reset first &mdash; ' +
+    "it's under Work, on a break. Ninety seconds and it works better before the screen, not after.</p>" +
     '<span class="lab" style="display:block;margin-bottom:7px">Ten minutes of less</span>' +
     '<div class="chips" id="af-chips">' +
       ["Sit in the quiet. No screen, no music.", "Shower, and make it hot.", "Walk the long way, no headphones.", "Lie on the floor for ten minutes.", "Eat something properly before anything else."]
