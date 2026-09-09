@@ -438,6 +438,27 @@ function anchorBlock() {
   return "HIS CALIBRATION ANCHORS (1-10, his scale, his word is final):\n" + rows;
 }
 
+// The anchor list is a description of a taste, not just a scale. Used only as a
+// ruler it calibrates the number while leaving the choice of title unmoored —
+// which is how a list of American crime and dark comedy produced French cinema.
+function tasteProfile() {
+  const top = state.anchors
+    .filter(a => Number(a.score) >= 7.5)
+    .sort((a, b) => b.score - a.score)
+    .map(a => a.title);
+  if (top.length < 4) return "";
+  return `
+WHAT HE ACTUALLY WATCHES — the titles he rates highest:
+${top.join(" · ")}
+
+Read that as a description of a taste, not a scale. Notice what it holds in common:
+the register, the mode, the kind of person it is about, the world it moves through,
+how it talks. Your picks must belong in that company — what someone with this list
+puts on next, or a real extension of it in a direction he would recognise. A title
+from a different tradition that happens to score well on paper is the WRONG pick,
+however good it is. If it would look out of place beside those titles, do not send it.`;
+}
+
 function tasteBlock() {
   if (!state.log.length) return "";
   const rows = state.log.slice(-24).map(e =>
@@ -697,6 +718,7 @@ function findPanel() {
             <div class="pnum">${s.toFixed(1)}</div>
           </div>
           <div class="pwhy prose">${esc(p.why || "")}</div>
+          ${p.near ? `<div class="pident" style="margin-top:8px"><span class="eyebrow">Nearest yours</span> ${esc(p.near)}</div>` : ""}
           <div class="pmeta">
             ${AXES.map(a => `<span class="tag">${a.key} ${ax05(p.scores && p.scores[a.key])}</span>`).join("")}
             ${pen > 0 ? `<span class="tag warn">docked ${pen.toFixed(1)} — fandom</span>` : ""}
@@ -734,6 +756,7 @@ This is not negotiable and overrides every other preference below. Tag each pick
 ${DOCTRINE}
 
 ${anchorBlock()}
+${tasteProfile()}
 ${tasteBlock()}
 
 ${laneTxt}
@@ -742,37 +765,60 @@ ${rubric}
 
 ${SHAPE_NOTE}
 
+HOW TO CHOOSE, in this order. Do not skip step 1.
+1. Start from his list above and ask what a person with that taste has not seen yet.
+   The pick comes from his world first, and is scored second.
+2. Then score it honestly on the axes. If it does not clear ${floor}, drop it and go
+   back to step 1. Never pick a title and then fit numbers to it — the axis scores must
+   be things you could point at in the work.
+3. For each pick, name which of his anchors it sits nearest and in what way. If you
+   cannot name one, it does not belong on the list.
+
 HARD RULES
 - ${FORM[kind].rule}
-- Only include a pick whose axis scores genuinely put it at ${floor} or above on his scale.
-  Returning four honest picks is better than six padded ones.
-- Strongly prefer things he is unlikely to have heard of. Skip the canon and skip anything
-  already on his anchor list.
+- Only include a pick whose axis scores genuinely put it at ${floor} or above.
+  Returning three honest picks is better than six padded ones.
+- Skip anything already on his anchor list, and skip the five most obvious titles
+  anyone would name in this space. Beyond that, DO NOT CHASE OBSCURITY. A well-known
+  thing he simply has not got to beats a rare one that misses. Rarity is not a
+  recommendation and he does not want to be impressed.
+- At most ONE of the six may be non-English-language, and only if it genuinely belongs
+  beside his list. Tag every pick with "lang". Extra ones are thrown away.
+- Never reach for a foreign, old or unreleased title to make the list look serious.
+  If the honest answers are recent and in English, send recent English-language picks.
+- Prefer this decade and the last unless something older is genuinely the better answer.
 - At least two of the six should be ${angle}.
 - Spread the register: no more than two picks doing the same thing in the same key.
-- Do NOT vary for the sake of country or decade, and never reach for a foreign or old
-  title to make the list look serious. If most honest answers here are recent and in
-  English, return recent English-language picks — that is not a failure of range.
 - Do not reward prestige cinematography or a moody score. A cheap-looking thing in total
   command beats a beautiful thing with thin writing.
 - Nothing already shown: ${state.seen.slice(-120).join("; ") || "none"}
 
 Reply with only this JSON:
-{"picks":[{"title":"","year":0,"form":"${kind}","ident":"","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"fandom":0,"fandomWhy":"","familiarity":3,"why":"what specifically gives it aura — the writing, the command, what it withholds","warn":"anything in it that might read as trying too hard, or empty string"}]}`;
+{"picks":[{"title":"","year":0,"form":"${kind}","lang":"english or the language","ident":"","near":"which of his anchors this sits nearest, and in what way","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"fandom":0,"fandomWhy":"","familiarity":3,"why":"the specific thing in the work that earns its two highest axis scores — name the scene, the choice, what it refuses to explain","warn":"anything in it that might read as trying too hard, or empty string"}]}`;
 
   try {
     const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
     const raw  = (out && Array.isArray(out.picks) ? out.picks : []).filter(p => p && p.title);
     // Trust but verify: a pick that doesn't claim the form you asked for is dropped.
     const form = raw.filter(p => !p.form || String(p.form).toLowerCase().indexOf(kind) >= 0);
-    const got  = form.filter(p => composite(p.scores, p.fandom) >= floor);
+    const scored = form.filter(p => composite(p.scores, p.fandom) >= floor);
+
+    // Enforce the one-non-English cap here rather than trusting the instruction.
+    // Saying "at most one" in a prompt has not held; dropping the extras does.
+    const isEng = p => !p.lang || /^(en|eng|english)/i.test(String(p.lang).trim());
+    const got = []; let foreignKept = 0, foreignCut = 0;
+    for (const p of scored) {
+      if (isEng(p)) { got.push(p); continue; }
+      if (foreignKept < 1) { got.push(p); foreignKept++; } else foreignCut++;
+    }
     picks = got;
 
     const wrongForm = raw.length - form.length;
-    const belowBar  = form.length - got.length;
+    const belowBar  = form.length - scored.length;
     const notes = [];
     if (wrongForm) notes.push(`${wrongForm} came back as the wrong form and ${wrongForm === 1 ? "was" : "were"} dropped.`);
     if (belowBar)  notes.push(`${belowBar} fell below your floor once scored.`);
+    if (foreignCut) notes.push(`${foreignCut} extra non-English pick${foreignCut === 1 ? "" : "s"} dropped — one per batch.`);
 
     if (!got.length) {
       notes.push(raw.length
