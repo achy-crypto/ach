@@ -129,6 +129,9 @@ button.ghost[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);
 .mark .fixline{font-size:13px;margin-top:5px;color:var(--dim)}
 .mark .tag{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--pencil);display:block;margin-bottom:6px}
+.mark.good{border-left-color:var(--good);background:transparent;
+  border-bottom:1px solid var(--hair);padding-bottom:12px}
+.mark.good .tag{color:var(--good)}
 .worst{border-left:2px solid var(--ink);padding:10px 14px;margin-top:16px;font-size:13.5px}
 
 /* cards tab */
@@ -345,6 +348,7 @@ const EXAMPLE = {
 let work = EXAMPLE;
 let brief = EXAMPLE.brief, length = "short";
 let busy = "", err = "", streamed = "";
+let mode = "write", pasted = "";
 
 /* ---------- WRITE panel ---------- */
 
@@ -354,19 +358,36 @@ function writePanel() {
 
   let h = `
     <div class="bar" style="margin-top:0">
-      <span class="eyebrow" style="margin-right:2px">Voice</span>
-      ${state.cards.map(c => `<button class="ghost" data-act="pick" data-v="${esc(c.id)}" aria-pressed="${c.id === state.active}">${esc(c.name)}</button>`).join("")}
-    </div>
-    <label class="fld eyebrow" for="brief">Brief</label>
-    <textarea id="brief" class="brief" placeholder="What happens, who's in it, where it sits. A sentence is enough.">${esc(brief)}</textarea>
-    <div class="bar">
-      <span class="eyebrow" style="margin-right:2px">Length</span>
-      ${LENGTHS.map(l => `<button class="ghost" data-act="len" data-v="${l[0]}" aria-pressed="${length === l[0]}">${l[1]}</button>`).join("")}
-    </div>
-    <div class="bar">
-      <button class="go" data-act="write" ${busy ? "disabled" : ""}>${w.draft && !w.example ? "Write again" : "Write it"}</button>
-      ${busy ? `<button class="ghost" data-act="stop">Stop</button>` : ""}
+      <button class="ghost" data-act="mode" data-v="write" aria-pressed="${mode === "write"}">Write one</button>
+      <button class="ghost" data-act="mode" data-v="mark" aria-pressed="${mode === "mark"}">Mark up something</button>
     </div>`;
+
+  if (mode === "write") {
+    h += `
+      <div class="bar">
+        <span class="eyebrow" style="margin-right:2px">Voice</span>
+        ${state.cards.map(c => `<button class="ghost" data-act="pick" data-v="${esc(c.id)}" aria-pressed="${c.id === state.active}">${esc(c.name)}</button>`).join("")}
+      </div>
+      <label class="fld eyebrow" for="brief">Brief</label>
+      <textarea id="brief" class="brief" placeholder="What happens, who's in it, where it sits. A sentence is enough.">${esc(brief)}</textarea>
+      <div class="bar">
+        <span class="eyebrow" style="margin-right:2px">Length</span>
+        ${LENGTHS.map(l => `<button class="ghost" data-act="len" data-v="${l[0]}" aria-pressed="${length === l[0]}">${l[1]}</button>`).join("")}
+      </div>
+      <div class="bar">
+        <button class="go" data-act="write" ${busy ? "disabled" : ""}>${w.draft && !w.example ? "Write again" : "Write it"}</button>
+        ${busy ? `<button class="ghost" data-act="stop">Stop</button>` : ""}
+      </div>`;
+  } else {
+    h += `
+      <label class="fld eyebrow" for="paste">Somebody's prose</label>
+      <textarea id="paste" class="big" placeholder="Paste an excerpt — yours, or someone else's.">${esc(pasted)}</textarea>
+      <p class="sub">Judged on the rubric alone. Your voice card isn't applied — it's not their job to write like you.</p>
+      <div class="bar">
+        <button class="go blue" data-act="markup" ${busy ? "disabled" : ""}>Read it</button>
+        ${busy ? `<button class="ghost" data-act="stop">Stop</button>` : ""}
+      </div>`;
+  }
 
   if (busy === "write")  h += `<div class="status"><span class="dot"></span>Writing.</div>`;
   if (busy === "audit")  h += `<div class="status"><span class="dot"></span>Marking it up against the rubric.</div>`;
@@ -434,9 +455,21 @@ function auditBlock(w) {
       }).join("")}
     </div>`;
 
+  const ss = Array.isArray(a.strengths) ? a.strengths : [];
+  if (ss.length) {
+    h += `<p class="note" style="margin-top:16px">What it's doing.</p>`;
+    for (const s of ss) {
+      h += `<div class="mark good">
+        <span class="tag">${esc(s.axis || "")}</span>
+        <div class="q">${esc(s.quote || "")}</div>
+        <div class="why">${esc(s.move || "")}</div>
+      </div>`;
+    }
+  }
+
   const vs = Array.isArray(a.violations) ? a.violations : [];
   if (vs.length) {
-    h += `<p class="note" style="margin-top:16px">${vs.length} mark${vs.length === 1 ? "" : "s"} on the draft.</p>`;
+    h += `<p class="note" style="margin-top:16px">${w.foreign ? `Where it slips.` : `${vs.length} mark${vs.length === 1 ? "" : "s"} on the draft.`}</p>`;
     for (const v of vs) {
       h += `<div class="mark">
         <span class="tag">${esc(v.axis || "")}</span>
@@ -445,11 +478,18 @@ function auditBlock(w) {
         ${v.fix ? `<div class="fixline">${esc(v.fix)}</div>` : ""}
       </div>`;
     }
-    if (!w.revision && !busy && !w.example)
+    if (!w.revision && !busy && !w.example && !w.foreign)
       h += `<div class="bar"><button class="go blue" data-act="revise">Apply the fixes</button></div>
             <p class="note">Fixes exactly these lines. Same story, same length — it doesn't get to rewrite it.</p>`;
     if (w.example)
       h += `<p class="note">This is a worked example on a deliberately bad paragraph. Write something to replace it.</p>`;
+  }
+
+  if (w.foreign && !busy) {
+    h += `<div class="bar" style="margin-top:18px">
+        <button class="go" data-act="cardfrom">Make a voice card from this</button>
+      </div>
+      <p class="note">Derives the rules from this passage and opens the card, so you can write in it.</p>`;
   }
   return h + `</div>`;
 }
@@ -511,11 +551,46 @@ Output the prose only. No title, no preamble, no notes, no commentary afterwards
 async function doAudit(which) {
   const text = which === "revision" ? work.revision : work.draft;
   if (!text) return;
+  const foreign = !!work.foreign;
   err = ""; busy = "audit"; render();
   ctl = new AbortController();
 
-  const prompt =
-`You are marking up a piece of fiction against a fixed rubric. Be a hard marker.
+  // Someone else's prose gets judged on the rubric only. Marking it down for
+  // failing to match the voice card would be measuring the wrong thing, and a
+  // passage you admire needs its strengths named, not an empty fault list.
+  const prompt = foreign
+? `Read this passage closely and judge it against a fixed rubric. Someone else wrote
+it. You are reading it, not correcting it, and you must not fault it for failing to
+match any particular house style.
+
+THE RUBRIC — score each 0-5:
+${rubricBlock()}
+
+CALIBRATION. Be severe but fair. Genuinely good published prose does reach 4s, and
+occasionally a 5 — say so when it earns it. Competent, flat, explain-everything prose
+does not, however professional it looks. Prose that states emotion outright, resolves
+cleanly, or performs its own seriousness scores low on the axes it offends, whoever
+wrote it.
+
+Name BOTH:
+- What it is doing right — the specific moves that earn the score. This matters most.
+  What is being withheld, what the rhythm is doing, where the subtext sits.
+- Where it fails the rubric, if anywhere. It is fine to return none.
+
+Quote EXACTLY as the text appears — every quote must be a verbatim substring.
+At most 5 of each, best and worst first.
+
+PASSAGE:
+---
+${text.slice(0, 24000)}
+---
+
+Reply with only this JSON:
+{"scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},
+"strengths":[{"quote":"","axis":"one of the six keys","move":"what this is doing, in one sentence"}],
+"violations":[{"quote":"","axis":"one of the six keys","problem":"","fix":""}],
+"worst":"one sentence naming what most defines this passage, good or bad"}`
+: `You are marking up a piece of fiction against a fixed rubric. Be a hard marker.
 
 THE RUBRIC — score each 0-5:
 ${rubricBlock()}
@@ -550,6 +625,31 @@ Reply with only this JSON:
   } catch (e) {
     if (!(e && e.code === "cancelled")) err = errCopy(e);
   }
+  busy = ""; render();
+}
+
+function doMarkup() {
+  const t = (document.getElementById("paste").value || "").trim();
+  pasted = t;
+  if (!t) { err = "Paste something first."; return render(); }
+  err = "";
+  work = { draft: t, foreign: true, audit: null, revision: "", brief: "" };
+  doAudit("draft");
+}
+
+async function cardFromPassage() {
+  if (!work.draft) return;
+  err = ""; busy = "audit"; render();
+  try {
+    const rules = await deriveRules(work.draft);
+    const id = "c" + Date.now().toString(36);
+    state.cards.push({ id, name: "From a passage", samples: work.draft.slice(0, 6000), rules });
+    state.active = id;
+    await saveState();
+    busy = ""; mode = "write"; tab = "cards"; editing = id;
+    render();
+    return;
+  } catch (e) { err = errCopy(e); }
   busy = ""; render();
 }
 
@@ -731,7 +831,14 @@ document.addEventListener("click", async ev => {
   }
   const act = t.dataset.act, v = t.dataset.v;
 
-  if (act === "write")   return void doWrite();
+  if (act === "write")    return void doWrite();
+  if (act === "markup")   return void doMarkup();
+  if (act === "cardfrom") return void cardFromPassage();
+  if (act === "mode") {
+    if (mode === "write") { const b = document.getElementById("brief"); if (b) brief = b.value; }
+    else { const p = document.getElementById("paste"); if (p) pasted = p.value; }
+    mode = v; err = ""; return render();
+  }
   if (act === "audit")   return void doAudit("draft");
   if (act === "reaudit") return void doAudit("revision");
   if (act === "revise")  return void doRevise();
@@ -817,6 +924,7 @@ document.addEventListener("click", async ev => {
 
 document.addEventListener("input", ev => {
   if (ev.target.id === "brief")    brief = ev.target.value;
+  if (ev.target.id === "paste")    pasted = ev.target.value;
   if (ev.target.id === "nname")    newName = ev.target.value;
   if (ev.target.id === "nsamples") newSamples = ev.target.value;
 });
