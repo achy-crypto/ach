@@ -147,6 +147,12 @@ h2.sec:first-child{margin-top:0}
 .sub{color:var(--dim);font-size:12.5px;margin:3px 0 0;max-width:62ch}
 ul.rules{margin:10px 0 0;padding-left:18px;font-size:13.5px;line-height:1.65}
 ul.rules li{margin-bottom:3px}
+/* the anchor add row — markup was carried over from the marking sheet without
+   these, so the score and note fields stacked full-width instead of sitting
+   in a row with a narrow score box. */
+.addrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.addrow input[type=text]{flex:2;min-width:150px;width:auto}
+.addrow input.sc{flex:0 0 76px;min-width:76px;text-align:center}
 [hidden]{display:none!important}
 </style>
 
