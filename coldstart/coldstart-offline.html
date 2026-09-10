@@ -4861,20 +4861,39 @@ CL.use("sample").then((s) => { sample = s; if (screen === "start") suggestMoves(
     const extras={easy:'',novel:cat==='sounds'?'Try a texture or mood you do not usually choose.': 'Change one familiar detail: the place, order, material, or soundtrack.',challenge:cat==='sounds'?'Give yourself one constraint: three beats maximum, or just two lines.': 'Set one small finish line you can see. Stop there if you want.',company:'If someone is available, try your own small activities alongside each other. If nobody is free, you can still try this on your own.'};
     return {title,description:`${description} ${extras[mode]}`.trim()};
   }
-  let aiDraft='',aiBusy=false,aiError='',aiStatus='unknown',aiAbort=null;
+  let aiDraft='',aiBusy=false,aiError='',aiStatus='unknown',aiAbort=null,sampleFn=null;
+
+  /* Published as an artifact, Claude is reached through the page's own
+     sample capability rather than an HTTP backend — there is no server
+     behind the site, the downloaded file or the artifact. */
+  const SPARK_BRIEF = [
+    'You are helping someone with ADHD find something they would actually want to do,',
+    'or make a task they are avoiding more appealing. Interest is not a precondition for',
+    'them, it is a product of starting under some stakes, so suggest concrete ways in',
+    'rather than encouragement. Be specific and warm but not saccharine. Offer at most',
+    'two or three concrete directions, each one sentence. Under 120 words unless asked',
+    'for more. Never tell them to just focus or to try harder.',
+  ].join(' ');
+  async function ensureSample(){
+    if(sampleFn!==null)return sampleFn;
+    try{sampleFn=(typeof claude!=='undefined'&&claude&&claude.use)?await claude.use('sample'):null;}
+    catch{sampleFn=null;}
+    return sampleFn;
+  }
   function aiView(){
     const local=location.protocol==='file:';
     return `<p class="sp-kicker">Personalized ideas</p><h1 id="spark-heading" tabindex="-1">Talk it through with Claude</h1><p class="sp-muted">Tell it what you want to do, what you liked, or what got boring. You can keep shaping the ideas together.</p>
-    ${local?'<p class="sp-notice">You are viewing the downloaded file. Claude needs the server version. <a href="http://127.0.0.1:4173/">Open the local app</a>.</p>':aiStatus==='missing'?'<p class="sp-notice">Claude is not connected yet. The server needs an Anthropic API key. Built-in ideas still work.</p>':aiStatus==='unavailable'?'<p class="sp-notice">The Claude connection is unavailable on this version. Built-in ideas still work.</p>':''}
+    ${aiStatus==='unavailable'?'<p class="sp-notice">Claude is not reachable in this copy — the offline file and the public site have no connection to it. Open the artifact version if you want this part; everything else here works either way.</p>':aiStatus==='missing'?'<p class="sp-notice">Claude is not connected yet. The server needs an Anthropic API key. Built-in ideas still work.</p>':aiStatus==='unavailable'?'<p class="sp-notice">The Claude connection is unavailable on this version. Built-in ideas still work.</p>':''}
     <div aria-label="Conversation">${data.chat.map(m=>`<article class="sp-card"><p class="sp-kicker">${m.role==='user'?'You':'Claude'}</p><div style="white-space:pre-wrap;overflow-wrap:anywhere">${escape(m.content)}</div></article>`).join('')}</div>
     ${aiBusy?'<p role="status">Claude is thinking of a direction…</p>':''}${aiError?`<p class="sp-notice" role="alert">${escape(aiError)}</p>`:''}
     <label class="sp-label" for="spark-ai-message">What would you like help with?</label><textarea id="spark-ai-message" maxlength="3000" ${aiBusy?'disabled':''} placeholder="I like shaping things and comparing them, but this project is getting repetitive. Help me find a different direction.">${escape(aiDraft)}</textarea>
     <p class="sp-small sp-muted">Send shares this message and recent messages in this conversation with Anthropic. Saved task and project notes are not included automatically. API use is billed to the connected account.</p>
-    <div class="sp-row">${button('ai-send',aiBusy?'Getting a reply…':'Send to Claude',`class="sp-primary" ${aiBusy||local||aiStatus==='missing'?'disabled':''}`)}${aiBusy?button('ai-cancel','Cancel reply'):''}${button('projects','Browse built-in ideas')}${button('choose','Back')}</div><p class="sp-small sp-muted">Recent replies stay in this browser. Ideas can miss the mark; tell Claude what does not fit.</p>`;
+    <div class="sp-row">${button('ai-send',aiBusy?'Getting a reply…':'Send to Claude',`class="sp-primary" ${aiBusy||aiStatus==='unavailable'||aiStatus==='missing'?'disabled':''}`)}${aiBusy?button('ai-cancel','Cancel reply'):''}${button('projects','Browse built-in ideas')}${button('choose','Back')}</div><p class="sp-small sp-muted">Recent replies stay in this browser. Ideas can miss the mark; tell Claude what does not fit.</p>`;
   }
   async function openAI(prefill=''){
     if(prefill)aiDraft=prefill;screen='ai';notice='';render();
-    if(location.protocol==='file:')return;
+    if(await ensureSample()){aiStatus='ready';if(screen==='ai')render(false);return;}
+    if(location.protocol==='file:'){aiStatus='unavailable';if(screen==='ai')render(false);return;}
     try{const r=await fetch('/api/status',{signal:AbortSignal.timeout(5000)});const status=await r.json();aiStatus=r.ok&&status.configured?'ready':r.ok?'missing':'unavailable';}catch{aiStatus='unavailable';}
     if(screen==='ai')render(false);
   }
@@ -4886,9 +4905,16 @@ CL.use("sample").then((s) => { sample = s; if (screen === "start") suggestMoves(
     const messages=[...history,{role:'user',content:message}];
     aiBusy=true;aiError='';aiAbort=new AbortController();const timeout=setTimeout(()=>aiAbort?.abort(),50000);render(false);
     try{
-      const r=await fetch('/api/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages}),signal:aiAbort.signal});
-      let result;try{result=await r.json();}catch{throw Error('This version does not have a working Claude connection yet. Your message has been kept.');}
-      if(!r.ok)throw Error(result.error||'Claude could not reply. Your message has been kept.');
+      let result;
+      if(await ensureSample()){
+        const convo=messages.map(m=>(m.role==='user'?'Person: ':'You: ')+m.content).join('\n\n');
+        const out=await sampleFn(SPARK_BRIEF+'\n\n'+convo+'\n\nYou:',{signal:aiAbort.signal});
+        result={reply:(out&&out.text)||'',truncated:!!(out&&out.truncated)};
+      }else{
+        const r=await fetch('/api/suggest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages}),signal:aiAbort.signal});
+        try{result=await r.json();}catch{throw Error('No Claude connection in this copy. Your message has been kept.');}
+        if(!r.ok)throw Error(result.error||'Claude could not reply. Your message has been kept.');
+      }
       if(typeof result.reply!=='string'||!result.reply.trim())throw Error('No reply came back. Your message has been kept.');
       data.chat=[...messages,{role:'assistant',content:result.reply.slice(0,7000)}].slice(-8);aiDraft='';save();
       if(result.truncated)aiError='The reply reached its length limit. You can ask Claude to continue.';
