@@ -27,5 +27,5 @@
   }
   update(document.body);
   new MutationObserver(changes=>{for(const change of changes)for(const node of change.addedNodes){if(node.nodeType===1)update(node);else if(node.nodeType===3&&!node.parentElement?.closest('script,style,textarea,#spark-dialog')){const text=wording.get(node.nodeValue.trim());if(text)node.nodeValue=text;}}}).observe(document.body,{subtree:true,childList:true});
-  const style=document.createElement('style');style.textContent='[id^="s-"] p,[id^="s-"] input,[id^="s-"] textarea{font-size:max(1rem,16px)}[id^="s-"] label,[id^="s-"] .sub,[id^="s-"] .hint{font-size:max(.875rem,14px);color:#46534e}';document.head.append(style);
+  const style=document.createElement('style');style.textContent='[id^="s-"] p,[id^="s-"] input,[id^="s-"] textarea{font-size:max(1rem,16px)}[id^="s-"] label,[id^="s-"] .sub,[id^="s-"] .hint{font-size:max(.875rem,14px);color:var(--dim)}';document.head.append(style);
 })();
