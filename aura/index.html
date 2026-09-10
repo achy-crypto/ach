@@ -4,1070 +4,147 @@
 
 <style>
 :root{
-  --paper:#e7e6df;
-  --sheet:#f4f3ee;
-  --ink:#15171c;
-  --dim:#6a6e77;
-  --rule:#cbc9c0;
-  --rule-soft:#dbd9d1;
-  --pen:#a82b1e;
-  --pen-soft:#a82b1e26;
-  --ok:#3d6b4a;
+  --paper:#e7e6df;--sheet:#f4f3ee;--ink:#15171c;--dim:#6a6e77;
+  --rule:#cbc9c0;--rule-soft:#dbd9d1;--pen:#a82b1e;--pen-soft:#a82b1e26;--ok:#3d6b4a;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#111317;
-    --sheet:#191c21;
-    --ink:#e7e5de;
-    --dim:#8c9099;
-    --rule:#2b2f36;
-    --rule-soft:#22262c;
-    --pen:#e0705d;
-    --pen-soft:#e0705d24;
-    --ok:#6fae82;
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#111317;
-  --sheet:#191c21;
-  --ink:#e7e5de;
-  --dim:#8c9099;
-  --rule:#2b2f36;
-  --rule-soft:#22262c;
-  --pen:#e0705d;
-  --pen-soft:#e0705d24;
-  --ok:#6fae82;
-}
-
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#111317;--sheet:#191c21;--ink:#e7e5de;--dim:#8c9099;--rule:#2b2f36;--rule-soft:#22262c;--pen:#e0705d;--pen-soft:#e0705d24;--ok:#6fae82}}
+:root[data-theme="dark"]{--paper:#111317;--sheet:#191c21;--ink:#e7e5de;--dim:#8c9099;--rule:#2b2f36;--rule-soft:#22262c;--pen:#e0705d;--pen-soft:#e0705d24;--ok:#6fae82}
 *{box-sizing:border-box}
-body{
-  background:var(--paper);
-  color:var(--ink);
-  font-family:"Archivo","Helvetica Neue",Arial,sans-serif;
-  font-size:15px;
-  line-height:1.5;
-  -webkit-font-smoothing:antialiased;
-}
-.wrap{max-width:620px;margin:0 auto;padding:30px 20px 80px}
-
-.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+body{background:var(--paper);color:var(--ink);font-family:"Archivo","Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:650px;margin:0 auto;padding:30px 20px 80px}
 .prose{font-family:"Newsreader",Georgia,serif;font-size:15.5px;line-height:1.6}
-
-.eyebrow{
-  font-family:"IBM Plex Mono",monospace;
-  font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
-}
-
-/* masthead */
-.head{border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:2px}
-.head h1{
-  font-size:30px;font-weight:700;letter-spacing:-.025em;margin:0;
-  display:flex;align-items:baseline;justify-content:space-between;gap:12px;
-}
-.head h1 .rev{font-size:10.5px;font-weight:400;letter-spacing:.14em;color:var(--dim);font-family:"IBM Plex Mono",monospace}
-.head p{margin:6px 0 0;color:var(--dim);font-size:13.5px;max-width:52ch}
-.headrule{height:0;border-bottom:1px solid var(--ink);margin-bottom:20px}
-
-/* tabs */
-.tabs{display:flex;gap:0;border-bottom:1px solid var(--rule);margin-bottom:22px}
-.tab{
-  appearance:none;background:none;border:0;border-bottom:2px solid transparent;
-  font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.02em;
-  color:var(--dim);padding:9px 14px 8px;cursor:pointer;margin-bottom:-1px;
-}
-.tab:hover{color:var(--ink)}
-.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--pen)}
-.tab:focus-visible{outline:2px solid var(--pen);outline-offset:-2px}
-
-/* controls */
-.row{display:flex;gap:8px;align-items:stretch}
-input[type=text]{
-  flex:1;min-width:0;background:var(--sheet);border:1px solid var(--rule);
-  color:var(--ink);font-family:inherit;font-size:15px;padding:10px 12px;border-radius:2px;
-}
-input[type=text]::placeholder{color:var(--dim)}
-input[type=text]:focus{outline:none;border-color:var(--ink)}
-button.go{
-  appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--paper);
-  font-family:inherit;font-weight:600;font-size:14px;padding:10px 18px;border-radius:2px;cursor:pointer;
-}
-button.go:hover{background:transparent;color:var(--ink)}
-button.go[disabled]{opacity:.45;cursor:default}
-button.go:focus-visible,.seg button:focus-visible,.chip:focus-visible{outline:2px solid var(--pen);outline-offset:2px}
-
-.seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.seg button{
-  appearance:none;background:none;border:1px solid var(--rule);color:var(--dim);
-  font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.04em;
-  padding:6px 10px;border-radius:2px;cursor:pointer;
-}
-.seg button:hover{color:var(--ink);border-color:var(--dim)}
-.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.head{border-bottom:2px solid var(--ink);padding-bottom:12px;margin-bottom:2px}.head h1{font-size:30px;font-weight:700;letter-spacing:-.025em;margin:0;display:flex;align-items:baseline;justify-content:space-between;gap:12px}.head h1 .rev{font-size:10.5px;font-weight:400;letter-spacing:.14em;color:var(--dim);font-family:"IBM Plex Mono",monospace}.head p{margin:6px 0 0;color:var(--dim);font-size:13.5px;max-width:56ch}.headrule{height:0;border-bottom:1px solid var(--ink);margin-bottom:20px}
+.tabs{display:flex;border-bottom:1px solid var(--rule);margin-bottom:22px}.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--dim);padding:9px 14px 8px;cursor:pointer;margin-bottom:-1px}.tab:hover{color:var(--ink)}.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--pen)}
+.row{display:flex;gap:8px;align-items:stretch}.row.wraprow{flex-wrap:wrap}
+input[type=text]{flex:1;min-width:0;background:var(--sheet);border:1px solid var(--rule);color:var(--ink);font-family:inherit;font-size:15px;padding:10px 12px;border-radius:2px}input[type=text]::placeholder{color:var(--dim)}input[type=text]:focus{outline:none;border-color:var(--ink)}
+button.go{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-family:inherit;font-weight:600;font-size:14px;padding:10px 18px;border-radius:2px;cursor:pointer}button.go:hover{background:transparent;color:var(--ink)}button.go[disabled]{opacity:.45;cursor:default}
+.seg{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.seg button,.chip{appearance:none;background:none;border:1px solid var(--rule);color:var(--dim);font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:6px 10px;border-radius:2px;cursor:pointer}.seg button:hover,.chip:hover{color:var(--ink);border-color:var(--dim)}.seg button[aria-pressed="true"],.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
 .fieldlab{margin:18px 0 0;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-
-/* status */
-.status{margin-top:16px;font-size:13.5px;color:var(--dim);display:flex;align-items:center;gap:10px}
-.status .dot{width:6px;height:6px;border-radius:50%;background:var(--pen);animation:pulse 1.1s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.status .dot{animation:none;opacity:.7}}
-.err{margin-top:16px;border-left:2px solid var(--pen);padding:8px 0 8px 12px;font-size:13.5px}
-.linkish{background:none;border:0;color:var(--pen);font:inherit;font-size:13.5px;text-decoration:underline;cursor:pointer;padding:0}
-
-/* marking sheet */
-.sheet{margin-top:26px}
-.sheetflag{
-  display:inline-block;border:1px solid var(--rule);color:var(--dim);
-  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;
-  text-transform:uppercase;padding:2px 7px;margin-bottom:12px;
-}
-.verdict{border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);padding:16px 0 18px}
-.vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
-.vname{font-size:19px;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
-.vident{color:var(--dim);font-size:13px;margin-top:3px;max-width:42ch}
-.vnum{
-  font-size:60px;font-weight:700;line-height:.86;letter-spacing:-.05em;color:var(--pen);
-  font-variant-numeric:tabular-nums;text-align:right;
-}
-.vband{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:11px;
-  letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:7px}
-
-.dock{
-  margin-top:14px;border-left:2px solid var(--pen);background:var(--pen-soft);
-  padding:8px 12px;font-size:13px;
-}
-.dock b{font-weight:600}
-.warnflag{
-  margin-top:14px;border-left:2px solid var(--rule);padding:8px 12px;font-size:13px;color:var(--dim);
-}
-
-/* axis rows */
-.axis{padding:14px 0;border-bottom:1px solid var(--rule-soft)}
-.axis:last-of-type{border-bottom:1px solid var(--rule)}
-.arow{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
-.alab{font-size:14px;font-weight:600}
-.aval{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
-.ticks{display:flex;gap:3px;margin:8px 0 7px}
-.ticks i{height:6px;flex:1;background:var(--rule);border-radius:1px}
-.ticks i.on{background:var(--pen)}
-.anote{color:var(--dim);font-size:14px}
-.ahint{display:block;color:var(--dim);font-size:12px;font-weight:400;margin-top:1px}
-
-.callout{margin-top:16px;display:grid;gap:10px}
-.callout div{border-left:2px solid var(--rule);padding:6px 0 6px 12px;font-size:14px}
-.callout div.peak{border-left-color:var(--ink)}
-.callout .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--dim);display:block;margin-bottom:2px}
-
-/* verdict capture */
-.after{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px}
-.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
-.chip{
-  appearance:none;background:var(--sheet);border:1px solid var(--rule);color:var(--ink);
-  font-family:inherit;font-size:13px;padding:6px 12px;border-radius:2px;cursor:pointer;
-}
-.chip:hover{border-color:var(--ink)}
-.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
-.saved{color:var(--ok);font-size:13px;margin-top:9px}
-
-/* picks */
-.pick{border-top:1px solid var(--rule);padding:16px 0}
-.pick:first-of-type{border-top:1px solid var(--ink)}
-.ptop{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
-.pname{font-size:16px;font-weight:600;letter-spacing:-.01em}
-.pname span{color:var(--dim);font-weight:400}
-.pnum{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:500;color:var(--pen);font-variant-numeric:tabular-nums}
-.pident{color:var(--dim);font-size:12.5px;margin-top:3px}
-.pwhy{margin-top:9px}
-.pmeta{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
-.tag{
-  font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.06em;
-  border:1px solid var(--rule);color:var(--dim);padding:2px 7px;
-}
-.tag.warn{border-color:var(--pen);color:var(--pen)}
-
-/* calibrate */
-.tablewrap{overflow-x:auto;margin-top:12px}
-table{border-collapse:collapse;width:100%;font-size:13.5px}
-th{
-  text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--dim);font-weight:400;
-  border-bottom:1px solid var(--ink);padding:0 10px 6px 0;white-space:nowrap;
-}
-td{border-bottom:1px solid var(--rule-soft);padding:8px 10px 8px 0;vertical-align:top}
-td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
-.del{appearance:none;background:none;border:0;color:var(--dim);cursor:pointer;font:inherit;font-size:16px;line-height:1;padding:0 2px}
-.del:hover{color:var(--pen)}
-.addrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
-.addrow input[type=text]{flex:2;min-width:150px}
-.addrow input.sc{flex:0 0 74px;min-width:74px;text-align:center}
-.justadded td{background:var(--pen-soft)}
-.empty{color:var(--dim);font-size:13.5px;margin-top:12px;font-style:italic}
-.readout{
-  margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-  gap:1px;background:var(--rule);border:1px solid var(--rule);
-}
-.readout div{background:var(--sheet);padding:11px 12px}
-.readout .n{font-family:"IBM Plex Mono",monospace;font-size:21px;font-variant-numeric:tabular-nums;line-height:1.1}
-.note{color:var(--dim);font-size:13px;margin-top:14px;max-width:58ch}
-h2.sec{font-size:15px;font-weight:600;margin:30px 0 0;letter-spacing:-.01em}
-h2.sec:first-child{margin-top:0}
-.subtle{color:var(--dim);font-size:13px;margin:4px 0 0;max-width:58ch}
-[hidden]{display:none !important}
+.status{margin-top:16px;font-size:13.5px;color:var(--dim);display:flex;align-items:center;gap:10px}.status .dot{width:6px;height:6px;border-radius:50%;background:var(--pen);animation:pulse 1.1s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}.err{margin-top:16px;border-left:2px solid var(--pen);padding:8px 0 8px 12px;font-size:13.5px}.saved{color:var(--ok);font-size:13px;margin-top:9px}
+.sheet{margin-top:26px}.sheetflag{display:inline-block;border:1px solid var(--rule);color:var(--dim);font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:2px 7px;margin-bottom:12px}.verdict{border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);padding:16px 0 18px}.vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.vname{font-size:19px;font-weight:600}.vident{color:var(--dim);font-size:13px;margin-top:3px;max-width:44ch}.vnum{font-size:60px;font-weight:700;line-height:.86;letter-spacing:-.05em;color:var(--pen);font-variant-numeric:tabular-nums;text-align:right}.vband{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:7px}.dock{margin-top:14px;border-left:2px solid var(--pen);background:var(--pen-soft);padding:8px 12px;font-size:13px}.warnflag{margin-top:14px;border-left:2px solid var(--rule);padding:8px 12px;font-size:13px;color:var(--dim)}
+.axis{padding:14px 0;border-bottom:1px solid var(--rule-soft)}.arow{display:flex;justify-content:space-between;align-items:baseline;gap:14px}.alab{font-size:14px;font-weight:600}.aval{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}.ticks{display:flex;gap:3px;margin:8px 0 7px}.ticks i{height:6px;flex:1;background:var(--rule);border-radius:1px}.ticks i.on{background:var(--pen)}.anote{color:var(--dim);font-size:14px}.ahint{display:block;color:var(--dim);font-size:12px;font-weight:400;margin-top:1px}
+.callout{margin-top:16px;display:grid;gap:10px}.callout div{border-left:2px solid var(--rule);padding:6px 0 6px 12px;font-size:14px}.callout div.peak{border-left-color:var(--ink)}.callout .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:2px}
+.after{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px}.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+/* Tap targets. These were ~30px tall with 6px gaps; the stored log showed zero
+   verdicts ever recorded while every other control saved fine, which is what a
+   too-small target looks like on a phone. */
+.chip{font-family:inherit;font-size:14px;color:var(--ink);background:var(--sheet);padding:12px 16px;min-height:46px;flex:1 1 auto;min-width:132px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.chip:active{background:var(--ink);color:var(--paper)}
+.pick{border-top:1px solid var(--rule);padding:16px 0}.pick:first-of-type{border-top:1px solid var(--ink)}.ptop{display:flex;justify-content:space-between;align-items:baseline;gap:16px}.pname{font-size:16px;font-weight:600}.pname span{color:var(--dim);font-weight:400}.pnum{font-family:"IBM Plex Mono",monospace;font-size:19px;font-weight:500;color:var(--pen)}.pident{color:var(--dim);font-size:12.5px;margin-top:3px}.pwhy{margin-top:9px}.pmeta{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}.tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.04em;border:1px solid var(--rule);color:var(--dim);padding:2px 7px}.tag.warn{border-color:var(--pen);color:var(--pen)}
+.tablewrap{overflow-x:auto;margin-top:12px}table{border-collapse:collapse;width:100%;font-size:13.5px}th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:400;border-bottom:1px solid var(--ink);padding:0 10px 6px 0;white-space:nowrap}td{border-bottom:1px solid var(--rule-soft);padding:8px 10px 8px 0;vertical-align:top}td.num{font-family:"IBM Plex Mono",monospace;white-space:nowrap}.del{appearance:none;background:none;border:0;color:var(--dim);cursor:pointer;font:inherit;font-size:16px;line-height:1;padding:0 2px}.del:hover{color:var(--pen)}.addrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.addrow input[type=text]{flex:2;min-width:150px}.addrow input.sc{flex:0 0 74px;min-width:74px;text-align:center}.justadded td{background:var(--pen-soft)}.empty{color:var(--dim);font-size:13.5px;margin-top:12px;font-style:italic}.readout{margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule)}.readout div{background:var(--sheet);padding:11px 12px}.readout .n{font-family:"IBM Plex Mono",monospace;font-size:21px}.note{color:var(--dim);font-size:13px;margin-top:14px;max-width:58ch}h2.sec{font-size:15px;font-weight:600;margin:30px 0 0}.subtle{color:var(--dim);font-size:13px;margin:4px 0 0;max-width:60ch}[hidden]{display:none!important}
 </style>
 
 <div class="wrap">
   <header class="head">
-    <h1>Aura<span class="rev">Marking sheet</span></h1>
-    <p>Conviction and control, not the look. Arizona is shot flat and carries more than most prestige television.</p>
+    <h1>Aura<span class="rev">Anchor scale</span></h1>
+    <p>Your scale is the ruler. The axes explain why a movie lands there; they do not overrule your anchors.</p>
   </header>
   <div class="headrule"></div>
-
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" id="tab-read" aria-selected="true" data-tab="read">Read one</button>
-    <button class="tab" role="tab" id="tab-find" aria-selected="false" data-tab="find">Find aura</button>
-    <button class="tab" role="tab" id="tab-cal" aria-selected="false" data-tab="cal">Calibration</button>
+    <button class="tab" data-tab="read" aria-selected="true">Read one</button>
+    <button class="tab" data-tab="find" aria-selected="false">Find aura</button>
+    <button class="tab" data-tab="cal" aria-selected="false">Calibration</button>
   </div>
-
-  <section id="panel-read" role="tabpanel" aria-labelledby="tab-read"></section>
-  <section id="panel-find" role="tabpanel" aria-labelledby="tab-find" hidden></section>
-  <section id="panel-cal" role="tabpanel" aria-labelledby="tab-cal" hidden></section>
+  <section id="panel-read"></section>
+  <section id="panel-find" hidden></section>
+  <section id="panel-cal" hidden></section>
 </div>
 
 <script>
 "use strict";
 
-/* ---------- rubric ---------- */
-
-const AXES = [
-  { key:"control",  label:"Total control",     hint:"Knows exactly what it is doing; every choice deliberate", w:3   },
-  { key:"writing",  label:"Sharp writing",     hint:"Not functional, not there to move the plot along",        w:2.5 },
-  { key:"under",    label:"More underneath",   hint:"Surface undersells it: looks like one thing, is another", w:2.5 },
-  { key:"commit",   label:"Commits fully",     hint:"No hedging, no winking, never softens itself",            w:2   },
-  { key:"nochase",  label:"Doesn't chase you", hint:"Not performing, not asking to be liked or seem deep",     w:2   },
-  { key:"withhold", label:"Withholds",         hint:"Doesn't explain itself; leaves things unsaid",            w:1.5 },
+const AXES=[
+  {key:"control",label:"Total control",hint:"Knows exactly what it is doing; every choice deliberate"},
+  {key:"writing",label:"Sharp writing",hint:"Not functional, not just moving plot"},
+  {key:"under",label:"More underneath",hint:"Surface undersells what is really there"},
+  {key:"commit",label:"Commits fully",hint:"No hedging, no winking, never softens itself"},
+  {key:"nochase",label:"Doesn't chase you",hint:"Not asking to be liked, cool, deep, or prestigious"},
+  {key:"withhold",label:"Withholds",hint:"Doesn't explain itself; leaves things unsaid"}
 ];
-const WSUM = AXES.reduce((a, x) => a + x.w, 0);
-
-const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-const ax05 = v => clamp(Number(v) || 0, 0, 5);
-
-// Fitted so the axis profiles of his own anchors reproduce his own numbers:
-// Arizona 9.3 · Parasite 8.0 · Truman 5.9 · Justified 2.8.
-// A flat linear map (the original) put straight 4s at 8.2, above Parasite. This does not.
-function composite(scores, fandom) {
-  let s = 0;
-  for (const a of AXES) s += ax05(scores && scores[a.key]) * a.w;
-  const base = 1 + 9 * Math.pow(s / (5 * WSUM), 1.35);
-  return clamp(base - clamp(Number(fandom) || 0, 0, 3) * 0.9, 1, 10);
-}
-
-function band(v) {
-  if (v >= 9)   return "Untouchable";
-  if (v >= 8)   return "Heavy aura";
-  if (v >= 7)   return "Real presence";
-  if (v >= 5.5) return "Some, not much";
-  if (v >= 4)   return "Thin";
-  return "No aura";
-}
-
-const VERDICTS = [
-  { key:"loved",   label:"Loved it"      },
-  { key:"liked",   label:"Liked it"      },
-  { key:"nothing", label:"Nothing there" },
-  { key:"bounced", label:"Bounced off"   },
+const VERDICTS=[
+  {key:"loved",label:"Loved it"},{key:"liked",label:"Liked it"},
+  {key:"nothing",label:"Nothing there"},{key:"bounced",label:"Bounced off"}
 ];
+const BASE_ANCHORS=[
+  {title:"Arizona (2018)",score:9,note:"Key anchor. Looks corny and flat but carries huge aura anyway: sharp writing, total commitment, no prestige crutch."},
+  {title:"Goodfellas",score:9,note:""},{title:"Taxi Driver",score:9,note:""},{title:"Severance",score:9,note:""},{title:"Drive",score:9,note:""},
+  {title:"Casino",score:8.5,note:""},{title:"Sicario",score:8.5,note:""},{title:"Nightcrawler",score:8.5,note:""},{title:"Fargo (season 1)",score:8.5,note:""},
+  {title:"Parasite",score:8,note:""},{title:"Zodiac",score:8,note:""},{title:"Whiplash",score:8,note:""},{title:"Obsession (2026)",score:8,note:""},
+  {title:"Get Shorty",score:7.5,note:""},{title:"Eastbound & Down",score:7.5,note:""},{title:"A Prophet",score:7.5,note:""},{title:"The Wrestler",score:7.5,note:""},{title:"Mr Inbetween",score:7.5,note:""},
+  {title:"The Truman Show",score:6,note:""},{title:"Ozark",score:5,note:""},{title:"The Shield",score:4,note:"Trying too hard is anti-aura."},
+  {title:"Justified",score:3,note:"Functional dialogue, reveal spent early, nobody with weight, nothing underneath."}
+];
+const DOCTRINE=`AURA is conviction and control. The work knows exactly what it is doing and does it without hedging. Sharp writing. Something underneath the surface. It does not announce itself or ask to be admired.
 
-/* ---------- base anchors (editable in Calibration) ---------- */
+Aura is NOT cinematography, lighting, color grading, a moody score, production value, popularity, obscurity, foreignness, age, subtitles, prestige, or whether the user personally enjoyed it. A cheap flat-looking movie in total command can have more aura than beautiful prestige television.
 
-const BASE_ANCHORS = [
-  { title:"Arizona (2018)",   score:9,   note:"Key anchor. Looks corny, shot flat, no visual ambition, packed with aura anyway: sharp writing, spoofs several registers and lands every one, never tips into goofy." },
-  { title:"Goodfellas",       score:9,   note:"" },
-  { title:"Taxi Driver",      score:9,   note:"" },
-  { title:"Severance",        score:9,   note:"" },
-  { title:"Drive",            score:9,   note:"" },
-  { title:"Casino",           score:8.5, note:"" },
-  { title:"Sicario",          score:8.5, note:"" },
-  { title:"Nightcrawler",     score:8.5, note:"" },
-  { title:"Fargo (season 1)", score:8.5, note:"" },
-  { title:"Parasite",         score:8,   note:"" },
-  { title:"Zodiac",           score:8,   note:"" },
-  { title:"Whiplash",         score:8,   note:"" },
-  { title:"Obsession (2026)", score:8,   note:"" },
-  { title:"Get Shorty",       score:7.5, note:"" },
-  { title:"Eastbound & Down", score:7.5, note:"" },
-  { title:"A Prophet",        score:7.5, note:"" },
-  { title:"The Wrestler",     score:7.5, note:"" },
-  { title:"Mr Inbetween",     score:7.5, note:"" },
-  { title:"The Truman Show",  score:6,   note:"" },
-  { title:"Ozark",            score:5,   note:"" },
-  { title:"The Shield",       score:4,   note:"Trying too hard is anti-aura, not aura." },
-  { title:"Justified",        score:3,   note:"Daytime television: functional dialogue that only moves the plot, the big reveal spent in the first five minutes, nobody with weight, nothing underneath." },
+ANTI-AURA: functional dialogue that only moves plot; explaining the story out loud; reveal spent early; hedging; winking; visibly trying to seem cool or serious; everyone softened into likability; nothing withheld.
+
+Coded fandom is evidence only when the WORK itself chases identity or admiration. Do not dock a work merely because a recognizable fanbase exists. Score the work, not the people who post about it.`;
+const PLACEMENT_NOTE=`THE USER'S ANCHOR SCALE IS THE FINAL AUTHORITY.
+For every title, choose exactly ONE calibration anchor that is closest in AURA — not plot, genre, country, decade, cinematography, popularity, or expected enjoyment. Copy that anchor title EXACTLY. Then give delta from -1.5 to +1.5 aura points. 0 means essentially equal aura; +0.5 clearly more; -0.5 clearly less. Usually stay within +/-0.75. The app computes final score = anchor score + delta. The six axes explain the placement but never overrule the anchor scale.`;
+const SHAPE_NOTE=`FAMILIARITY 0-3: 3 thoroughly; 2 well enough; 1 mostly reputation; 0 unknown. Be honest. IDENT: director/creator, year, premise so a wrong title match is caught.`;
+const FORM={film:{noun:"feature films",rule:"Every pick must be a feature film, not a series."},show:{noun:"television series",rule:"Every pick must be a television series or miniseries, not a feature film."}};
+const LANES=[
+  ["any","Any",""],
+  ["cheap","Cheap but total","Lean toward work that looks cheap, flat, corny, or unfashionable but is in complete command — the Arizona test."],
+  ["figure","A figure","Lean toward work built around one person with real weight."],
+  ["strange","Strange","Lean toward structurally odd work with real layers underneath."],
+  ["nasty","Nasty","Lean toward hard, unsentimental work with no interest in being liked."]
 ];
 
-const DOCTRINE =
-`AURA — what is being measured.
-Aura is conviction and control. The work knows exactly what it is doing and does it
-without hedging. Sharp writing. Something underneath the surface. It does not announce
-itself or ask to be admired.
-
-Aura is NOT cinematography, lighting, colour grading, a moody score, or prestige
-production values. Style laid over thin writing scores LOW. A cheap, flat-looking thing
-in total command scores HIGH. Do not reward the look — this is the most common way to
-get this wrong.
-
-ANTI-AURA: functional dialogue that only moves the plot; explaining the story out loud;
-the reveal spent early; hedging; winking at the audience; visibly trying hard to seem
-cool or serious; everyone likeable; nothing withheld.
-
-CODED FANDOM is scored SEPARATELY (0-3) and drains the result, overriding how well made
-the thing is. If liking it is a personality signal for a recognisable online type — if
-people put it in their bio, if it is earnest, wholesome, twee, or asks to be found
-meaningful — aura collapses no matter the craft. Aura requires that nobody is wearing it.
-0 = nobody wears it. 1 = a mild scene. 2 = a fanbase you can picture instantly.
-3 = liking it IS the personality.
-
-SUBTITLES AND AGE ARE NOT AURA. Foreign-language, old, or festival cinema is its own
-coded fandom — the "real cinema" personality — and reaching for it to seem serious is
-the same mistake as rewarding cinematography. A passport, a decade and a subtitle track
-are not evidence of conviction in either direction: A Prophet and Mr Inbetween earn
-their place on the axes, not by being French or Australian, and the top of this scale is
-a flat-looking American comedy from 2018. Never pick something BECAUSE it is foreign,
-old, or obscure. Judge what is on the screen.
-
-WORKED AXIS PROFILES (these reproduce his own numbers on the shared scale):
-  Arizona (2018) = 9   → control 5, writing 5, under 4, commit 5, nochase 5, withhold 4; fandom 0
-  Parasite       = 8   → control 5, writing 4, under 5, commit 4, nochase 3, withhold 3; fandom 0
-  The Truman Show= 6   → control 4, writing 3, under 4, commit 3, nochase 2, withhold 2; fandom 0
-  Justified      = 3   → control 2, writing 1, under 1, commit 2, nochase 2, withhold 1; fandom 0
-Match that severity. Most television sits at 1-2 on most axes. A 5 is rare and must be earned.`;
-
-/* ---------- state ---------- */
-
-const state = { anchors: BASE_ANCHORS.slice(), log: [], seen: [], loaded: false };
-let db = null, sample = null;
-let tab = "read";
-
-const DOC = "aura/state";
-
-// Per-title save status for the just-clicked verdict: "saving" | "ok" | "failed".
-// Without this, a verdict click updated local state and re-rendered instantly
-// whether or not the write actually reached storage — a failed save and a
-// working one looked identical, which is exactly what "I pressed it and
-// nothing happened" looks like from the outside.
-const saveStatus = {};
-let justAdded = null, addErr = "";
-let dbUnavailable = false;
-let dbErr = "";
-let lastSave = { cloud: null, local: null };
-
-const LS_KEY = "aura:state:v1";
-
-function payload() {
-  return {
-    anchors: state.anchors,
-    log: state.log.slice(-300),
-    seen: state.seen.slice(-300),
-    // The reading and the picks are kept too. Losing them on reload meant a
-    // verdict you had just logged left no trace where you logged it: the Read
-    // tab reset to the example, and the marked chip vanished with it.
-    last: (typeof reading !== "undefined" && reading && !reading.example) ? reading : null,
-    lastPicks: (typeof picks !== "undefined" && picks && picks.length) ? picks.slice(0, 8) : null,
-  };
-}
-
-function adopt(d) {
-  if (!d) return false;
-  if (Array.isArray(d.anchors)) state.anchors = d.anchors;
-  if (Array.isArray(d.log))     state.log     = d.log;
-  if (Array.isArray(d.seen))    state.seen    = d.seen;
-  if (d.last && d.last.name)      { reading = d.last; readTitle = d.last.name; }
-  if (Array.isArray(d.lastPicks)) picks = d.lastPicks;
-  return true;
-}
-
-async function loadState() {
-  // Cloud first (follows the link across devices), browser storage as the
-  // fallback so a view that can't reach db still remembers everything.
-  let got = false;
-  try {
-    db = await claude.use("db");
-    if (!db) { dbUnavailable = true; dbErr = "not available in this view"; }
-    else {
-      const snap = await db.doc(DOC).get();
-      if (snap.exists) got = adopt(snap.data());
-    }
-  } catch (e) {
-    db = null; dbUnavailable = true;
-    dbErr = (e && (e.code || e.message)) || "unknown error";
-  }
-  // Probe browser storage up front so the Storage readout states a fact
-  // rather than waiting for the first write to find out.
-  try {
-    localStorage.setItem(LS_KEY + ":probe", "1");
-    localStorage.removeItem(LS_KEY + ":probe");
-    lastSave.local = true;
-  } catch (e) { lastSave.local = false; }
-
-  if (!got) {
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) adopt(JSON.parse(raw));
-    } catch (e) { /* private mode, blocked storage — carry on in memory */ }
-  }
-  state.loaded = true;
-  render();
-}
-
-async function saveState() {
-  const body = payload();
-
-  let local = false;
-  try { localStorage.setItem(LS_KEY, JSON.stringify(body)); local = true; }
-  catch (e) { local = false; }
-
-  let cloud = false;
-  if (db) {
-    try { await db.doc(DOC).set(body); cloud = true; dbErr = ""; }
-    catch (e) { dbErr = (e && (e.code || e.message)) || "unknown error"; }
-  }
-
-  lastSave = { cloud, local };
-  return local || cloud;   // saved somewhere is saved
-}
-
-/* ---------- prompt assembly ---------- */
-
-function anchorBlock() {
-  const rows = state.anchors
-    .slice()
-    .sort((a, b) => b.score - a.score)
-    .map(a => `  ${a.title} = ${a.score}${a.note ? " — " + a.note : ""}`)
-    .join("\n");
-  return "HIS CALIBRATION ANCHORS (1-10, his scale, his word is final):\n" + rows;
-}
-
-// The anchor list is a description of a taste, not just a scale. Used only as a
-// ruler it calibrates the number while leaving the choice of title unmoored —
-// which is how a list of American crime and dark comedy produced French cinema.
-function tasteProfile() {
-  const top = state.anchors
-    .filter(a => Number(a.score) >= 7.5)
-    .sort((a, b) => b.score - a.score)
-    .map(a => a.title);
-  if (top.length < 4) return "";
-  return `
-WHAT HE ACTUALLY WATCHES — the titles he rates highest:
-${top.join(" · ")}
-
-Read that as a description of a taste, not a scale. Notice what it holds in common:
-the register, the mode, the kind of person it is about, the world it moves through,
-how it talks. Your picks must belong in that company — what someone with this list
-puts on next, or a real extension of it in a direction he would recognise. A title
-from a different tradition that happens to score well on paper is the WRONG pick,
-however good it is. If it would look out of place beside those titles, do not send it.`;
-}
-
-function tasteBlock() {
-  if (!state.log.length) return "";
-  const rows = state.log.slice(-24).map(e =>
-    `  ${e.title} — predicted ${Number(e.score).toFixed(1)} — he ${
-      { loved:"loved it", liked:"liked it", nothing:"found nothing there", bounced:"bounced off it" }[e.verdict]
-    }`).join("\n");
-  return `
-HIS ACTUAL REACTIONS so far (the ground truth this scale exists to predict — where a
-prediction missed, correct toward the reaction, and say so if it changes your read):
-${rows}`;
-}
-
-const SHAPE_NOTE =
-`FAMILIARITY (0-3): how well do you actually know this work? 3 = thoroughly.
-2 = well enough. 1 = only by reputation, you are partly guessing. 0 = you do not know it.
-Be honest — a confident score on something you half-remember is worse than a flagged guess.
-IDENT: one line naming director/creator, year, and premise, so a wrong match is caught.`;
-
-/* ---------- sampling ---------- */
-
-let ctl = null;
-
-function errCopy(e) {
-  const c = e && e.code;
-  if (c === "not_granted" || c === "sampling_disabled" || c === "not_declared" || c === "capability_disabled")
-    return "This page can't reach Claude. Open it from your Claude account and allow it when asked.";
-  if (c === "rate_limited")    return "Too many requests, or you've hit your usage limit. Give it a minute.";
-  if (c === "session_expired") return "Your session expired. Sign in again, then retry.";
-  if (c === "invalid_json")    return "The reply came back malformed. Try again.";
-  if (c === "refused")         return "Claude declined to answer that one. Try a different title.";
-  if (c === "prompt_too_large")return "Your calibration list has grown too long. Trim some anchors.";
-  if (c === "empty_completion")return "Nothing came back. Try again.";
-  return "That didn't go through. Try again.";
-}
-
-/* ---------- READ ---------- */
-
-const EXAMPLE = {
-  name: "Justified",
-  example: true,
-  ident: "Graham Yost, 2010-2015. US Marshal returns to eastern Kentucky and shoots people politely.",
-  scores: { control:2, writing:1, under:1, commit:2, nochase:2, withhold:1 },
-  notes: {
-    control:  "Competent, never deliberate — decisions land on procedural habit rather than intent.",
-    writing:  "Dialogue exists to move the plot and flatter the lead. Everyone talks in the same drawl.",
-    under:    "Nothing beneath the surface. What you are told is what there is.",
-    commit:   "Softens every hard turn within an episode and resets by the next one.",
-    nochase:  "Constantly performs its own cool — the hat is doing the work.",
-    withhold: "Spends the big reveal in the first five minutes and explains the rest aloud.",
-  },
-  fandom: 0, fandomWhy: "", familiarity: 3,
-  peak: "None. The pilot's diner scene is the high point and it's spent immediately.",
-  kill: "Functional dialogue. Nobody in it carries any weight.",
-};
-
-let reading = EXAMPLE, readBusy = false, readErr = "", readTitle = "";
-
-function readPanel() {
-  const r = reading;
-  let h = `
-    <div class="row">
-      <input type="text" id="q" placeholder="Film, show, anything" value="${esc(readTitle)}" autocomplete="off" spellcheck="false">
-      <button class="go" data-act="read" ${readBusy ? "disabled" : ""}>${readBusy ? "Reading" : "Read it"}</button>
-    </div>
-    <div class="seg">
-      <button data-act="stop" ${readBusy ? "" : "hidden"}>Stop</button>
-    </div>`;
-
-  if (readBusy) h += `<div class="status"><span class="dot"></span>Working through the rubric — up to a minute.</div>`;
-  if (readErr)  h += `<div class="err">${esc(readErr)}</div>`;
-
-  if (r) {
-    const score = composite(r.scores, r.fandom);
-    const pen = clamp(Number(r.fandom) || 0, 0, 3) * 0.9;
-    h += `<div class="sheet">`;
-    if (r.example) h += `<span class="sheetflag">Example reading</span>`;
-
-    h += `
-      <div class="verdict">
-        <div class="vtop">
-          <div>
-            <div class="vname">${esc(r.name)}</div>
-            ${r.ident ? `<div class="vident">${esc(r.ident)}</div>` : ""}
-          </div>
-          <div>
-            <div class="vnum">${score.toFixed(1)}</div>
-            <div class="vband">${band(score)}</div>
-          </div>
-        </div>
-        ${pen > 0 ? `<div class="dock"><b>Docked ${pen.toFixed(1)} for coded fandom.</b> ${esc(r.fandomWhy || "Liking it reads as a personality signal.")}</div>` : ""}
-        ${Number(r.familiarity) <= 1 ? `<div class="warnflag">Claude only knows this by reputation — treat the read as a guess, not a measurement.</div>` : ""}
-      </div>`;
-
-    for (const a of AXES) {
-      const v = ax05(r.scores && r.scores[a.key]);
-      h += `
-        <div class="axis">
-          <div class="arow">
-            <div class="alab">${a.label}<span class="ahint">${a.hint}</span></div>
-            <div class="aval">${v}/5</div>
-          </div>
-          <div class="ticks">${[0,1,2,3,4].map(i => `<i class="${i < v ? "on" : ""}"></i>`).join("")}</div>
-          <div class="anote prose">${esc((r.notes && r.notes[a.key]) || "")}</div>
-        </div>`;
-    }
-
-    h += `<div class="callout">
-      ${r.peak ? `<div class="peak"><span class="k">Carrying it</span><span class="prose">${esc(r.peak)}</span></div>` : ""}
-      ${r.kill ? `<div><span class="k">Draining it</span><span class="prose">${esc(r.kill)}</span></div>` : ""}
-    </div>`;
-
-    if (!r.example) {
-      const done = state.log.find(e => e.title === r.name);
-      h += `<div class="after">
-        <div class="eyebrow">Seen it? Tell it what actually happened</div>
-        <p class="subtle">Every verdict you log is fed into the next reading. This is the only thing that makes it more accurate about you specifically.</p>
-        <div class="chips">
-          ${VERDICTS.map(v => `<button class="chip" data-act="verdict" data-v="${v.key}" aria-pressed="${done && done.verdict === v.key ? "true" : "false"}">${v.label}</button>`).join("")}
-        </div>
-        ${saveLine(r.name, !!done)}
-      </div>`;
-    }
-    h += `</div>`;
-  }
-  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">Cloud storage isn't available in this view, so verdicts save to this browser only. See Calibration → Storage.</div>` + h;
-  return h;
-}
-
-async function doRead() {
-  const name = (document.getElementById("q").value || "").trim();
-  readTitle = name;
-  if (!name) { readErr = "Type a title first."; render(); return; }
-
-  readBusy = true; readErr = ""; render();
-  ctl = new AbortController();
-
-  const rubric = AXES.map(a => `  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
-  const prompt =
-`Score the aura of "${name}". Its opposite is daytime television: functional, explained,
-weightless.
-
-${DOCTRINE}
-
-${anchorBlock()}
-${tasteBlock()}
-
-Score each axis 0-5:
-${rubric}
-
-${SHAPE_NOTE}
-
-Judge the work itself, not its reputation. Be willing to score a beloved thing low and an
-unfashionable thing high. Notes are one sentence each, specific to this work — name the
-scene, the line, the choice. No hedging, no "arguably".
-
-Reply with only this JSON:
-{"ident":"","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},
-"notes":{"control":"","writing":"","under":"","commit":"","nochase":"","withhold":""},
-"fandom":0,"fandomWhy":"","familiarity":3,"peak":"","kill":""}`;
-
-  try {
-    // No caching: this tab exists to test calibration changes, so a re-read
-    // after editing an anchor must never replay a stale answer.
-    const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
-    reading = Object.assign({ name }, out, { example:false });
-  } catch (e) {
-    if (e && e.code === "cancelled") { readBusy = false; render(); return; }
-    readErr = errCopy(e);
-  }
-  readBusy = false;
-  render();
-}
-
-/* ---------- FIND ---------- */
-
-const LANES = [
-  ["any",     "Any",             ""],
-  ["cheap",   "Cheap but total", "Lean towards work that looks cheap, flat or unfashionable but is in complete command — the Arizona case."],
-  ["figure",  "A figure",        "Lean towards work built around one person with real weight, written well enough to carry it."],
-  ["strange", "Strange",         "Lean towards work that is structurally odd or unlike anything else, with layers under it."],
-  ["nasty",   "Nasty",           "Lean towards work with no interest in being liked — hard, unsentimental, unsoftened."],
-];
-
-// Variety by REGISTER, not by passport or decade. The previous list demanded
-// three of six be foreign / pre-1995 / non-Anglophone, which quota'd in exactly
-// the "real cinema" coded fandom the doctrine says drains aura — rewarding a
-// subtitle track for the same reason it refuses to reward cinematography.
-// These rotate the angle of attack instead, which is what actually keeps a
-// batch from collapsing into the same six crime films.
-const ANGLES = {
-  film: [
-    "hiding inside a genre that usually carries no weight — comedy, action, heist, horror",
-    "contained: a few people, one place, no scale to hide behind",
-    "about work — a job shown in real detail",
-    "funny on purpose, and still hard underneath",
-    "led by someone with no interest in being liked",
-    "that looks cheap, flat or unfashionable",
-    "told from the wrong angle, or out of order, and earns it",
-    "domestic rather than criminal — no guns, still ruthless",
-    "by someone who only ever made one or two things",
-  ],
-  show: [
-    "that ran one season and finished its thought",
-    "half-hour, and not a comedy in the way you expect",
-    "about work — a job shown in real detail",
-    "led by someone with no interest in being liked",
-    "that looks cheap, flat or unfashionable",
-    "buried on a channel or service nobody was watching",
-    "wearing a procedural shape and doing something else underneath",
-    "funny on purpose, and still hard underneath",
-    "domestic rather than criminal — no guns, still ruthless",
-  ],
-};
-
-const FORM = {
-  film: { noun:"feature films", rule:"Every pick must be a FEATURE FILM. No television series, no miniseries, no documentaries series." },
-  show: { noun:"television series", rule:"Every pick must be a TELEVISION SERIES — episodic or a limited/mini series. NO FEATURE FILMS. If a title you are considering is a film, discard it and find a series instead." },
-};
-
-let kind = "film", lane = "any", floor = 8, findBusy = false, findErr = "", picks = [];
-
-function findPanel() {
-  let h = `
-    <div class="fieldlab"><span class="eyebrow">Form</span></div>
-    <div class="seg">
-      ${["film","show"].map(k => `<button data-act="kind" data-v="${k}" aria-pressed="${kind===k}">${k === "film" ? "Films" : "Shows"}</button>`).join("")}
-    </div>
-    <div class="fieldlab"><span class="eyebrow">Register</span></div>
-    <div class="seg">
-      ${LANES.map(l => `<button data-act="lane" data-v="${l[0]}" aria-pressed="${lane===l[0]}">${l[1]}</button>`).join("")}
-    </div>
-    <div class="fieldlab"><span class="eyebrow">Floor</span><span class="aval">${band(floor)}</span></div>
-    <div class="seg">
-      ${[7.5,8,8.5].map(f => `<button data-act="floor" data-v="${f}" aria-pressed="${floor===f}">${f.toFixed(1)}+</button>`).join("")}
-    </div>
-    <div class="seg" style="margin-top:16px">
-      <button class="go" data-act="find" ${findBusy ? "disabled" : ""}>${findBusy ? "Looking" : "Find aura"}</button>
-      <button data-act="stopfind" ${findBusy ? "" : "hidden"}>Stop</button>
-    </div>`;
-
-  if (findBusy) h += `<div class="status"><span class="dot"></span>Six candidates, each scored on the full rubric. This takes a minute.</div>`;
-  if (findErr)  h += `<div class="err">${esc(findErr)}</div>`;
-
-  if (picks.length) {
-    h += `<div class="sheet">`;
-    picks.forEach((p, i) => {
-      const s = composite(p.scores, p.fandom);
-      const pen = clamp(Number(p.fandom) || 0, 0, 3) * 0.9;
-      const logged = state.log.find(e => e.title === p.title);
-      h += `
-        <div class="pick">
-          <div class="ptop">
-            <div>
-              <div class="pname">${esc(p.title)} ${p.year ? `<span>${esc(String(p.year))}</span>` : ""}</div>
-              ${p.ident ? `<div class="pident">${esc(p.ident)}</div>` : ""}
-            </div>
-            <div class="pnum">${s.toFixed(1)}</div>
-          </div>
-          <div class="pwhy prose">${esc(p.why || "")}</div>
-          ${p.near ? `<div class="pident" style="margin-top:8px"><span class="eyebrow">Nearest yours</span> ${esc(p.near)}</div>` : ""}
-          <div class="pmeta">
-            ${AXES.map(a => `<span class="tag">${a.key} ${ax05(p.scores && p.scores[a.key])}</span>`).join("")}
-            ${pen > 0 ? `<span class="tag warn">docked ${pen.toFixed(1)} — fandom</span>` : ""}
-            ${Number(p.familiarity) <= 1 ? `<span class="tag warn">low confidence</span>` : ""}
-          </div>
-          ${p.warn ? `<div class="warnflag">Watch for: ${esc(p.warn)}</div>` : ""}
-          <div class="chips">
-            ${VERDICTS.map(v => `<button class="chip" data-act="pverdict" data-i="${i}" data-v="${v.key}" aria-pressed="${logged && logged.verdict === v.key ? "true" : "false"}">${v.label}</button>`).join("")}
-          </div>
-          ${saveLine(p.title, !!logged)}
-        </div>`;
-    });
-    h += `</div>`;
-  }
-  if (dbUnavailable) h = `<div class="warnflag" style="margin-bottom:14px">Cloud storage isn't available in this view, so verdicts save to this browser only. See Calibration → Storage.</div>` + h;
-  return h;
-}
-
-async function doFind() {
-  findBusy = true; findErr = ""; picks = []; render();
-  ctl = new AbortController();
-
-  const pool = ANGLES[kind];
-  const angle = pool[Math.floor(Math.random() * pool.length)];
-  const laneTxt = (LANES.find(l => l[0] === lane) || [])[2] || "";
-  const rubric = AXES.map(a => `  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
-
-  const prompt =
-`Recommend 6 ${FORM[kind].noun} with heavy aura.
-
-${FORM[kind].rule}
-This is not negotiable and overrides every other preference below. Tag each pick with
-"form":"${kind}" to confirm it. Anything of the wrong form will be thrown away.
-
-${DOCTRINE}
-
-${anchorBlock()}
-${tasteProfile()}
-${tasteBlock()}
-
-${laneTxt}
-Score every pick on the same axes, 0-5:
-${rubric}
-
-${SHAPE_NOTE}
-
-HOW TO CHOOSE, in this order. Do not skip step 1.
-1. Start from his list above and ask what a person with that taste has not seen yet.
-   The pick comes from his world first, and is scored second.
-2. Then score it honestly on the axes. If it does not clear ${floor}, drop it and go
-   back to step 1. Never pick a title and then fit numbers to it — the axis scores must
-   be things you could point at in the work.
-3. For each pick, name which of his anchors it sits nearest and in what way. If you
-   cannot name one, it does not belong on the list.
-
-HARD RULES
-- ${FORM[kind].rule}
-- Only include a pick whose axis scores genuinely put it at ${floor} or above.
-  Returning three honest picks is better than six padded ones.
-- Skip anything already on his anchor list, and skip the five most obvious titles
-  anyone would name in this space. Beyond that, DO NOT CHASE OBSCURITY. A well-known
-  thing he simply has not got to beats a rare one that misses. Rarity is not a
-  recommendation and he does not want to be impressed.
-- At most ONE of the six may be non-English-language, and only if it genuinely belongs
-  beside his list. Tag every pick with "lang". Extra ones are thrown away.
-- Never reach for a foreign, old or unreleased title to make the list look serious.
-  If the honest answers are recent and in English, send recent English-language picks.
-- Prefer this decade and the last unless something older is genuinely the better answer.
-- At least two of the six should be ${angle}.
-- Spread the register: no more than two picks doing the same thing in the same key.
-- Do not reward prestige cinematography or a moody score. A cheap-looking thing in total
-  command beats a beautiful thing with thin writing.
-- Nothing already shown: ${state.seen.slice(-120).join("; ") || "none"}
-
-Reply with only this JSON:
-{"picks":[{"title":"","year":0,"form":"${kind}","lang":"english or the language","ident":"","near":"which of his anchors this sits nearest, and in what way","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"fandom":0,"fandomWhy":"","familiarity":3,"why":"the specific thing in the work that earns its two highest axis scores — name the scene, the choice, what it refuses to explain","warn":"anything in it that might read as trying too hard, or empty string"}]}`;
-
-  try {
-    const out = await sample.json(prompt, { modelTier:"complex", signal: ctl.signal, cache:false });
-    const raw  = (out && Array.isArray(out.picks) ? out.picks : []).filter(p => p && p.title);
-    // Trust but verify: a pick that doesn't claim the form you asked for is dropped.
-    const form = raw.filter(p => !p.form || String(p.form).toLowerCase().indexOf(kind) >= 0);
-    const scored = form.filter(p => composite(p.scores, p.fandom) >= floor);
-
-    // Enforce the one-non-English cap here rather than trusting the instruction.
-    // Saying "at most one" in a prompt has not held; dropping the extras does.
-    const isEng = p => !p.lang || /^(en|eng|english)/i.test(String(p.lang).trim());
-    const got = []; let foreignKept = 0, foreignCut = 0;
-    for (const p of scored) {
-      if (isEng(p)) { got.push(p); continue; }
-      if (foreignKept < 1) { got.push(p); foreignKept++; } else foreignCut++;
-    }
-    picks = got;
-
-    const wrongForm = raw.length - form.length;
-    const belowBar  = form.length - scored.length;
-    const notes = [];
-    if (wrongForm) notes.push(`${wrongForm} came back as the wrong form and ${wrongForm === 1 ? "was" : "were"} dropped.`);
-    if (belowBar)  notes.push(`${belowBar} fell below your floor once scored.`);
-    if (foreignCut) notes.push(`${foreignCut} extra non-English pick${foreignCut === 1 ? "" : "s"} dropped — one per batch.`);
-
-    if (!got.length) {
-      notes.push(raw.length
-        ? "Nothing survived. Try a lower floor or a different register."
-        : "Nothing came back. Try again.");
-    } else {
-      state.seen = state.seen.concat(got.map(p => p.title)).slice(-300);
-      saveState();
-    }
-    findErr = notes.join(" ");
-  } catch (e) {
-    if (e && e.code === "cancelled") { findBusy = false; render(); return; }
-    findErr = errCopy(e);
-  }
-  findBusy = false;
-  render();
-}
-
-/* ---------- CALIBRATION ---------- */
-
-function calPanel() {
-  const log = state.log.slice().reverse();
-
-  const stats = VERDICTS.map(v => {
-    const rows = state.log.filter(e => e.verdict === v.key);
-    const avg = rows.length ? rows.reduce((a, e) => a + Number(e.score), 0) / rows.length : null;
-    return { label: v.label, n: rows.length, avg };
-  });
-
-  let h = `
-    <h2 class="sec">How well it reads you</h2>
-    <p class="subtle">The scale works if what it scores high is what you end up liking. These are its predictions against your verdicts.</p>
-    <div class="readout">
-      ${stats.map(s => `
-        <div>
-          <div class="n">${s.avg === null ? "—" : s.avg.toFixed(1)}</div>
-          <div class="eyebrow" style="margin-top:4px">${s.label}</div>
-          <div class="aval" style="margin-top:2px">${s.n} logged</div>
-        </div>`).join("")}
-    </div>
-    <p class="note">Healthy calibration: the average beside <em>Loved it</em> sits well above the one beside <em>Bounced off</em>. If they converge, the rubric isn't tracking your taste — adjust the anchors below.</p>`;
-
-  h += `<h2 class="sec">Verdict log</h2>`;
-  if (!log.length) {
-    h += `<p class="empty">Nothing logged yet. Read something, watch it, then say what happened.</p>`;
-  } else {
-    h += `<div class="tablewrap"><table>
-      <thead><tr><th>Title</th><th>Predicted</th><th>You</th><th></th></tr></thead><tbody>
-      ${log.map(e => `<tr>
-        <td>${esc(e.title)}</td>
-        <td class="num">${Number(e.score).toFixed(1)}</td>
-        <td>${(VERDICTS.find(v => v.key === e.verdict) || {}).label || ""}</td>
-        <td class="num"><button class="del" data-act="dellog" data-t="${esc(e.title)}" aria-label="Remove ${esc(e.title)}">&times;</button></td>
-      </tr>`).join("")}
-      </tbody></table></div>`;
-  }
-
-  h += `
-    <h2 class="sec">Anchors</h2>
-    <p class="subtle">Your scale, sent with every request. Change a number you disagree with, or add one — that is the fastest way to move its judgement.</p>
-    <div class="tablewrap"><table>
-      <thead><tr><th>Title</th><th>Score</th><th>Note</th><th></th></tr></thead><tbody>
-      ${state.anchors.slice().sort((a,b) => b.score - a.score).map(a => `<tr${a.title === justAdded ? ` class="justadded" id="justadded"` : ""}>
-        <td>${esc(a.title)}${a.title === justAdded ? ` <span class="eyebrow" style="color:var(--pen)">just added</span>` : ""}</td>
-        <td class="num"><input type="text" class="sc anchsc" data-t="${esc(a.title)}" value="${a.score}" style="width:56px;padding:4px 6px;font-size:13px" inputmode="decimal"></td>
-        <td class="prose" style="font-size:13.5px;color:var(--dim)">${esc(a.note || "")}</td>
-        <td class="num"><button class="del" data-act="delanch" data-t="${esc(a.title)}" aria-label="Remove ${esc(a.title)}">&times;</button></td>
-      </tr>`).join("")}
-      </tbody></table></div>
-    <div class="addrow">
-      <input type="text" id="na" placeholder="Title" autocomplete="off">
-      <input type="text" id="ns" class="sc" placeholder="8.5" inputmode="decimal">
-      <button class="go" data-act="addanch">Add</button>
-    </div>
-    ${anchorSaveLine()}
-    ${storageLine()}`;
-
-  return h;
-}
-
-/* ---------- verdict capture ---------- */
-
-async function logVerdict(title, score, verdict) {
-  const i = state.log.findIndex(e => e.title === title);
-  const row = { title, score: Number(score), verdict, at: Date.now() };
-  if (i >= 0) state.log[i] = row; else state.log.push(row);
-  saveStatus[title] = "saving";
-  render();
-  const ok = await saveState();
-  saveStatus[title] = ok ? "ok" : "failed";
-  render();
-}
-
-function whereSaved() {
-  const where = lastSave.cloud ? "Saved" : (lastSave.local ? "Saved to this browser" : "Saved");
-  return where + " — it's in Calibration → Verdict log, and it goes out with every request from now on.";
-}
-
-function saveLine(title, fallbackDone) {
-  const s = saveStatus[title];
-  if (s === "saving") return `<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;
-  if (s === "failed")  return `<div class="err" style="margin-top:9px">Logged on screen, but nothing could be written to storage — it resets if you reload.</div>`;
-  if (s === "ok" || fallbackDone) return `<div class="saved">${whereSaved()}</div>`;
-  return "";
-}
-
-// Anchor edits (add / remove / rescore) share this key rather than one per
-// title: editing the anchor list is a batch action, and the point is telling
-// you whether the WHOLE list you're looking at is the one in storage.
-async function mutateAnchors(fn) {
-  fn();
-  saveStatus.anchors = "saving";
-  render();
-  const ok = await saveState();
-  saveStatus.anchors = ok ? "ok" : "failed";
-  render();
-  // The table is sorted by score, so a new row lands wherever its number puts
-  // it in a list of twenty-odd. Take the eye there.
-  const row = document.getElementById("justadded");
-  if (row && row.scrollIntoView) row.scrollIntoView({ block: "center", behavior: "smooth" });
-}
-
-function anchorSaveLine() {
-  if (addErr) return `<p class="err">${esc(addErr)}</p>`;
-  const s = saveStatus.anchors;
-  if (s === "ok" && justAdded) {
-    const a = state.anchors.find(x => x.title === justAdded);
-    if (a) return `<p class="saved">Added ${esc(a.title)} at ${Number(a.score).toFixed(1)} — it's in the list below, and goes out with every request from now on.</p>`;
-  }
-  if (s === "saving") return `<p class="note"><span class="status" style="display:inline-flex"><span class="dot"></span>Saving…</span></p>`;
-  if (s === "failed")  return `<p class="err">That change reached nothing — reload now and you'll lose it.</p>`;
-  if (s === "ok")      return `<p class="saved">${lastSave.cloud ? "Saved." : "Saved to this browser."}</p>`;
-  return "";
-}
-
-// Plain statement of where data is actually going, so a storage problem is
-// something you can read off the page instead of infer from things vanishing.
-function storageLine() {
-  const cloud = db
-    ? (dbErr ? `failing (${esc(dbErr)})` : "working")
-    : `unavailable${dbErr ? ` (${esc(dbErr)})` : ""}`;
-  let local = "untested";
-  if (lastSave.local === true) local = "working";
-  else if (lastSave.local === false) local = "blocked";
-  const bad = (!db || dbErr) && lastSave.local !== true;
-  return `
-    <h2 class="sec">Storage</h2>
-    <p class="subtle">Cloud (follows the link, any device): <b>${cloud}</b><br>
-    This browser (fallback): <b>${local}</b></p>
-    ${bad ? `<p class="err">Nothing is persisting right now — verdicts and anchors will reset when you reload.</p>` : ""}`;
-}
-
-/* ---------- plumbing ---------- */
-
-function esc(s) {
-  return String(s == null ? "" : s)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
-function render() {
-  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === tab)));
-  const map = { read:["panel-read", readPanel], find:["panel-find", findPanel], cal:["panel-cal", calPanel] };
-  for (const k of Object.keys(map)) {
-    const el = document.getElementById(map[k][0]);
-    el.hidden = k !== tab;
-    if (k === tab) el.innerHTML = map[k][1]();
-  }
-  if (tab === "read") {
-    const q = document.getElementById("q");
-    if (q && document.activeElement !== q && readTitle) q.value = readTitle;
-  }
-}
-
-document.addEventListener("click", ev => {
-  const t = ev.target.closest("[data-act], .tab");
-  if (!t) return;
-
-  if (t.classList.contains("tab")) { tab = t.dataset.tab; render(); return; }
-
-  const act = t.dataset.act;
-  if (act === "read")      return void doRead();
-  if (act === "find")      return void doFind();
-  if (act === "stop" || act === "stopfind") { if (ctl) ctl.abort(); return; }
-  if (act === "kind")  { kind = t.dataset.v; return render(); }
-  if (act === "lane")  { lane = t.dataset.v; return render(); }
-  if (act === "floor") { floor = Number(t.dataset.v); return render(); }
-
-  if (act === "verdict" && reading && !reading.example)
-    return void logVerdict(reading.name, composite(reading.scores, reading.fandom), t.dataset.v);
-
-  if (act === "pverdict") {
-    const p = picks[Number(t.dataset.i)];
-    if (p) void logVerdict(p.title, composite(p.scores, p.fandom), t.dataset.v);
-    return;
-  }
-  if (act === "dellog")  { state.log = state.log.filter(e => e.title !== t.dataset.t); saveState(); return render(); }
-  if (act === "delanch") return void mutateAnchors(() => {
-    state.anchors = state.anchors.filter(a => a.title !== t.dataset.t);
-  });
-  if (act === "addanch") {
-    const ti = document.getElementById("na"), sc = document.getElementById("ns");
-    const title = (ti.value || "").trim();
-    const raw = (sc.value || "").trim();
-    // Number("") is 0, which passes isFinite — so a blank score used to add the
-    // title at 1 and sort it silently to the bottom of a 22-row table.
-    if (!title) { addErr = "Type a title first."; return render(); }
-    if (!raw || !isFinite(Number(raw))) { addErr = "Give it a score out of 10 — that's what the scale is."; return render(); }
-    addErr = "";
-    const score = clamp(Number(raw), 1, 10);
-    justAdded = title;
-    return void mutateAnchors(() => {
-      state.anchors = state.anchors.filter(a => a.title.toLowerCase() !== title.toLowerCase());
-      state.anchors.push({ title, score, note: "" });
-    });
-  }
-});
-
-document.addEventListener("keydown", ev => {
-  if (ev.key === "Enter" && ev.target.id === "q") doRead();
-  if (ev.key === "Enter" && (ev.target.id === "na" || ev.target.id === "ns"))
-    document.querySelector('[data-act="addanch"]').click();
-});
-
-document.addEventListener("change", ev => {
-  if (!ev.target.classList.contains("anchsc")) return;
-  const v = Number(ev.target.value);
-  const a = state.anchors.find(x => x.title === ev.target.dataset.t);
-  if (a && isFinite(v)) void mutateAnchors(() => { a.score = clamp(v, 1, 10); });
-});
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const ax05=v=>clamp(Number(v)||0,0,5);
+const norm=s=>String(s||"").toLowerCase().replace(/\s+/g," ").trim();
+function band(v){if(v>=9)return"Untouchable";if(v>=8)return"Heavy aura";if(v>=7)return"Real presence";if(v>=5.5)return"Some, not much";if(v>=4)return"Thin";return"No aura"}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+
+const state={anchors:BASE_ANCHORS.map(x=>({...x})),log:[],seen:[],loaded:false};
+let db=null,sample=null,tab="read",ctl=null;
+let reading={name:"Justified",example:true,ident:"Graham Yost, 2010-2015. US Marshal returns to eastern Kentucky.",placement:{anchor:"Justified",delta:0},scores:{control:2,writing:1,under:1,commit:2,nochase:2,withhold:1},notes:{control:"Competent, not commanding.",writing:"Dialogue mostly moves plot and performs cool.",under:"Very little beneath what is stated.",commit:"Hard turns get softened.",nochase:"It often performs its own cool.",withhold:"It explains and spends information early."},familiarity:3,peak:"The pilot has the clearest weight.",kill:"Functional dialogue and performed cool."};
+let readTitle="",readBusy=false,readErr="";
+let kind="film",lane="any",floor=8,findBusy=false,findErr="",picks=[];
+let justAdded=null,addErr="",dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
+const saveStatus={};
+const DOC="aura/state";
+const LS_KEY="aura:state:v2";
+
+function payload(){return{anchors:state.anchors,log:state.log.slice(-300),seen:state.seen.slice(-300),last:reading&&!reading.example?reading:null,lastPicks:picks.slice(0,8)}}
+function adopt(d){if(!d)return false;if(Array.isArray(d.anchors))state.anchors=d.anchors;if(Array.isArray(d.log))state.log=d.log;if(Array.isArray(d.seen))state.seen=d.seen;if(d.last&&d.last.name){reading=d.last;readTitle=d.last.name}if(Array.isArray(d.lastPicks))picks=d.lastPicks;return true}
+async function loadState(){let got=false;try{db=await claude.use("db");if(!db){dbUnavailable=true;dbErr="not available in this view"}else{const snap=await db.doc(DOC).get();if(snap.exists)got=adopt(snap.data())}}catch(e){db=null;dbUnavailable=true;dbErr=(e&&(e.code||e.message))||"unknown error"}try{localStorage.setItem(LS_KEY+":probe","1");localStorage.removeItem(LS_KEY+":probe");lastSave.local=true}catch(e){lastSave.local=false}if(!got){try{const raw=localStorage.getItem(LS_KEY)||localStorage.getItem("aura:state:v1");if(raw)adopt(JSON.parse(raw))}catch(e){}}state.loaded=true;render()}
+async function saveState(){const body=payload();let local=false,cloud=false;try{localStorage.setItem(LS_KEY,JSON.stringify(body));local=true}catch(e){}if(db){try{await db.doc(DOC).set(body);cloud=true;dbErr=""}catch(e){dbErr=(e&&(e.code||e.message))||"unknown error"}}lastSave={cloud,local};return local||cloud}
+
+function anchorBlock(){return"HIS CALIBRATION ANCHORS (1-10; his numbers are ground truth):\n"+state.anchors.slice().sort((a,b)=>b.score-a.score).map(a=>`  ${a.title} = ${a.score}${a.note?" — "+a.note:""}`).join("\n")}
+function correctionBlock(){const rows=state.log.filter(e=>Number.isFinite(Number(e.actual))).slice(-30);if(!rows.length)return"";return`USER AURA CORRECTIONS — these outrank every previous prediction:\n${rows.map(e=>`  ${e.title}: predicted ${Number(e.score).toFixed(1)}; user says ${Number(e.actual).toFixed(1)}`).join("\n")}\nTreat each correction exactly like a calibration anchor.`}
+function reactionBlock(){const rows=state.log.filter(e=>e.verdict).slice(-24);if(!rows.length)return"";return`WATCH REACTIONS — preference data only. They may break ties when choosing what to recommend, but they MUST NEVER raise or lower an aura score:\n${rows.map(e=>`  ${e.title} — ${({loved:"loved",liked:"liked",nothing:"found nothing there",bounced:"bounced off"})[e.verdict]}`).join("\n")}`}
+function fallbackComposite(scores){let sum=0;for(const a of AXES)sum+=ax05(scores&&scores[a.key]);return clamp(1+9*(sum/(AXES.length*5)),1,10)}
+function placedScore(r){if(!r)return 1;const p=r.placement;if(p&&p.anchor){const a=state.anchors.find(x=>norm(x.title)===norm(p.anchor));const d=Number(p.delta);if(a&&Number.isFinite(d))return clamp(Number(a.score)+clamp(d,-1.5,1.5),1,10)}const direct=Number(r.scaleScore);if(Number.isFinite(direct))return clamp(direct,1,10);return fallbackComposite(r.scores)}
+function errCopy(e){const c=e&&e.code;if(c==="rate_limited")return"Too many requests, or you've hit your usage limit. Try again later.";if(c==="session_expired")return"Your session expired. Sign in again, then retry.";if(c==="invalid_json")return"The reply came back malformed. Try again.";if(c==="refused")return"Claude declined that one. Try a different title.";return"That didn't go through. Try again."}
+
+function saveLine(title,fallbackDone){const s=saveStatus[title];if(s==="saving")return`<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;if(s==="failed")return`<div class="err" style="margin-top:9px">Saved on screen only; storage write failed.</div>`;if(s==="ok"||fallbackDone)return`<div class="saved">${lastSave.cloud?"Saved.":"Saved to this browser."}</div>`;return""}
+
+function readPanel(){const r=reading;let h=`<div class="row"><input type="text" id="q" placeholder="Film, show, anything" value="${esc(readTitle)}" autocomplete="off"><button class="go" data-act="read" ${readBusy?"disabled":""}>${readBusy?"Reading":"Read it"}</button></div>`;if(readBusy)h+=`<div class="status"><span class="dot"></span>Placing it on your anchor scale.</div>`;if(readErr)h+=`<div class="err">${esc(readErr)}</div>`;if(r){const score=placedScore(r);h+=`<div class="sheet">${r.example?`<span class="sheetflag">Example reading</span>`:""}<div class="verdict"><div class="vtop"><div><div class="vname">${esc(r.name)}</div>${r.ident?`<div class="vident">${esc(r.ident)}</div>`:""}</div><div><div class="vnum">${score.toFixed(1)}</div><div class="vband">${band(score)}</div></div></div>${r.placement&&r.placement.anchor?`<div class="dock"><b>Placed against ${esc(r.placement.anchor)}</b>${Number(r.placement.delta)?` (${Number(r.placement.delta)>0?"+":""}${Number(r.placement.delta).toFixed(1)})`:""}. ${esc(r.near||"")}</div>`:""}${Number(r.familiarity)<=1?`<div class="warnflag">Low familiarity — treat this read as a guess.</div>`:""}</div>`;for(const a of AXES){const v=ax05(r.scores&&r.scores[a.key]);h+=`<div class="axis"><div class="arow"><div class="alab">${a.label}<span class="ahint">${a.hint}</span></div><div class="aval">${v}/5</div></div><div class="ticks">${[0,1,2,3,4].map(i=>`<i class="${i<v?"on":""}"></i>`).join("")}</div><div class="anote prose">${esc((r.notes&&r.notes[a.key])||"")}</div></div>`}h+=`<div class="callout">${r.peak?`<div class="peak"><span class="k">Carrying it</span><span class="prose">${esc(r.peak)}</span></div>`:""}${r.kill?`<div><span class="k">Draining it</span><span class="prose">${esc(r.kill)}</span></div>`:""}</div>`;if(!r.example){const done=state.log.find(e=>e.title===r.name);h+=`<div class="after"><div class="eyebrow">Calibrate the number</div><p class="subtle">If the score is wrong, give your score. Your number becomes a real anchor and outranks the app next time.</p><div class="row" style="margin-top:9px"><input type="text" id="actual-aura" inputmode="decimal" placeholder="Your score, e.g. 7.5" value="${done&&Number.isFinite(Number(done.actual))?Number(done.actual).toFixed(1):""}"><button class="go" data-act="correct">Save score</button></div><div class="eyebrow" style="margin-top:18px">Did you enjoy it? <span style="text-transform:none;letter-spacing:0">separate from aura</span></div><div class="chips">${VERDICTS.map(v=>`<button class="chip" data-act="verdict" data-v="${v.key}" aria-pressed="${done&&done.verdict===v.key}">${v.label}</button>`).join("")}</div>${saveLine(r.name,!!done)}</div>`}h+=`</div>`}if(dbUnavailable)h=`<div class="warnflag" style="margin-bottom:14px">Cloud storage isn't available in this view; changes use browser storage here.</div>`+h;return h}
+
+async function doRead(){const name=(document.getElementById("q").value||"").trim();readTitle=name;if(!name){readErr="Type a title first.";render();return}readBusy=true;readErr="";render();ctl=new AbortController();const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");const prompt=`Score the aura of "${name}" on this user's personal scale.\n\n${DOCTRINE}\n\n${anchorBlock()}\n\n${correctionBlock()}\n\n${reactionBlock()}\n\n${PLACEMENT_NOTE}\n\nScore each axis 0-5 as supporting evidence:\n${rubric}\n\n${SHAPE_NOTE}\n\nJudge the work itself, not its reputation or how much you think the user would like it. Notes must be specific to the work. No hedging.\n\nReply with only this JSON:\n{"ident":"","placement":{"anchor":"EXACT title from calibration anchors","delta":0},"scaleScore":0,"near":"why this anchor is the closest aura comparison","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"notes":{"control":"","writing":"","under":"","commit":"","nochase":"","withhold":""},"familiarity":3,"peak":"","kill":""}`;try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});reading=Object.assign({name},out,{example:false})}catch(e){if(!(e&&e.code==="cancelled"))readErr=errCopy(e)}readBusy=false;render()}
+
+function findPanel(){let h=`<div class="fieldlab"><span class="eyebrow">Form</span></div><div class="seg">${["film","show"].map(k=>`<button data-act="kind" data-v="${k}" aria-pressed="${kind===k}">${k==="film"?"Films":"Shows"}</button>`).join("")}</div><div class="fieldlab"><span class="eyebrow">Register</span></div><div class="seg">${LANES.map(l=>`<button data-act="lane" data-v="${l[0]}" aria-pressed="${lane===l[0]}">${l[1]}</button>`).join("")}</div><div class="fieldlab"><span class="eyebrow">Floor</span><span class="aval">${band(floor)}</span></div><div class="seg">${[7.5,8,8.5].map(f=>`<button data-act="floor" data-v="${f}" aria-pressed="${floor===f}">${f.toFixed(1)}+</button>`).join("")}</div><div class="seg" style="margin-top:16px"><button class="go" data-act="find" ${findBusy?"disabled":""}>${findBusy?"Looking":"Find aura"}</button></div>`;if(findBusy)h+=`<div class="status"><span class="dot"></span>Building a candidate pool, then placing the strongest on your scale.</div>`;if(findErr)h+=`<div class="err">${esc(findErr)}</div>`;if(picks.length){h+=`<div class="sheet">`;picks.forEach((p,i)=>{const s=placedScore(p),logged=state.log.find(e=>e.title===p.title);h+=`<div class="pick"><div class="ptop"><div><div class="pname">${esc(p.title)} ${p.year?`<span>${esc(String(p.year))}</span>`:""}</div>${p.ident?`<div class="pident">${esc(p.ident)}</div>`:""}</div><div class="pnum">${s.toFixed(1)}</div></div><div class="pwhy prose">${esc(p.why||"")}</div>${p.placement&&p.placement.anchor?`<div class="pident" style="margin-top:8px"><span class="eyebrow">Nearest yours</span> ${esc(p.placement.anchor)} ${Number(p.placement.delta)?`(${Number(p.placement.delta)>0?"+":""}${Number(p.placement.delta).toFixed(1)})`:""} — ${esc(p.near||"")}</div>`:""}<div class="pmeta">${AXES.map(a=>`<span class="tag">${a.key} ${ax05(p.scores&&p.scores[a.key])}</span>`).join("")}${Number(p.familiarity)<=1?`<span class="tag warn">low confidence</span>`:""}</div>${p.warn?`<div class="warnflag">Watch for: ${esc(p.warn)}</div>`:""}<div class="chips">${VERDICTS.map(v=>`<button class="chip" data-act="pverdict" data-i="${i}" data-v="${v.key}" aria-pressed="${logged&&logged.verdict===v.key}">${v.label}</button>`).join("")}</div>${saveLine(p.title,!!logged)}</div>`});h+=`</div>`}return h}
+
+async function doFind(){findBusy=true;findErr="";picks=[];render();ctl=new AbortController();const laneTxt=(LANES.find(l=>l[0]===lane)||[])[2]||"";const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");const prompt=`Recommend up to 6 ${FORM[kind].noun} with genuinely high aura on this user's personal scale.\n\n${FORM[kind].rule}\n\n${DOCTRINE}\n\n${anchorBlock()}\n\n${correctionBlock()}\n\n${reactionBlock()}\n\n${laneTxt}\n\n${PLACEMENT_NOTE}\n\nScore each candidate on the axes as evidence:\n${rubric}\n\n${SHAPE_NOTE}\n\nHOW TO CHOOSE\n1. Internally build a pool of at least 15 plausible candidates. Search for the doctrine itself — conviction, control, writing, underneath, commitment, non-chasing, withholding — not merely titles from the user's favorite genres.\n2. Place each serious candidate on the user's anchor scale, then keep the strongest. Do not choose first and inflate afterward.\n3. Watch reactions may break ties between similarly high-aura candidates but MUST NEVER alter either aura score.\n4. Diversity is a tie-breaker only. Do not sacrifice stronger aura to vary country, decade, language, obscurity, or genre.\n5. Famous, old, new, foreign, English-language, ugly-looking, and prestigious works all compete on the same scale. None gets a bonus or penalty for those traits.\n6. Skip titles already in the anchor list or already shown: ${state.seen.slice(-120).join("; ")||"none"}.\n7. Only return a title if its anchor-placed score is at least ${floor}. Returning fewer than six is fine.\n\nReply with only this JSON:\n{"picks":[{"title":"","year":0,"form":"${kind}","lang":"","ident":"","placement":{"anchor":"EXACT title from calibration anchors","delta":0},"scaleScore":0,"near":"why this anchor is the closest aura comparison","scores":{"control":0,"writing":0,"under":0,"commit":0,"nochase":0,"withhold":0},"familiarity":3,"why":"specific evidence from the work that earns its placement","warn":"anything that may drain aura, or empty string"}]}`;try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});const raw=(out&&Array.isArray(out.picks)?out.picks:[]).filter(p=>p&&p.title);const form=raw.filter(p=>!p.form||String(p.form).toLowerCase().includes(kind));picks=form.filter(p=>placedScore(p)>=floor).sort((a,b)=>placedScore(b)-placedScore(a)).slice(0,6);const notes=[];if(raw.length-form.length)notes.push(`${raw.length-form.length} wrong-form pick${raw.length-form.length===1?" was":"s were"} dropped.`);if(form.length-picks.length)notes.push(`${form.length-picks.length} fell below your ${floor.toFixed(1)} floor.`);if(!picks.length)notes.push("Nothing survived the scale. Try a lower floor or another batch.");else{state.seen=state.seen.concat(picks.map(p=>p.title)).slice(-300);saveState()}findErr=notes.join(" ")}catch(e){if(!(e&&e.code==="cancelled"))findErr=errCopy(e)}findBusy=false;render()}
+
+async function logVerdict(title,score,verdict){const i=state.log.findIndex(e=>e.title===title);const row=Object.assign({},i>=0?state.log[i]:{},{title,score:Number(score),verdict,at:Date.now()});if(i>=0)state.log[i]=row;else state.log.push(row);saveStatus[title]="saving";render();const ok=await saveState();saveStatus[title]=ok?"ok":"failed";render()}
+async function logCorrection(title,predicted,actual){const n=Number(actual);if(!Number.isFinite(n))return false;const userScore=clamp(n,1,10);const i=state.log.findIndex(e=>e.title===title);const row=Object.assign({},i>=0?state.log[i]:{},{title,score:Number(predicted),actual:userScore,at:Date.now()});if(i>=0)state.log[i]=row;else state.log.push(row);const existing=state.anchors.find(a=>norm(a.title)===norm(title));if(existing)existing.score=userScore;else state.anchors.push({title,score:userScore,note:`User-corrected after app predicted ${Number(predicted).toFixed(1)}.`});saveStatus[title]="saving";render();const ok=await saveState();saveStatus[title]=ok?"ok":"failed";render();return ok}
+async function mutateAnchors(fn){fn();saveStatus.anchors="saving";render();const ok=await saveState();saveStatus.anchors=ok?"ok":"failed";render()}
+
+function calPanel(){const corrected=state.log.filter(e=>Number.isFinite(Number(e.actual)));const mae=corrected.length?corrected.reduce((s,e)=>s+Math.abs(Number(e.score)-Number(e.actual)),0)/corrected.length:null;let h=`<h2 class="sec">Scale accuracy</h2><p class="subtle">This measures predicted aura against the numbers you personally corrected — not whether you enjoyed the movie.</p><div class="readout"><div><div class="n">${corrected.length}</div><div class="eyebrow" style="margin-top:4px">Corrections</div></div><div><div class="n">${mae===null?"—":mae.toFixed(2)}</div><div class="eyebrow" style="margin-top:4px">Avg miss</div></div></div>`;h+=`<h2 class="sec">Correction log</h2>`;if(!state.log.length)h+=`<p class="empty">Nothing logged yet.</p>`;else h+=`<div class="tablewrap"><table><thead><tr><th>Title</th><th>Predicted</th><th>Your aura</th><th>Enjoyed?</th><th></th></tr></thead><tbody>${state.log.slice().reverse().map(e=>`<tr><td>${esc(e.title)}</td><td class="num">${Number(e.score).toFixed(1)}</td><td class="num">${Number.isFinite(Number(e.actual))?Number(e.actual).toFixed(1):"—"}</td><td>${(VERDICTS.find(v=>v.key===e.verdict)||{}).label||"—"}</td><td><button class="del" data-act="dellog" data-t="${esc(e.title)}">&times;</button></td></tr>`).join("")}</tbody></table></div>`;h+=`<h2 class="sec">Anchors</h2><p class="subtle">These numbers are the actual ruler used by every read and recommendation.</p><div class="tablewrap"><table><thead><tr><th>Title</th><th>Score</th><th>Note</th><th></th></tr></thead><tbody>${state.anchors.slice().sort((a,b)=>b.score-a.score).map(a=>`<tr${a.title===justAdded?` class="justadded"`:""}><td>${esc(a.title)}</td><td class="num"><input type="text" class="anchsc" data-t="${esc(a.title)}" value="${a.score}" style="width:58px;padding:4px 6px" inputmode="decimal"></td><td class="prose" style="font-size:13.5px;color:var(--dim)">${esc(a.note||"")}</td><td><button class="del" data-act="delanch" data-t="${esc(a.title)}">&times;</button></td></tr>`).join("")}</tbody></table></div><div class="addrow"><input type="text" id="na" placeholder="Title"><input type="text" id="ns" class="sc" placeholder="8.5" inputmode="decimal"><button class="go" data-act="addanch">Add</button></div>${addErr?`<div class="err">${esc(addErr)}</div>`:""}${saveStatus.anchors==="ok"?`<div class="saved">Anchors saved.</div>`:""}${storageLine()}`;return h}
+function storageLine(){const cloud=db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;const local=lastSave.local===true?"working":lastSave.local===false?"blocked":"untested";return`<h2 class="sec">Storage</h2><p class="subtle">Cloud: <b>${cloud}</b><br>This browser: <b>${local}</b></p>`}
+
+function render(){document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.tab===tab)));const map={read:["panel-read",readPanel],find:["panel-find",findPanel],cal:["panel-cal",calPanel]};for(const k of Object.keys(map)){const el=document.getElementById(map[k][0]);el.hidden=k!==tab;if(k===tab)el.innerHTML=map[k][1]()}}
+
+document.addEventListener("click",ev=>{const t=ev.target.closest("[data-act],.tab");if(!t)return;if(t.classList.contains("tab")){tab=t.dataset.tab;render();return}const act=t.dataset.act;if(act==="read")return void doRead();if(act==="find")return void doFind();if(act==="kind"){kind=t.dataset.v;return render()}if(act==="lane"){lane=t.dataset.v;return render()}if(act==="floor"){floor=Number(t.dataset.v);return render()}if(act==="correct"&&reading&&!reading.example){const el=document.getElementById("actual-aura"),raw=(el&&el.value||"").trim();if(!raw||!Number.isFinite(Number(raw))){readErr="Give your aura score from 1 to 10.";return render()}readErr="";return void logCorrection(reading.name,placedScore(reading),Number(raw))}if(act==="verdict"&&reading&&!reading.example)return void logVerdict(reading.name,placedScore(reading),t.dataset.v);if(act==="pverdict"){const p=picks[Number(t.dataset.i)];if(p)void logVerdict(p.title,placedScore(p),t.dataset.v);return}if(act==="dellog"){state.log=state.log.filter(e=>e.title!==t.dataset.t);saveState();return render()}if(act==="delanch")return void mutateAnchors(()=>{state.anchors=state.anchors.filter(a=>a.title!==t.dataset.t)});if(act==="addanch"){const ti=document.getElementById("na"),sc=document.getElementById("ns"),title=(ti.value||"").trim(),raw=(sc.value||"").trim();if(!title){addErr="Type a title first.";return render()}if(!raw||!Number.isFinite(Number(raw))){addErr="Give it a score out of 10.";return render()}addErr="";const score=clamp(Number(raw),1,10);justAdded=title;return void mutateAnchors(()=>{state.anchors=state.anchors.filter(a=>norm(a.title)!==norm(title));state.anchors.push({title,score,note:""})})}});
+document.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&ev.target.id==="q")doRead();if(ev.key==="Enter"&&(ev.target.id==="na"||ev.target.id==="ns")){const b=document.querySelector('[data-act="addanch"]');if(b)b.click()}});
+document.addEventListener("change",ev=>{if(!ev.target.classList.contains("anchsc"))return;const v=Number(ev.target.value),a=state.anchors.find(x=>x.title===ev.target.dataset.t);if(a&&Number.isFinite(v))void mutateAnchors(()=>{a.score=clamp(v,1,10)})});
 
 render();
-
-(async () => {
-  try { sample = await claude.use("sample"); } catch (e) { sample = null; }
-  if (!sample) {
-    readErr = "This page can't reach Claude from here. Open it from your Claude account.";
-    findErr = readErr;
-    render();
-  }
-  loadState();
-})();
+(async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";findErr=readErr;render()}loadState()})();
 </script>
