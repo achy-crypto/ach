@@ -2,6 +2,11 @@
 (() => {
   const wording=new Map([
     ['PAST RUNWAY','EXTRA TIME'],['PARKED','SAVED THOUGHTS'],['PARKING LOT','SAVED THOUGHTS'],['THE RECORD','PAST SESSIONS'],
+    /* the same labels as they exist in the DOM — the uppercasing is CSS, so
+       the all-caps keys above never match a text node. */
+    ['4 — How long you owe it','4 — How long you want to try'],
+    ['Before you go — close the exits','Optional — make your space easier'],
+    ['Past runway','Extra time'],['Parked','Saved thoughts'],['Parking lot','Saved thoughts'],['The record','Past sessions'],
     ['Name it, shrink it, go.','Choose a small place to start.'],
     ['Three fields. No planning. The clock starts the second you hit the button.','Choose a first step and a time that works for you. The timer starts when you are ready.'],
     ['You know exactly what to do. You are not doing it. It’s been a while.','You have something to do and would like help getting started.'],
