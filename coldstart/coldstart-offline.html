@@ -748,6 +748,10 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <!-- ============ COLD START ============ -->
 <section class="screen" id="s-start" hidden>
   <button class="back" data-go="home">&larr; back</button>
+  <button class="big go" data-go="game" style="margin-bottom:16px">
+    <span class="t">Build me a game for this &rarr;</span>
+    <span class="d">Three questions and it assembles one around your actual task &mdash; a finish line, a score, and a handicap tuned to whether it's boring or daunting.</span>
+  </button>
   <h2 class="ask">Name it, shrink it, go.</h2>
   <p class="sub">Three fields. No planning. The clock starts the second you hit the button.</p>
 
@@ -800,6 +804,12 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <button class="launch" id="launch" disabled>Start the clock</button>
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ GAME BUILDER ============ -->
+<section class="screen" id="s-game" hidden>
+  <button class="back" id="game-back">&larr; back</button>
+  <div id="game-body"></div>
 </section>
 
 <!-- ============ WORK ============ -->
@@ -1501,7 +1511,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "train", "work", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "train", "work", "game", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1515,6 +1525,7 @@ function go(name) {
   if (name === "now")    renderNow();
   if (name === "train")  renderTrain();
   if (name === "work")   renderWork();
+  if (name === "game")   renderGame();
   if (name !== "train")  stopDrill();
   if (name === "sleep")  renderSleep();
   if (name === "land")   renderLand();
@@ -1983,6 +1994,204 @@ let lastVia = "start";
 let ticker = null;
 function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
+
+/* ---------- the game builder ----------
+   Hyperfocus can't be summoned, but its conditions can be built: a
+   finish line you can point at, a score that moves while you work, a
+   challenge tuned to the band between bored and swamped, and a clock
+   short enough to feel. This walks through those one at a time and
+   assembles them around the actual task, rather than handing over a
+   form to fill in. */
+
+const WIN_SHAPES = [
+  "One complete rough version of it, start to finish",
+  "Up to the part where it gets hard — then stop",
+  "The first section, actually finished",
+  "Far enough that someone else could pick it up",
+  "The worst acceptable version, done and not touched again",
+];
+
+let game = { task: "", win: "", unit: "", target: null, rule: "", mood: "" };
+
+function renderGame() {
+  game = { task: $("task-in") ? $("task-in").value.trim() : "", win: "", unit: "", target: null, rule: "", mood: "" };
+  gameStep(game.task ? 1 : 0);
+}
+
+$("game-back").addEventListener("click", () => go("start"));
+
+function gameCard() {
+  return '<div class="crumb" style="margin-bottom:14px"><b>The game so far</b>' +
+    (game.task ? "<div><b style=\"display:inline;text-transform:none;letter-spacing:0;font-size:14px;color:var(--ink)\">" + esc(game.task) + "</b></div>" : "") +
+    (game.win ? '<div style="font-size:13px;margin-top:5px">Win: ' + esc(game.win) + "</div>" : "") +
+    (game.unit ? '<div style="font-size:13px;margin-top:3px">Score: ' + esc(game.unit) + (game.target ? " · target " + game.target : "") + "</div>" : "") +
+    (game.rule ? '<div style="font-size:13px;margin-top:3px">Handicap: ' + esc(game.rule) + "</div>" : "") +
+    "</div>";
+}
+
+function gameStep(n) {
+  const B = $("game-body");
+
+  if (n === 0) {
+    B.innerHTML = '<h2 class="ask">What are we building it around?</h2>' +
+      '<p class="sub">Say it the way you would out loud.</p>' +
+      '<input class="field" id="gm-task" placeholder="the thing" autocomplete="off">' +
+      '<button class="btn prime wide" id="gm-0" style="margin-top:12px">Next</button>';
+    focusSoon("gm-task");
+    const go0 = () => { game.task = $("gm-task").value.trim(); if (game.task) gameStep(1); };
+    $("gm-0").addEventListener("click", go0);
+    $("gm-task").addEventListener("keydown", (e) => { if (e.key === "Enter") go0(); });
+    return;
+  }
+
+  if (n === 1) {
+    B.innerHTML = gameCard() +
+      '<h2 class="ask">Where\'s the finish line?</h2>' +
+      '<p class="sub">Not finishing the whole thing &mdash; what would make the next twenty minutes a win. ' +
+      "It has to be something you can <b>point at</b>: if you can't tell whether you've done it, it isn't a finish line, and " +
+      "a game with no win condition is just work with a timer on it.</p>" +
+      '<input class="field" id="gm-win" placeholder="done when…" autocomplete="off">' +
+      '<div class="chips" style="margin-top:8px">' +
+        WIN_SHAPES.map((w) => '<button class="chip" data-win="' + esc(w) + '">' + esc(w) + "</button>").join("") +
+        (sample ? '<button class="chip q" id="gm-auto">design the whole thing for me &rarr;</button>' : "") +
+      "</div>" +
+      '<button class="btn prime wide" id="gm-1" style="margin-top:14px">Next</button>';
+    focusSoon("gm-win");
+    B.querySelectorAll("[data-win]").forEach((b) => b.addEventListener("click", () => { $("gm-win").value = b.dataset.win; }));
+    const go1 = () => { game.win = $("gm-win").value.trim(); if (game.win) gameStep(2); };
+    $("gm-1").addEventListener("click", go1);
+    $("gm-win").addEventListener("keydown", (e) => { if (e.key === "Enter") go1(); });
+    if ($("gm-auto")) $("gm-auto").addEventListener("click", autoDesign);
+    return;
+  }
+
+  if (n === 2) {
+    const deck = (function () { for (const r of UNIT_RULES) if (r.re.test(game.task)) return r; return UNIT_FALLBACK; })();
+    B.innerHTML = gameCard() +
+      '<h2 class="ask">What moves while you work?</h2>' +
+      '<p class="sub">The task gives you nothing until it\'s over, and a brain with no feedback leaves. Pick something countable. ' +
+      (deck.coarse ? "This kind you tap at milestones, not per item &mdash; the phone stays down." : "Small enough that you'd hit it every minute or two.") + "</p>" +
+      '<div class="chips" style="margin-bottom:10px">' + deck.units.map((u) => '<button class="chip" data-unit="' + esc(u) + '">' + esc(u) + "</button>").join("") + "</div>" +
+      '<div class="row"><input class="field tin" id="gm-unit" placeholder="unit" value="' + esc(deck.units[0]) + '">' +
+      '<span style="font-size:14px;color:var(--dim)">get to</span>' +
+      '<input class="field tin" id="gm-target" type="number" min="1" max="999" value="' + deck.target + '"></div>' +
+      '<div class="row" style="margin-top:12px"><button class="btn prime" id="gm-2">Next</button>' +
+      '<button class="btn ghost" id="gm-2skip">nothing to count — the work shows itself</button></div>';
+    B.querySelectorAll("[data-unit]").forEach((b) => b.addEventListener("click", () => { $("gm-unit").value = b.dataset.unit; }));
+    $("gm-2").addEventListener("click", () => {
+      game.unit = $("gm-unit").value.trim();
+      const t = parseInt($("gm-target").value, 10);
+      game.target = t > 0 ? t : null;
+      gameStep(3);
+    });
+    $("gm-2skip").addEventListener("click", () => { game.unit = ""; game.target = null; gameStep(3); });
+    return;
+  }
+
+  if (n === 3) {
+    B.innerHTML = gameCard() +
+      '<h2 class="ask">Boring, or daunting?</h2>' +
+      '<p class="sub">These feel identical from the inside &mdash; you leave &mdash; but they need opposite handicaps. ' +
+      "Guessing wrong is why 'try harder' fails on both.</p>" +
+      '<div class="stack">' +
+      '<button class="big" data-mood="easy"><span class="t">Boring.</span><span class="d">I know how to do it. My mind just slides off to something better.</span></button>' +
+      '<button class="big go" data-mood="hard"><span class="t">Daunting.</span><span class="d">It\'s too big or I don\'t know where to put my hands. I want out.</span></button>' +
+      "</div>";
+    B.querySelectorAll("[data-mood]").forEach((b) => b.addEventListener("click", () => { game.mood = b.dataset.mood; gameStep(4); }));
+    return;
+  }
+
+  if (n === 4) {
+    const deck = game.mood === "easy" ? HARDER : EASIER;
+    const best = bestRate(game.unit);
+    let cards = pick3(deck);
+    if (game.mood === "easy" && best) cards = ["Beat " + best.toFixed(1) + " " + game.unit + " a minute — that's your own record."].concat(cards.slice(0, 2));
+    B.innerHTML = gameCard() +
+      '<h2 class="ask">' + (game.mood === "easy" ? "Make it harder." : "Make it smaller and worse.") + "</h2>" +
+      '<p class="sub">' + (game.mood === "easy"
+        ? "Boredom means the challenge is below your skill, so the fix is to raise it — not to care more."
+        : "Overwhelm means the challenge is above it, so the fix is to lower the bar until starting is trivial. You can always do a good version second.") + "</p>" +
+      cards.map((c) => '<button class="card' + (game.mood === "hard" ? " easier" : "") + '" data-rule="' + esc(c) + '">' + esc(c) + "</button>").join("") +
+      '<div class="row" style="margin-top:10px"><button class="btn ghost" id="gm-4again">different ones</button>' +
+      '<button class="btn ghost" id="gm-4none">no handicap</button></div>';
+    B.querySelectorAll("[data-rule]").forEach((b) => b.addEventListener("click", () => { game.rule = b.dataset.rule; gameStep(5); }));
+    $("gm-4again").addEventListener("click", () => gameStep(4));
+    $("gm-4none").addEventListener("click", () => { game.rule = ""; gameStep(5); });
+    return;
+  }
+
+  /* 5 — assembled, with the exits and the clock */
+  B.innerHTML = gameCard() +
+    '<h2 class="ask">That\'s the game.</h2>' +
+    '<p class="sub">A finish line you can point at, a number that moves while you work, and a difficulty tuned to which way you were falling out. ' +
+    "That's the whole of what makes something absorbing &mdash; it isn't willpower and it was never about caring more.</p>" +
+    '<span class="lab" style="display:block;margin-bottom:7px">Close the exits</span>' +
+    '<div class="pre" id="gm-pre">' +
+      '<button data-pre="phone" aria-pressed="false">phone away</button>' +
+      '<button data-pre="tabs" aria-pressed="false">tabs shut</button>' +
+      '<button data-pre="door" aria-pressed="false">door shut</button>' +
+    "</div>" +
+    '<span class="lab" style="display:block;margin:14px 0 7px">How long you owe it</span>' +
+    '<div class="rwpick" id="gm-rw">' +
+      ["5", "12", "20", "30"].map((m) => '<button data-min="' + m + '"' + (m === "12" ? ' aria-pressed="true"' : "") + '><span class="m">' + m + '</span><span class="u">min</span></button>').join("") +
+    "</div>" +
+    '<button class="launch" id="gm-go" style="margin-top:16px">Start the game</button>' +
+    '<p class="sub" style="margin:10px 0 0;font-size:12.5px">It won\'t summon the state &mdash; nothing does. It builds the conditions it needs and then it\'s down to the task.</p>';
+
+  let mins_ = 12, pre = [];
+  $("gm-rw").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-min]");
+    if (!b) return;
+    mins_ = Number(b.dataset.min);
+    $$("#gm-rw button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  });
+  $("gm-pre").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-pre]");
+    if (!b) return;
+    const i = pre.indexOf(b.dataset.pre);
+    if (i >= 0) pre.splice(i, 1); else pre.push(b.dataset.pre);
+    b.setAttribute("aria-pressed", String(i < 0));
+  });
+  $("gm-go").addEventListener("click", () => {
+    armAudio();
+    state.live = {
+      id: uid(), mode: "work",
+      task: game.task, move: "", moveDone: true, win: game.win,
+      unit: game.unit, target: game.target, count: 0,
+      inAt: null, tollSec: typicalTimeToIn() || Math.min(480, mins_ * 60 * 0.4),
+      constraints: game.rule ? [game.rule] : [], pre,
+      plannedMin: mins_, plannedSec: mins_ * 60, addedSec: 0,
+      startedAt: now(), via: "game", parked: 0, chimed: false,
+    };
+    save(); go("run");
+  });
+}
+
+async function autoDesign() {
+  const btn = $("gm-auto");
+  btn.textContent = "designing…"; btn.disabled = true;
+  try {
+    const r = await sample.json(
+      'Task someone with ADHD is struggling to focus on: "' + game.task + '". Design a short game around it. ' +
+      'Return JSON only: {"win":"a finish line for the next 20 minutes, concrete and checkable, under 12 words", ' +
+      '"unit":"a countable unit of the real work, 1-3 words", "target":<integer 3-30>, ' +
+      '"rule":"one self-imposed constraint that makes it more engaging, under 12 words"}. ' +
+      "Be specific to this task, not generic. No preamble.",
+      { modelTier: "quick", cache: true });
+    if (r && r.win) {
+      game.win = String(r.win);
+      game.unit = String(r.unit || "");
+      game.target = parseInt(r.target, 10) > 0 ? parseInt(r.target, 10) : null;
+      game.rule = String(r.rule || "");
+      gameStep(5);
+      return;
+    }
+    btn.textContent = "nothing came back — carry on below"; btn.disabled = false;
+  } catch (e) {
+    btn.textContent = (e && e.code === "rate_limited") ? "rate limited — carry on below" : "couldn't reach it — carry on below";
+    btn.disabled = false;
+  }
+}
 
 /* ---------- work ----------
    Everything else in the app assumes you're alone with the task. These
@@ -3571,12 +3780,14 @@ function paintRun() {
   $("run-task").textContent = L.task;
 
   const bar = $("run-movebar");
-  if (!L.move) bar.hidden = true;
+  if (!L.move && !L.win) bar.hidden = true;
   else {
     bar.hidden = false;
-    bar.querySelector(".mv b").textContent = isPlay ? "This session is for" : "Start here";
-    $("run-move").textContent = L.move;
-    bar.classList.toggle("done", !!L.moveDone);
+    const showWin = L.win && (L.moveDone || !L.move);
+    bar.querySelector(".mv b").textContent = showWin ? "Done when" : isPlay ? "This session is for" : "Start here";
+    $("run-move").textContent = showWin ? L.win : L.move;
+    bar.classList.toggle("done", !!L.moveDone && !showWin);
+    $("move-done").hidden = showWin;
     $("move-done").textContent = L.moveDone ? "Done" : (isPlay ? "Got it" : "Did it");
     $("move-done").disabled = !!L.moveDone;
   }
