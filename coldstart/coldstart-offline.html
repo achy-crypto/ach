@@ -3056,10 +3056,10 @@ const FUEL_STATES = [
   { k: "wrung", t: "Wrung out. Just finished something hard.",
     d: "A long shift, a hard task, hours of noise and people.",
     why: "You are <b>overstimulated, not understimulated</b> — and those feel identical while needing opposite things. Reaching for the phone adds input to a system that is already full, which is why an hour of scrolling leaves you worse off than before it. Less, not more.",
-    levers: ["Sit in the quiet for ten minutes. No screen, no music.",
+    levers: ["Sit down and get the weight off your feet. Elevate them if you can.",
+             "Sit in the quiet for ten minutes. No screen, no music.",
+             "Lie on the floor with your legs up the wall for five.",
              "Shower, hot, and let yourself cool down after.",
-             "Walk the long way with no headphones.",
-             "Lie on the floor for ten minutes.",
              "Eat something properly before anything else."] },
   { k: "tired", t: "Tired. I want to lie down.",
     d: "Heavy, slow, eyes going.",
@@ -3070,12 +3070,26 @@ const FUEL_STATES = [
              "Decide now what time you are actually going to bed."] },
   { k: "itchy", t: "Bored and itchy. Can't settle.",
     d: "Restless, nothing holds, picking things up and putting them down.",
-    why: "Understimulated. <b>Movement is the fastest honest lever there is</b> — a brisk ten minutes genuinely raises the chemistry you are missing, and it is the best-evidenced non-drug option by a distance. Cold on the face works faster and lasts less.",
-    levers: ["Ten minutes brisk, outside, now.",
-             "Twenty squats and a big glass of water.",
-             "Cold water on your face and the inside of your wrists.",
-             "One album, loud, doing nothing else.",
-             "Make something deliberately bad for ten minutes."] },
+    why: "Understimulated. <b>Movement is the fastest honest lever there is</b> — but what counts is a <em>change of intensity</em>, not simply being upright, and that distinction matters enormously depending on your day.",
+    split: {
+      q: "Have you been on your feet already today?",
+      a: { label: "No — I've mostly been sitting.",
+           note: "Then the standard answer applies. Ten brisk minutes genuinely raises the chemistry you are short of, and it is the best-evidenced non-drug lever by a distance.",
+           levers: ["Ten minutes brisk, outside, now.",
+                    "Twenty squats and a big glass of water.",
+                    "Cold water on your face and the inside of your wrists.",
+                    "One album, loud, doing nothing else.",
+                    "Make something deliberately bad for ten minutes."] },
+      b: { label: "Yes — standing or walking all day.",
+           note: "Then <b>more walking will not do it</b>. Standing work is low intensity and high postural load — you get the tiredness of being active without the arousal exercise gives, which is the worst of both. What still works is a short, sharp <em>step up</em> in intensity: the delta is the lever, not being upright. And if it is your legs rather than your head, sitting down is the correct move and more standing is not.",
+           levers: ["One flight of stairs, fast. That is enough.",
+                    "Twenty quick squats — sharper than anything the shift asks of you.",
+                    "Sixty seconds genuinely brisk, faster than your working pace.",
+                    "Cold water on your face and the inside of your wrists.",
+                    "Sit down and do something with your hands instead.",
+                    "Roll your ankles and shift your weight — static standing does the damage, not moving."] },
+    },
+    levers: [] },
   { k: "grey", t: "Came off my phone and everything's grey.",
     d: "Just put it down and the room feels flat and pointless.",
     why: "A <b>contrast crash</b>. The room did not get worse — your baseline moved, and everything below it now reads as nothing. It comes back on its own in about twenty minutes <em>if you do not top it up again</em>, which is the hard part. This is also why a shift floor feels like a hole: it is being measured against a screen.",
@@ -3140,18 +3154,38 @@ function renderFuel() {
   B.querySelectorAll("[data-fuel]").forEach((b) => b.addEventListener("click", () => fuelState(b.dataset.fuel)));
 }
 
-function fuelState(k) {
+function fuelState(k, branch) {
   const f = FUEL_STATES.find((x) => x.k === k);
   const B = $("fuel-body");
   B.dataset.deep = "1";
-  B.innerHTML =
-    '<span class="lab" style="display:block;margin-bottom:8px">' + esc(f.t) + "</span>" +
-    '<p class="note finding">' + f.why + "</p>" +
+  const head = '<span class="lab" style="display:block;margin-bottom:8px">' + esc(f.t) + "</span>" +
+    '<p class="note finding">' + f.why + "</p>";
+
+  /* Some states fork before the levers, because the same complaint needs
+     opposite handling depending on what the day has already done to you. */
+  if (f.split && !branch) {
+    B.innerHTML = head +
+      '<span class="lab" style="display:block;margin:18px 0 8px">' + esc(f.split.q) + "</span>" +
+      '<div class="stack">' +
+        '<button class="big" data-branch="a"><span class="t">' + esc(f.split.a.label) + "</span></button>" +
+        '<button class="big go" data-branch="b"><span class="t">' + esc(f.split.b.label) + "</span></button>" +
+      "</div>" +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="fuel-home">Back</button></div>';
+    $("fuel-home").addEventListener("click", renderFuel);
+    B.querySelectorAll("[data-branch]").forEach((b2) =>
+      b2.addEventListener("click", () => fuelState(k, b2.dataset.branch)));
+    return;
+  }
+
+  const side = branch ? f.split[branch] : null;
+  const levers = side ? side.levers : f.levers;
+  B.innerHTML = head +
+    (side ? '<p class="note">' + side.note + "</p>" : "") +
     '<span class="lab" style="display:block;margin:18px 0 8px">Pick one. Then actually do it.</span>' +
-    f.levers.map((l) => '<button class="card" data-lever="' + esc(l) + '">' + esc(l) + "</button>").join("") +
+    levers.map((l) => '<button class="card" data-lever="' + esc(l) + '">' + esc(l) + "</button>").join("") +
     '<div class="row" style="margin-top:12px"><button class="btn" id="fuel-home">Back</button></div>';
   $("fuel-home").addEventListener("click", renderFuel);
-  B.querySelectorAll("[data-lever]").forEach((b) => b.addEventListener("click", () => fuelPick(k, b.dataset.lever)));
+  B.querySelectorAll("[data-lever]").forEach((b2) => b2.addEventListener("click", () => fuelPick(k, b2.dataset.lever)));
 }
 
 function fuelPick(k, lever) {
