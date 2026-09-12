@@ -660,6 +660,10 @@ body.night img,body.night .lamp{filter:saturate(.6)}
       <span class="t">Don't know what to do with myself.</span>
       <span class="d">Task's done, or there was never one. Empty time, and the scroll is about to eat it.</span>
     </button>
+    <button class="big go" data-go="fuel">
+      <span class="t">Running on empty.</span>
+      <span class="d">No drive, nothing appeals, everything is grey. The dopamine thing — handled honestly.</span>
+    </button>
     <span class="grouplab" id="night-lab">Night</span>
     <button class="big" id="sleep-btn" data-go="sleep">
       <span class="t">Should be asleep.</span>
@@ -788,6 +792,12 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <button class="launch" id="launch" disabled>Start the clock</button>
   <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+</section>
+
+<!-- ============ RUNNING ON EMPTY ============ -->
+<section class="screen" id="s-fuel" hidden>
+  <button class="back" id="fuel-back">&larr; back</button>
+  <div id="fuel-body"></div>
 </section>
 
 <!-- ============ GAME BUILDER ============ -->
@@ -1295,6 +1305,7 @@ const state = {
   nights:   [],   // landing sequences, not sleep — the app can't see sleep
   training: null, // drill reps
   work:     null, // breadcrumb + tomorrow's first move
+  fuel:     null, // which depletion lever actually works
   shift:    null, // shift start, journey, kit
   sleep:    null, // landing time + the sequence itself
   live:     null, // the run in progress, if any
@@ -1316,6 +1327,7 @@ function payload() {
     nights:   state.nights || [],
     training: state.training,
     work:     state.work,
+    fuel:     state.fuel,
     shift:    state.shift,
   };
 }
@@ -1331,6 +1343,7 @@ function adopt(d) {
   if (Array.isArray(d.nights)) state.nights = d.nights;
   if (d.training && typeof d.training === "object") state.training = d.training;
   if (d.work && typeof d.work === "object") state.work = d.work;
+  if (d.fuel && typeof d.fuel === "object") state.fuel = d.fuel;
   if (d.shift && typeof d.shift === "object") state.shift = d.shift;
   state.live = d.live && typeof d.live === "object" ? d.live : null;
   return true;
@@ -1374,6 +1387,9 @@ function paintSaveState(cloud) {
    a tap followed by pocketing the phone suspends the page, and anything
    still sitting on a timer is simply lost. Only the cloud write waits. */
 function writeLocal() {
+  /* Never write before load() has read: boot() renders ahead of it, and a
+     flush in that window would put empty state over everything stored. */
+  if (!state.loaded) return savedLocal;
   try { localStorage.setItem(LS_KEY, JSON.stringify(payload())); savedLocal = true; }
   catch (e) { savedLocal = false; }
   return savedLocal;
@@ -1495,7 +1511,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "now", "sleep", "land", "down", "train", "work", "game", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "fuel", "sleep", "land", "down", "train", "work", "game", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1510,6 +1526,7 @@ function go(name) {
   if (name === "train")  renderTrain();
   if (name === "work")   renderWork();
   if (name === "game")   renderGame();
+  if (name === "fuel")   renderFuel();
   if (name !== "train")  stopDrill();
   if (name === "sleep")  renderSleep();
   if (name === "land")   renderLand();
@@ -3010,6 +3027,139 @@ function training() {
 
 let drillTimer = null;
 function stopDrill() { clearInterval(drillTimer); clearTimeout(drillTimer); drillTimer = null; }
+
+/* ---------- running on empty ----------
+   You cannot top dopamine up, and anything selling that is selling you
+   something. What you can do is tell apart the states that all present
+   as "no drive" — they need opposite things, and guessing wrong is why
+   the obvious move so often makes it worse. Movement, food, water,
+   daylight and sleep are the levers with real effect sizes; everything
+   here is one of those, matched to the state. */
+
+const FUEL_STATES = [
+  { k: "wrung", t: "Wrung out. Just finished something hard.",
+    d: "A long shift, a hard task, hours of noise and people.",
+    why: "You are <b>overstimulated, not understimulated</b> — and those feel identical while needing opposite things. Reaching for the phone adds input to a system that is already full, which is why an hour of scrolling leaves you worse off than before it. Less, not more.",
+    levers: ["Sit in the quiet for ten minutes. No screen, no music.",
+             "Shower, hot, and let yourself cool down after.",
+             "Walk the long way with no headphones.",
+             "Lie on the floor for ten minutes.",
+             "Eat something properly before anything else."] },
+  { k: "tired", t: "Tired. I want to lie down.",
+    d: "Heavy, slow, eyes going.",
+    why: "This is usually <b>sleep debt</b> rather than a motivation problem, and stimulation borrows against it rather than paying it. Lying down is often the correct move — the trick is a timer, so it is a reset and not the rest of the evening.",
+    levers: ["Lie down with a twenty-minute timer.",
+             "Nap, but set an alarm — past thirty minutes you wake worse.",
+             "Ten minutes of daylight if the sun is still up.",
+             "Decide now what time you are actually going to bed."] },
+  { k: "itchy", t: "Bored and itchy. Can't settle.",
+    d: "Restless, nothing holds, picking things up and putting them down.",
+    why: "Understimulated. <b>Movement is the fastest honest lever there is</b> — a brisk ten minutes genuinely raises the chemistry you are missing, and it is the best-evidenced non-drug option by a distance. Cold on the face works faster and lasts less.",
+    levers: ["Ten minutes brisk, outside, now.",
+             "Twenty squats and a big glass of water.",
+             "Cold water on your face and the inside of your wrists.",
+             "One album, loud, doing nothing else.",
+             "Make something deliberately bad for ten minutes."] },
+  { k: "grey", t: "Came off my phone and everything's grey.",
+    d: "Just put it down and the room feels flat and pointless.",
+    why: "A <b>contrast crash</b>. The room did not get worse — your baseline moved, and everything below it now reads as nothing. It comes back on its own in about twenty minutes <em>if you do not top it up again</em>, which is the hard part. This is also why a shift floor feels like a hole: it is being measured against a screen.",
+    levers: ["Phone in another room for twenty minutes. Not face down — another room.",
+             "Walk it off. Movement shortens the dip.",
+             "Do something with your hands until it lifts.",
+             "Wait it out on purpose, knowing what it is."] },
+  { k: "unfed", t: "Haven't eaten or drunk anything.",
+    d: "Or not properly, or not for hours.",
+    why: "Not a willpower problem. Protein carries the precursor your brain builds these chemicals from, and dehydration alone will flatten you — a hot wet room takes plenty out of you without your noticing. This one is boring and it is frequently the whole answer.",
+    levers: ["Eat something with actual protein in it.",
+             "Big glass of water, then reassess.",
+             "Make a proper hot drink and sit down to drink it."] },
+];
+
+function fuel() {
+  if (!state.fuel) state.fuel = { log: [] };
+  if (!Array.isArray(state.fuel.log)) state.fuel.log = [];
+  return state.fuel;
+}
+
+$("fuel-back").addEventListener("click", () => {
+  if (!$("fuel-body").dataset.deep) { go("home"); return; }
+  renderFuel();
+});
+
+function fuelFindings() {
+  const log = fuel().log.filter((x) => x.helped != null);
+  if (log.length < 4) return "";
+  const by = new Map();
+  log.forEach((x) => {
+    if (!by.has(x.lever)) by.set(x.lever, { n: 0, y: 0 });
+    const r = by.get(x.lever); r.n++; if (x.helped) r.y++;
+  });
+  const rows = Array.from(by.entries()).filter(([, v]) => v.n >= 2)
+    .map(([k, v]) => ({ k, n: v.n, rate: v.y / v.n })).sort((a, b) => b.rate - a.rate);
+  if (!rows.length) return "";
+  const best = rows[0];
+  let out = '<p class="note finding" style="margin-top:16px"><b>' + esc(best.k) + "</b> has worked " +
+    Math.round(best.rate * 100) + "% of the time for you, over " + best.n + " goes.";
+  if (rows.length > 1 && rows[rows.length - 1].rate < best.rate - 0.25)
+    out += " <b>" + esc(rows[rows.length - 1].k) + "</b> mostly has not — stop reaching for that one.";
+  return out + " That is your own record, not a claim.</p>";
+}
+
+function renderFuel() {
+  const B = $("fuel-body");
+  B.dataset.deep = "";
+  B.innerHTML =
+    '<h2 class="ask">Running on empty.</h2>' +
+    '<p class="note">Straight answer first: <b>you cannot top dopamine up</b>, and anything with a button promising that is selling you the button. ' +
+    "It is also not the pleasure chemical — it is closer to <em>wanting</em> than <em>liking</em>, which is why you can scroll for two hours and feel nothing good at the end of it. " +
+    "What you can do is work out which kind of empty this is. Four of these five feel identical from the inside and need opposite things, " +
+    "and picking wrong is why the obvious move so often makes it worse.</p>" +
+    '<div class="stack">' +
+      FUEL_STATES.map((f) => '<button class="big" data-fuel="' + f.k + '"><span class="t">' + f.t + "</span>" +
+        '<span class="d">' + f.d + "</span></button>").join("") +
+    "</div>" +
+    fuelFindings() +
+    '<p class="sub" style="margin-top:18px;font-size:12.5px">If it is flat like this most days for weeks &mdash; work, food, people, things you used to like &mdash; that is not a state to pick a lever for. ' +
+    "That is a pattern, it is treatable, and it is worth one conversation with a doctor.</p>";
+  B.querySelectorAll("[data-fuel]").forEach((b) => b.addEventListener("click", () => fuelState(b.dataset.fuel)));
+}
+
+function fuelState(k) {
+  const f = FUEL_STATES.find((x) => x.k === k);
+  const B = $("fuel-body");
+  B.dataset.deep = "1";
+  B.innerHTML =
+    '<span class="lab" style="display:block;margin-bottom:8px">' + esc(f.t) + "</span>" +
+    '<p class="note finding">' + f.why + "</p>" +
+    '<span class="lab" style="display:block;margin:18px 0 8px">Pick one. Then actually do it.</span>' +
+    f.levers.map((l) => '<button class="card" data-lever="' + esc(l) + '">' + esc(l) + "</button>").join("") +
+    '<div class="row" style="margin-top:12px"><button class="btn" id="fuel-home">Back</button></div>';
+  $("fuel-home").addEventListener("click", renderFuel);
+  B.querySelectorAll("[data-lever]").forEach((b) => b.addEventListener("click", () => fuelPick(k, b.dataset.lever)));
+}
+
+function fuelPick(k, lever) {
+  const entry = { at: now(), state: k, lever, helped: null };
+  fuel().log.push(entry);
+  fuel().log = fuel().log.slice(-200);
+  save();
+  const B = $("fuel-body");
+  B.dataset.deep = "1";
+  B.innerHTML =
+    '<span class="lab" style="display:block;margin-bottom:8px">Go and do this</span>' +
+    '<p class="quote" style="border-left-color:var(--go)">' + esc(lever) + "</p>" +
+    '<p class="sub">Come back after and say whether it did anything. Two taps, and after a few it can tell you which of these actually works on you &mdash; ' +
+    "which is worth more than any general claim about what should.</p>" +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-helped="1">That helped</button>' +
+    '<button class="btn" data-helped="0">Did nothing</button>' +
+    '<button class="btn ghost" id="fuel-later">Later</button></div>';
+  B.querySelectorAll("[data-helped]").forEach((b) => b.addEventListener("click", () => {
+    entry.helped = b.dataset.helped === "1";
+    save();
+    renderFuel();
+  }));
+  $("fuel-later").addEventListener("click", renderFuel);
+}
 
 function renderTrain() {
   stopDrill();
