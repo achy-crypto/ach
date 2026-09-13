@@ -614,17 +614,39 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 }
 .eyeover .x:hover{color:#c08a5e}
 @media (prefers-reduced-motion:reduce){.eyeover .bar i{transition:none}}
+/* ---- today: the orienting surface ---- */
+.now{border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--panel);padding:15px 16px;margin-bottom:18px}
+.now.live{border-left-color:var(--go);background:var(--go-w)}
+.now .k{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:5px}
+.now .t{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;font-size:20px;font-weight:700;letter-spacing:-.02em;line-height:1.2;display:block;overflow-wrap:anywhere}
+.now .d{display:block;color:var(--dim);font-size:13px;margin-top:4px}
+.todo{border-top:1px solid var(--ink)}
+.todo .row-i{display:flex;align-items:flex-start;gap:10px;border-bottom:1px solid var(--hair);padding:11px 0}
+.todo .box{width:21px;height:21px;flex:none;border:1.5px solid var(--rule);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--go);font-size:13px;margin-top:1px}
+.todo .box:hover{border-color:var(--go)}
+.todo .lbl{flex:1;min-width:0;font-size:15px;line-height:1.35;overflow-wrap:anywhere;text-align:left;background:none;border:0;color:var(--ink);font-family:inherit;cursor:pointer;padding:0}
+.todo .lbl:hover{color:var(--signal)}
+.todo .done .lbl{color:var(--dim);text-decoration:line-through}
+.todo .mini{background:none;border:0;color:var(--dim);cursor:pointer;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 5px;flex:none}
+.todo .mini:hover{color:var(--ink)}
+.feed{list-style:none;margin:0;padding:0}
+.feed li{display:flex;gap:11px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--hair);font-size:13.5px;line-height:1.4}
+.feed li:last-child{border-bottom:0}
+.feed .ts{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--dim);flex:none;font-variant-numeric:tabular-nums;min-width:58px}
+.feed .ev{flex:1;min-width:0;overflow-wrap:anywhere}
+.feed .ev b{font-weight:600}
+.feed .tag{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);flex:none}
 </style>
 
 <div class="app">
 
 <header class="mast">
   <h1><span class="lamp" id="lamp"></span>Cold Start</h1>
-  <p>For the part of you that won't turn over &mdash; work, games, or a Tuesday afternoon with nothing in it. Not a tracker. Nothing here to keep alive.</p>
+  <p>For when starting is the hard part &mdash; work, games, or an afternoon with nothing in it. Nothing here to keep up with.</p>
   <div class="strip" id="strip">
     <div class="cell"><span class="k">State</span><span class="v" id="rd-state">idle</span></div>
-    <div class="cell"><span class="k">Parked</span><span class="v" id="rd-parked">0</span></div>
-    <div class="cell"><span class="k">Past runway</span><span class="v" id="rd-over">0m</span></div>
+    <div class="cell"><span class="k">Saved</span><span class="v" id="rd-parked">0</span></div>
+    <div class="cell"><span class="k">Extra time</span><span class="v" id="rd-over">0m</span></div>
   </div>
 </header>
 
@@ -633,7 +655,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <!-- ============ HOME ============ -->
 <section class="screen" id="s-home">
   <h2 class="ask">What's happening right now?</h2>
-  <p class="sub">Pick the one that's true this second. Each one goes somewhere different.</p>
+  <p class="sub">Whichever one fits right now. They each go somewhere different.</p>
 
   <div id="resume-slot"></div>
 
@@ -641,43 +663,44 @@ body.night img,body.night .lamp{filter:saturate(.6)}
     <span class="grouplab">Stuck on something</span>
     <button class="big" data-go="start">
       <span class="t">Can't start.</span>
-      <span class="d">You know exactly what to do. You are not doing it. It's been a while.</span>
+      <span class="d">You have something to do and would like help getting started.</span>
     </button>
     <button class="big" data-go="spin">
       <span class="t">Can't stop thinking.</span>
-      <span class="d">A loop is running and it's loud. Trying to work through it isn't working.</span>
+      <span class="d">A thought keeps circling and it is hard to think past it.</span>
     </button>
     <button class="big" data-go="drift">
       <span class="t">Started, then drifted.</span>
-      <span class="d">You were on it forty seconds ago and you have no idea where you went.</span>
+      <span class="d">You were on it a moment ago and are not quite sure where you went.</span>
     </button>
     <span class="grouplab">Nothing's landing</span>
     <button class="big go" data-go="play">
       <span class="t">Can't get into anything, even fun stuff.</span>
-      <span class="d">Games, shows, hobbies. You want to want it. It reads as flat from the first minute, or drains out fast.</span>
+      <span class="d">Games, shows, hobbies. You would like to enjoy it, and it feels flat from the start or fades quickly.</span>
     </button>
     <button class="big go" data-go="now">
       <span class="t">Don't know what to do with myself.</span>
-      <span class="d">Task's done, or there was never one. Empty time, and the scroll is about to eat it.</span>
+      <span class="d">Empty time, and it is easy to lose it to the phone without meaning to.</span>
     </button>
     <button class="big go" data-go="fuel">
       <span class="t">Running on empty.</span>
-      <span class="d">No drive, nothing appeals, everything is grey. The dopamine thing — handled honestly.</span>
+      <span class="d">Nothing appeals and everything feels flat. The dopamine question, answered honestly.</span>
     </button>
     <span class="grouplab" id="night-lab">Night</span>
     <button class="big" id="sleep-btn" data-go="sleep">
       <span class="t">Should be asleep.</span>
-      <span class="d">Still going, or in bed and wired. Different problems, both handled.</span>
+      <span class="d">Still going, or lying there wide awake. Two different things, both here.</span>
     </button>
   </div>
 
   <div id="wired-slot"></div>
 
   <div class="foot">
-    <button class="back" data-go="parked" style="margin:0">Parking lot <span id="foot-parked"></span></button>
+    <button class="back" data-go="parked" style="margin:0">Saved thoughts <span id="foot-parked"></span></button>
+    <button class="back" data-go="today" style="margin:0">Today</button>
     <button class="back" data-go="work" style="margin:0">Work</button>
     <button class="back" data-go="train" style="margin:0">Training</button>
-    <button class="back" data-go="record" style="margin:0">The record</button>
+    <button class="back" data-go="record" style="margin:0">Past sessions</button>
   </div>
 
   <details class="why">
@@ -740,24 +763,24 @@ body.night img,body.night .lamp{filter:saturate(.6)}
     <span class="t">Build me a game for this &rarr;</span>
     <span class="d">Three questions and it assembles one around your actual task &mdash; a finish line, a score, and a handicap tuned to whether it's boring or daunting.</span>
   </button>
-  <h2 class="ask">Name it, shrink it, go.</h2>
-  <p class="sub">Three fields. No planning. The clock starts the second you hit the button.</p>
+  <h2 class="ask">Choose a small place to start.</h2>
+  <p class="sub">Choose a first step and a time that works for you. The timer starts when you are ready.</p>
 
   <div class="blk">
-    <span class="lab">1 — The thing you're avoiding</span>
+    <span class="lab">1 — What you would like to get to</span>
     <input class="field" id="task-in" placeholder="say it the way you'd say it out loud" autocomplete="off">
     <div class="chips" id="task-chips" style="margin-top:7px"></div>
   </div>
 
   <div class="blk">
-    <span class="lab">2 — The first physical move (under 60 seconds)</span>
-    <input class="field" id="move-in" placeholder="not a plan. a body movement." autocomplete="off">
+    <span class="lab">2 — A first step, small and physical</span>
+    <input class="field" id="move-in" placeholder="something you could do in under a minute" autocomplete="off">
     <div class="chips" id="move-chips" style="margin-top:7px"></div>
   </div>
 
   <div class="blk">
-    <span class="lab">3 — What you're counting</span>
-    <p class="sub" style="margin:0 0 8px;font-size:12.5px">A task with no score gives you no feedback until it's over, and a brain with no feedback leaves. Pick a unit small enough that you'll hit the button every minute or two.</p>
+    <span class="lab">3 — Something to count, if it helps</span>
+    <p class="sub" style="margin:0 0 8px;font-size:12.5px">Counting something gives you a bit of feedback while you work, instead of nothing until the end. Pick something small enough to tap every minute or two &mdash; or skip this if the work already shows its own progress.</p>
     <div class="unitpick" id="unitpick"></div>
     <div class="row">
       <input class="field tin" id="unit-in" placeholder="unit" autocomplete="off">
@@ -770,7 +793,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
   </div>
 
   <div class="blk">
-    <span class="lab">4 — How long you owe it</span>
+    <span class="lab">4 — How long you want to try</span>
     <div class="rwpick" id="rwpick">
       <button data-min="5" aria-pressed="false"><span class="m">5</span><span class="u">min</span></button>
       <button data-min="12" aria-pressed="true"><span class="m">12</span><span class="u">min</span></button>
@@ -781,7 +804,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
   </div>
 
   <div class="blk">
-    <span class="lab">Before you go — close the exits</span>
+    <span class="lab">Optional — make your space easier</span>
     <div class="pre" id="pre">
       <button data-pre="phone" aria-pressed="false">phone in another room</button>
       <button data-pre="tabs" aria-pressed="false">tabs shut</button>
@@ -790,8 +813,28 @@ body.night img,body.night .lamp{filter:saturate(.6)}
     <div id="novel-slot"></div>
   </div>
 
-  <button class="launch" id="launch" disabled>Start the clock</button>
-  <p class="sub" style="margin:10px 0 0;font-size:12.5px">You are allowed to stop at the end. That's the deal, and the deal is what makes it startable.</p>
+  <button class="launch" id="launch" disabled>Start when you are ready</button>
+  <p class="sub" style="margin:10px 0 0;font-size:12.5px">You can stop when the time is up. Knowing that is often what makes starting possible.</p>
+</section>
+
+<!-- ============ TODAY ============ -->
+<section class="screen" id="s-today" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Today</h2>
+  <div id="today-now"></div>
+  <div class="sec">
+    <h3>On the list <span id="today-count"></span></h3>
+    <div class="todo" id="today-list"></div>
+    <div class="row" style="margin-top:10px">
+      <input class="field" id="today-add" placeholder="add something" autocomplete="off" style="flex:1;min-width:140px">
+      <button class="btn" id="today-add-b">Add</button>
+    </div>
+    <p class="sub" style="margin:8px 0 0;font-size:12.5px">Tap the text to start a session on it, or the box when it is done. A few is usually easier to face than a long list.</p>
+  </div>
+  <div class="sec">
+    <h3>What's actually happened <span id="today-feedn"></span></h3>
+    <ul class="feed" id="today-feed"></ul>
+  </div>
 </section>
 
 <!-- ============ RUNNING ON EMPTY ============ -->
@@ -853,8 +896,8 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <!-- ============ TRAINING ============ -->
 <section class="screen" id="s-train" hidden>
   <button class="back" id="train-back">&larr; back</button>
-  <h2 class="ask">Reps, not levels.</h2>
-  <p class="note" style="margin-bottom:18px">Brain-training games don't work. Working-memory games make you better at working-memory games &mdash; the transfer to real attention, symptoms or getting anything done collapses once the raters are blinded. Any app selling you a daily n-back to fix your ADHD is selling you the game. What holds up for adults is <b>skills practice</b> and <b>noticing practice</b>, so that's what these are. Four drills, two to four minutes each. No streak, no score, nothing to protect.</p>
+  <h2 class="ask">Practice, not levels.</h2>
+  <p class="note" style="margin-bottom:18px">Brain-training games don't work. Working-memory games make you better at working-memory games &mdash; the transfer to real attention, symptoms or getting anything done collapses once the raters are blinded. Any app selling you a daily n-back to fix your ADHD is selling you the game. What holds up for adults is <b>skills practice</b> and <b>noticing practice</b>, so that's what these are. Four drills, two to four minutes each. No streaks and nothing to keep up.</p>
 
   <div id="train-menu">
     <div class="stack">
@@ -913,11 +956,11 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <!-- ============ LANDING ============ -->
 <section class="screen" id="s-land" hidden>
   <button class="back" data-go="sleep">&larr; back</button>
-  <h2 class="ask">Land it.</h2>
+  <h2 class="ask">Winding down.</h2>
   <p class="sub" id="land-frame"></p>
 
   <div class="blk">
-    <span class="lab">1 &mdash; Put the open loops down</span>
+    <span class="lab">1 &mdash; Put down anything still open</span>
     <p class="sub" style="margin:0 0 8px;font-size:12.5px">Anything unfinished gets rehearsed at 3am, because nothing outside your head is holding it. One line each, then it's not yours until morning.</p>
     <div class="park" style="margin-bottom:8px">
       <input id="land-park" placeholder="what's still open?" autocomplete="off">
@@ -950,7 +993,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <section class="screen" id="s-down" hidden>
   <button class="back" data-go="sleep">&larr; back</button>
   <div id="down-pick">
-    <h2 class="ask">Give it something to do.</h2>
+    <h2 class="ask">Give your mind something to hold.</h2>
     <p class="sub">"Clear your mind" is the one instruction your brain can't follow. All three of these work the same way &mdash; they occupy the part that's generating noise, rather than asking it to stop.</p>
     <div class="stack">
       <button class="big" data-tool="shuffle">
@@ -987,14 +1030,14 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <div class="sec" style="margin-top:26px" id="down-rule">
     <h3>If you're still awake in twenty minutes</h3>
-    <p class="note" style="margin-top:12px">Get up. Go to another room, dim light, do something dull until you're heavy, then come back. Lying there awake teaches your body that bed is where you lie awake, and that association is most of what keeps insomnia going once it starts. Twenty minutes, then move.</p>
+    <p class="note" style="margin-top:12px">It often helps to get up — another room, low light, something dull until you feel heavy, then come back. Lying there awake teaches your body that bed is where you lie awake, and that association is most of what keeps insomnia going once it starts. Twenty minutes, then move.</p>
   </div>
 </section>
 
 <!-- ============ WHAT NOW ============ -->
 <section class="screen" id="s-now" hidden>
   <button class="back" data-go="home">&larr; back</button>
-  <h2 class="ask">Don't decide. Pick one.</h2>
+  <h2 class="ask">No need to decide. Just pick one.</h2>
   <p class="sub">The void after a task isn't laziness, it's a transition with nothing on the other side &mdash; and choosing what goes there is the exact function that's hard. So it's dealt for you: three things, different kinds, all startable this minute. Not much to do is fine. The point is that the next twelve minutes are chosen, not defaulted into.</p>
   <div class="stack" id="now-hand"></div>
   <div class="row" style="margin-top:12px">
@@ -1053,7 +1096,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <div id="spin-1">
     <h2 class="ask">Get it out of your head first.</h2>
-    <p class="sub">It keeps re-firing because nothing outside your skull is holding it. Type it badly. Nobody reads this.</p>
+    <p class="sub">Try putting the thought into words. It does not need to be tidy or complete, and nobody else reads this.</p>
     <textarea class="field" id="spin-in" placeholder="what's on the loop?"></textarea>
     <div class="row" style="margin-top:10px">
       <button class="btn prime" id="spin-next" disabled>Next</button>
@@ -1073,7 +1116,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
   <div id="spin-3" hidden>
     <h2 class="ask">Is there anything to actually do?</h2>
-    <p class="sub">This is the only fork that matters. A problem gets an action. A worry gets an appointment. Neither one gets to stay in your head.</p>
+    <p class="sub">Would a small action help, or would you rather set this aside for later? It is okay if the thought comes back.</p>
     <div class="stack">
       <button class="big" id="spin-problem">
         <span class="t">There's something I could do.</span>
@@ -1128,7 +1171,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
         <span class="d">The loop is quieter when there's a task in the foreground.</span>
       </button>
       <button class="big go" data-go="now">
-        <span class="t">Deal me something.</span>
+        <span class="t">Suggest something.</span>
         <span class="d">Offloading was the job and you did it. Now the next twelve minutes get chosen rather than defaulted into.</span>
       </button>
     </div>
@@ -1186,10 +1229,10 @@ body.night img,body.night .lamp{filter:saturate(.6)}
   <div id="in-slot"></div>
 
   <div class="park">
-    <input id="park-in" placeholder="something popped into your head? put it here" autocomplete="off">
+    <input id="park-in" placeholder="something on your mind? put it here" autocomplete="off">
     <button id="park-btn">Park</button>
   </div>
-  <p class="parkhint" id="park-hint">Space bar counts. Parking never leaves this screen.</p>
+  <p class="parkhint" id="park-hint">Space bar counts. Anything you note stays on this screen.</p>
 
   <div id="dial-slot"></div>
 
@@ -1248,7 +1291,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
       <button class="btn prime" data-go="now">What now?</button>
       <button class="btn" id="debrief-again">Go again</button>
       <button class="btn ghost" data-go="home">Home</button>
-      <button class="btn ghost" data-go="record">The record</button>
+      <button class="btn ghost" data-go="record">Past sessions</button>
     </div>
   </div>
 </section>
@@ -1256,7 +1299,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <!-- ============ PARKING LOT ============ -->
 <section class="screen" id="s-parked" hidden>
   <button class="back" data-go="home">&larr; back</button>
-  <h2 class="ask">Parking lot</h2>
+  <h2 class="ask">Saved thoughts</h2>
   <p class="sub">Everything you put down instead of chasing. Nothing here is overdue and nothing here is nagging you — that's what it's for.</p>
   <div id="parked-body"></div>
 </section>
@@ -1264,7 +1307,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <!-- ============ RECORD ============ -->
 <section class="screen" id="s-record" hidden>
   <button class="back" data-go="home">&larr; back</button>
-  <h2 class="ask">The record</h2>
+  <h2 class="ask">Past sessions</h2>
   <p class="sub">There is no streak here and nothing to protect. A three-week gap costs you exactly nothing. This counts what happened, and tells you what your own sessions say about you.</p>
   <div id="record-body"></div>
 </section>
@@ -1306,6 +1349,7 @@ const state = {
   training: null, // drill reps
   work:     null, // breadcrumb + tomorrow's first move
   fuel:     null, // which depletion lever actually works
+  today:    null, // the short list
   shift:    null, // shift start, journey, kit
   sleep:    null, // landing time + the sequence itself
   live:     null, // the run in progress, if any
@@ -1328,6 +1372,7 @@ function payload() {
     training: state.training,
     work:     state.work,
     fuel:     state.fuel,
+    today:    state.today,
     shift:    state.shift,
   };
 }
@@ -1344,6 +1389,7 @@ function adopt(d) {
   if (d.training && typeof d.training === "object") state.training = d.training;
   if (d.work && typeof d.work === "object") state.work = d.work;
   if (d.fuel && typeof d.fuel === "object") state.fuel = d.fuel;
+  if (d.today && typeof d.today === "object") state.today = d.today;
   if (d.shift && typeof d.shift === "object") state.shift = d.shift;
   state.live = d.live && typeof d.live === "object" ? d.live : null;
   return true;
@@ -1511,7 +1557,7 @@ document.addEventListener("visibilitychange", () => {
 
 /* ---------- routing ---------- */
 
-const SCREENS = ["home", "start", "play", "now", "fuel", "sleep", "land", "down", "train", "work", "game", "spin", "drift", "run", "debrief", "parked", "record"];
+const SCREENS = ["home", "start", "play", "now", "fuel", "today", "sleep", "land", "down", "train", "work", "game", "spin", "drift", "run", "debrief", "parked", "record"];
 let screen = "home";
 
 function go(name) {
@@ -1527,6 +1573,7 @@ function go(name) {
   if (name === "work")   renderWork();
   if (name === "game")   renderGame();
   if (name === "fuel")   renderFuel();
+  if (name === "today")  renderToday();
   if (name !== "train")  stopDrill();
   if (name === "sleep")  renderSleep();
   if (name === "land")   renderLand();
@@ -1800,7 +1847,7 @@ function paintBestHint() {
   }
   const u = $("unit-in").value.trim(), b = bestRate(u);
   const coarse = unitDeck().coarse
-    ? "Tap this when you finish a whole one, not for every item — the phone stays in your pocket while you work. "
+    ? "With this kind, tap when you finish a whole one rather than every item, so the phone can stay in your pocket. "
     : "";
   $("best-hint").textContent = coarse + (b
     ? "Your best on " + u + " is " + b.toFixed(1) + " a minute. Beating your own number is the only honest way to make a boring task harder."
@@ -1855,7 +1902,7 @@ function renderStart() {
 
 function runwayHint() {
   const g = groups(state.sessions.filter((s) => s.mode !== "play" && s.plannedMin), (s) => s.plannedMin, 3);
-  if (g.length < 2) return "Twelve is the default because it's short enough that starting doesn't need a decision.";
+  if (g.length < 2) return "Twelve minutes is a starting option. Choose a different length if it suits you better.";
   const best = g[0], worst = g[g.length - 1];
   if (best.rate - worst.rate < 0.2) return "Your record doesn't favour any length yet — they all land about the same.";
   return "Your record: " + best.key + "-minute runs land " + pct(best.rate) + " of the time (" + best.n +
@@ -1865,7 +1912,7 @@ function runwayHint() {
 function refreshLaunch() {
   const ok = $("task-in").value.trim().length > 0;
   $("launch").disabled = !ok;
-  $("launch").textContent = ok ? "Start the clock" : "Name it first";
+  $("launch").textContent = ok ? "Start when you are ready" : "Add it above first";
 }
 
 $("task-in").addEventListener("input", () => { suggestMoves(); suggestUnits(); refreshLaunch(); });
@@ -1993,7 +2040,7 @@ let lastVia = "start";
 /* ---------- the focus surface ---------- */
 
 let ticker = null;
-function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); }, 500); }
+function tickOn()  { if (!ticker) ticker = setInterval(() => { paintStrip(); if (screen === "run") paintRun(); if (screen === "today") paintTodayNow(); }, 500); }
 function tickOff() { clearInterval(ticker); ticker = null; }
 
 /* ---------- the game builder ----------
@@ -2808,11 +2855,11 @@ function toolCrumb() {
     '"about to rename the handler" gets you back. "the refactor" does not.</p>' +
     '<input class="field" id="cb-in" placeholder="what were you about to do next?" autocomplete="off">' +
     '<button class="btn prime wide" id="cb-go" style="margin-top:10px">Drop it and go</button>' +
-    '<p class="sub" style="margin:10px 0 0;font-size:12.5px">Then look at them. Being looked at is most of what they want, and it ends the conversation faster than half-attention does.</p></div>';
+    '<p class="sub" style="margin:10px 0 0;font-size:12.5px">Then give them your attention — it usually ends the conversation sooner than half-listening does.</p></div>';
   focusSoon("cb-in");
   const fire = () => {
     dropCrumb($("cb-in").value, state.live ? state.live.task : "");
-    $("work-run").innerHTML = '<div class="drill"><span class="lab">Dropped</span><p style="margin:0">It\'ll be on the Work screen when you get back. Go.</p>' +
+    $("work-run").innerHTML = '<div class="drill"><span class="lab">Dropped</span><p style="margin:0">It\'ll be on the Work screen when you get back. Off you go.</p>' +
       '<div class="row" style="margin-top:12px"><button class="btn" id="cb-back">Back</button></div></div>';
     $("cb-back").addEventListener("click", renderWork);
   };
@@ -3028,6 +3075,128 @@ function training() {
 let drillTimer = null;
 function stopDrill() { clearInterval(drillTimer); clearTimeout(drillTimer); drillTimer = null; }
 
+/* ---------- today ----------
+   A short list plus a record of what actually happened. The list keeps
+   you oriented; the feed answers the question a day of time blindness
+   leaves behind — "have I done anything at all?" — which a to-do list
+   never can, because it only shows what is left. */
+
+function today() {
+  if (!state.today) state.today = { items: [] };
+  if (!Array.isArray(state.today.items)) state.today.items = [];
+  return state.today;
+}
+
+/* Everything the app already records, merged into one timeline. */
+function todayFeed() {
+  const out = [], k = dayKey();
+  const push = (at, tag, html) => { if (dayKey(at) === k) out.push({ at, tag, html }); };
+
+  state.sessions.forEach((x) => push(x.endedAt, x.mode === "play" ? "play" : "session",
+    "<b>" + esc(x.task) + "</b> — " + mins(x.elapsedSec) +
+    (x.count ? ", " + x.count + " " + esc(x.unit) : "") +
+    (x.outcome ? " · " + x.outcome : "")));
+
+  state.parked.forEach((x) => push(x.createdAt, x.kind === "worry" ? "parked" : x.kind,
+    "Put down: " + esc(x.text)));
+  state.parked.forEach((x) => { if (x.doneAt) push(x.doneAt, "cleared", "Cleared: " + esc(x.text)); });
+
+  const sh = state.shift || {};
+  (sh.resets || []).forEach((t) => push(t, "reset", "Stepped out"));
+  (sh.flats || []).forEach((f) => push(f.at, "station", esc(f.station) + " went flat at " + mins(f.sec)));
+  (state.nights || []).forEach((nt) => push(nt.inBedAt, "night",
+    "In bed" + (nt.took ? " — landing took " + mins(nt.took) : "")));
+  ((state.fuel || {}).log || []).forEach((f) => push(f.at, "empty",
+    esc(f.lever) + (f.helped == null ? "" : f.helped ? " · helped" : " · did nothing")));
+  ((state.training || {}).time || []).forEach((t) => push(t.at, "drill",
+    "Time check — " + (t.err > 0 ? "+" : "") + t.err + "%"));
+
+  return out.sort((a, b) => b.at - a.at);
+}
+
+function paintTodayNow() {
+  const el = $("today-now");
+  if (!el) return;
+  const L = state.live;
+  if (L) {
+    const rem = (L.startedAt + (L.plannedSec + L.addedSec) * 1000 - now()) / 1000;
+    el.innerHTML = '<button class="now live" id="today-resume" style="width:100%;text-align:left;cursor:pointer;font-family:inherit">' +
+      '<span class="k">Running</span><span class="t">' + esc(L.task) + "</span>" +
+      '<span class="d">' + (rem > 0 ? mmss(rem) + " left" : mmss(-rem) + " past the runway") +
+      (L.win ? " · done when " + esc(L.win) : "") + "</span></button>";
+    $("today-resume").addEventListener("click", () => go("run"));
+    return;
+  }
+  const next = today().items.find((i) => !i.done);
+  if (next) {
+    el.innerHTML = '<button class="now" id="today-start" style="width:100%;text-align:left;cursor:pointer;font-family:inherit">' +
+      '<span class="k">Next up</span><span class="t">' + esc(next.text) + "</span>" +
+      '<span class="d">Tap to start a session on it.</span></button>';
+    $("today-start").addEventListener("click", () => openStart(next.text, ""));
+    return;
+  }
+  el.innerHTML = '<div class="now"><span class="k">Nothing on the list</span>' +
+    '<span class="t">Which is allowed.</span>' +
+    '<span class="d">Add something below, or have the next twelve minutes dealt to you instead.</span>' +
+    '<div class="row" style="margin-top:10px"><button class="btn prime" id="today-deal">Suggest something</button></div></div>';
+  $("today-deal").addEventListener("click", () => go("now"));
+}
+
+function paintTodayList() {
+  const t = today(), open_ = t.items.filter((i) => !i.done);
+  $("today-count").textContent = open_.length ? open_.length + " open" : "clear";
+  $("today-list").innerHTML = t.items.length
+    ? t.items.map((i, ix) =>
+        '<div class="row-i' + (i.done ? " done" : "") + '">' +
+        '<button class="box" data-tick="' + i.id + '" aria-label="' + (i.done ? "Mark as not done" : "Mark done") + '">' + (i.done ? "&#10003;" : "") + "</button>" +
+        '<button class="lbl" data-startit="' + i.id + '">' + esc(i.text) + "</button>" +
+        (ix > 0 && !i.done ? '<button class="mini" data-up="' + i.id + '" aria-label="Move up">&uarr;</button>' : "") +
+        '<button class="mini" data-del="' + i.id + '" aria-label="Remove">&times;</button></div>').join("")
+    : '<p class="empty">Nothing yet.</p>';
+}
+
+function paintTodayFeed() {
+  const f = todayFeed();
+  $("today-feedn").textContent = f.length ? f.length + " logged" : "";
+  $("today-feed").innerHTML = f.length
+    ? f.map((e) => '<li><span class="ts">' + hhmm(e.at) + '</span><span class="ev">' + e.html +
+        '</span><span class="tag">' + e.tag + "</span></li>").join("")
+    : '<p class="empty">Nothing logged today yet. It fills itself as you use the app — you do not add to it.</p>';
+}
+
+function renderToday() {
+  paintTodayNow();
+  paintTodayList();
+  paintTodayFeed();
+}
+
+$("today-add-b").addEventListener("click", addToday);
+$("today-add").addEventListener("keydown", (e) => { if (e.key === "Enter") addToday(); });
+function addToday() {
+  const v = $("today-add").value.trim();
+  if (!v) return;
+  today().items.push({ id: uid(), text: v, done: false, at: now() });
+  $("today-add").value = "";
+  save(); paintTodayList(); paintTodayNow();
+}
+
+$("today-list").addEventListener("click", (e) => {
+  const t = today();
+  const tick = e.target.closest("[data-tick]"), del = e.target.closest("[data-del]");
+  const up = e.target.closest("[data-up]"), st = e.target.closest("[data-startit]");
+  if (st) { const i = t.items.find((x) => x.id === st.dataset.startit); if (i) openStart(i.text, ""); return; }
+  if (tick) {
+    const i = t.items.find((x) => x.id === tick.dataset.tick);
+    if (i) { i.done = !i.done; i.doneAt = i.done ? now() : null; }
+  }
+  if (del) t.items = t.items.filter((x) => x.id !== del.dataset.del);
+  if (up) {
+    const ix = t.items.findIndex((x) => x.id === up.dataset.up);
+    if (ix > 0) { const [m] = t.items.splice(ix, 1); t.items.splice(ix - 1, 0, m); }
+  }
+  save(); paintTodayList(); paintTodayNow();
+});
+
 /* ---------- running on empty ----------
    You cannot top dopamine up, and anything selling that is selling you
    something. What you can do is tell apart the states that all present
@@ -3115,7 +3284,7 @@ function fuelFindings() {
   let out = '<p class="note finding" style="margin-top:16px"><b>' + esc(best.k) + "</b> has worked " +
     Math.round(best.rate * 100) + "% of the time for you, over " + best.n + " goes.";
   if (rows.length > 1 && rows[rows.length - 1].rate < best.rate - 0.25)
-    out += " <b>" + esc(rows[rows.length - 1].k) + "</b> mostly has not — stop reaching for that one.";
+    out += " <b>" + esc(rows[rows.length - 1].k) + "</b> mostly has not — so it may be worth trying something else.";
   return out + " That is your own record, not a claim.</p>";
 }
 
@@ -3165,7 +3334,7 @@ function fuelState(k, branch) {
   const levers = side ? side.levers : f.levers;
   B.innerHTML = head +
     (side ? '<p class="note">' + side.note + "</p>" : "") +
-    '<span class="lab" style="display:block;margin:18px 0 8px">Pick one. Then actually do it.</span>' +
+    '<span class="lab" style="display:block;margin:18px 0 8px">Pick one that sounds doable.</span>' +
     levers.map((l) => '<button class="card" data-lever="' + esc(l) + '">' + esc(l) + "</button>").join("") +
     '<div class="row" style="margin-top:12px"><button class="btn" id="fuel-home">Back</button></div>';
   $("fuel-home").addEventListener("click", renderFuel);
@@ -3180,12 +3349,12 @@ function fuelPick(k, lever) {
   const B = $("fuel-body");
   B.dataset.deep = "1";
   B.innerHTML =
-    '<span class="lab" style="display:block;margin-bottom:8px">Go and do this</span>' +
+    '<span class="lab" style="display:block;margin-bottom:8px">One to try</span>' +
     '<p class="quote" style="border-left-color:var(--go)">' + esc(lever) + "</p>" +
-    '<p class="sub">Come back after and say whether it did anything. Two taps, and after a few it can tell you which of these actually works on you &mdash; ' +
+    '<p class="sub">Come back after, if you like, and say whether it did anything. Two taps, and after a few it can tell you which of these actually works on you &mdash; ' +
     "which is worth more than any general claim about what should.</p>" +
     '<div class="row" style="margin-top:14px"><button class="btn prime" data-helped="1">That helped</button>' +
-    '<button class="btn" data-helped="0">Did nothing</button>' +
+    '<button class="btn" data-helped="0">Not really</button>' +
     '<button class="btn ghost" id="fuel-later">Later</button></div>';
   B.querySelectorAll("[data-helped]").forEach((b) => b.addEventListener("click", () => {
     entry.helped = b.dataset.helped === "1";
@@ -3448,7 +3617,7 @@ function renderLand() {
   }
   $("land-frame").innerHTML = (landLate != null && landLate > 900)
     ? "You're <b>" + mins(landLate) + "</b> past your own landing time. Worth knowing why, once: the night is the only stretch of the day nobody wants anything from you, so going to bed reads as giving that up. That's a real trade, not a character flaw — but it's cheaper to take the hour back tomorrow morning than to keep paying for it tonight."
-    : "Stopping is a task, and it's the same muscle as starting. So it gets the same treatment: the steps are listed rather than remembered, because each one is a place you get derailed.";
+    : "Stopping is its own task, and it uses the same muscle as starting. The steps are written down rather than remembered, because each one is a place it is easy to get sidetracked.";
   renderLandList();
   $("land-parked").textContent = "";
   $("land-wind").innerHTML = WIND_DOWN.map((w) => '<button class="chip" data-wind="' + esc(w) + '">' + esc(w) + "</button>").join("");
@@ -3475,7 +3644,7 @@ function tickLand() {
     const e = (now() - landStartedAt) / 1000;
     el.textContent = landDone.length === sleepState().list.length
       ? "All of it, in " + mmss(e) + ". That is how long it actually takes."
-      : landDone.length + " of " + sleepState().list.length + " · " + mmss(e) + " so far. It is shorter than it feels from the sofa.";
+      : landDone.length + " of " + sleepState().list.length + " · " + mmss(e) + " so far. It is usually shorter than it feels from the sofa.";
   }, 1000);
 }
 
@@ -3687,8 +3856,8 @@ function dealNow() {
   const left = 3 - nowDeals;
   $("now-deal").textContent = left > 0 ? "Deal again (" + left + " left)" : "Take the top one";
   $("now-note").textContent = left > 0
-    ? "Every card starts a clock the moment you tap it. Nothing here is important; it only needs to be chosen."
-    : "That's the deals. Re-dealing is the same thing as scrolling — take the top one and start the clock.";
+    ? "Each one starts a short timer when you tap it. None of it is important — it just helps to have chosen."
+    : "That is the last of them. Re-rolling can become its own way of putting things off, so the top one is a fine choice.";
 }
 
 $("now-deal").addEventListener("click", () => {
@@ -4086,8 +4255,8 @@ function paintIn(elapsed) {
   if (L.inAt) {
     const at = (L.inAt - L.startedAt) / 1000;
     slot.innerHTML = '<div class="instamp"><b>In &mdash; crossed at ' + mmss(at) + '</b>' +
-      "You're in the state you were trying to reach. Don't stop to check anything, don't switch tasks, " +
-      "don't tidy the desk. Ride it until it ends on its own.</div>";
+      "This is the part worth protecting. Try not to check anything or switch tasks, and let it run " +
+      "for as long as it wants to.</div>";
     return;
   }
   const usual = typicalTimeToIn();
@@ -4095,7 +4264,7 @@ function paintIn(elapsed) {
   slot.innerHTML = '<button class="inbtn" id="im-in"><span class="t">I\'m in &mdash; it stopped feeling like effort</span>' +
     '<span class="d">' + (late
       ? "You're past your usual crossing point. If it hasn't happened, turn the dial rather than stopping."
-      : "Tap it the moment the grinding stops. This is the only way the app learns how long your entry actually takes.") +
+      : "Tap it whenever the effort eases off. That is how the app learns how long getting in usually takes you.") +
     "</span></button>";
   $("im-in").addEventListener("click", () => {
     state.live.inAt = now(); save(); paintRun();
@@ -4258,12 +4427,12 @@ $("move-done").addEventListener("click", () => {
   if (state.live.mode === "play") {
     openDial();
     flashPark("Goal done. Pick the next one now — the gap after finishing is where boredom gets in.");
-  } else flashPark("That was the hard part. Everything after this is downhill.");
+  } else flashPark("That was the hard part. The rest is usually easier.");
 });
 
 const PARK_HINT = window.matchMedia("(pointer: coarse)").matches
-  ? "Parking never leaves this screen. That's the entire point of it."
-  : "Space bar counts. Parking never leaves this screen.";
+  ? "Anything you note here stays on this screen."
+  : "Space bar counts. Anything you note stays on this screen.";
 
 function flashPark(msg) {
   const h = $("park-hint");
@@ -4291,7 +4460,7 @@ function doPark() {
   parkIt(v, "thought");
   if (state.live) { state.live.parked = (state.live.parked || 0) + 1; save(); }
   $("park-in").value = "";
-  flashPark("Caught. It's in the parking lot and it'll still be there. Back to the thing.");
+  flashPark("Noted. It will still be there later, so you can leave it for now.");
 }
 
 $("expired").addEventListener("click", (e) => {
