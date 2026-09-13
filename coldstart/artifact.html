@@ -1,4 +1,4 @@
-<script>window.__BUILD__='5a7b446e04';</script>
+<script>window.__BUILD__='841c8e040b';</script>
 <title>Cold Start</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -1318,6 +1318,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 <div class="foot">
   <span class="lab" id="save-state">local only</span>
   <span class="lab" id="build-id" hidden></span>
+  <button class="back" id="force-update" style="margin:0">Force update</button>
   <button class="back" id="sound-toggle" style="margin:0">Sound: on</button>
 </div>
 
@@ -5000,6 +5001,26 @@ function renderRecord() {
 
 /* ---------- boot ---------- */
 
+/* A stale service worker can pin a browser to one build forever, and no
+   amount of reloading escapes it — especially once installed to a home
+   screen. This is the escape hatch: drop every worker and cache, then
+   reload from the network. */
+$("force-update").addEventListener("click", async () => {
+  const btn = $("force-update");
+  btn.textContent = "Updating…";
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (window.caches) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } catch (e) { /* nothing to clear, carry on to the reload */ }
+  location.reload();
+});
+
 $("sound-toggle").addEventListener("click", () => {
   state.sound = !state.sound; save();
   $("sound-toggle").textContent = "Sound: " + (state.sound ? "on" : "off");
@@ -5008,10 +5029,10 @@ $("sound-toggle").addEventListener("click", () => {
 function boot() {
   /* The build stamp is injected at build time; showing it means "which
      version am I actually running" is answerable rather than guessed. */
-  if (typeof window.__BUILD__ === "string") {
-    $("build-id").textContent = "build " + window.__BUILD__;
-    $("build-id").hidden = false;
-  }
+  $("build-id").textContent = typeof window.__BUILD__ === "string"
+    ? "build " + window.__BUILD__
+    : "build unstamped (old copy)";
+  $("build-id").hidden = false;
   $("sound-toggle").textContent = "Sound: " + (state.sound ? "on" : "off");
   if (typeof state.soundVol === "number") { snd.vol = state.soundVol; $("sndvol").value = Math.round(snd.vol * 100); }
   $("save-state").textContent = !state.loaded ? "checking storage"
