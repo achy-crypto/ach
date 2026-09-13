@@ -153,24 +153,54 @@ const MISSING_LABEL = {
   goal:"No finish line", feedback:"No feedback", balance:"Out of the band", shield:"Too many exits",
 };
 
-const DOCTRINE = `Flow has entry conditions. It cannot be summoned by wanting it, and advice to
-"focus" or "be present" does nothing. Four conditions can be built on purpose for almost any task:
+const DOCTRINE = `FLOW — the conditions, on Csikszentmihalyi's model.
 
-1. A CLEAR GOAL — you know what done looks like at every moment. Most tasks fail here: "clean the
-   kitchen" and "work on the essay" have no visible finish line, so there is never a moment of
-   completion and attention has nothing to aim at.
-2. IMMEDIATE FEEDBACK — you can tell continuously whether you are getting somewhere. Boring tasks
-   are usually boring because they emit no signal. If the task has no scoreboard, one must be
-   invented and attached to it.
-3. CHALLENGE MATCHED TO SKILL — absorption sits in a narrow band. Below it is boredom, above it is
-   anxiety, and the two need OPPOSITE fixes. Too easy: add a constraint. Too hard: cut scope or
-   lower the bar until it is doable, then start.
-4. NO AVAILABLE EXITS — one specific escape route is what actually ends the session, and it is
-   usually a particular device, tab or room. Naming the one that matters beats a list of tips.
+Attention is a limited resource. Only so much can be processed at once, and anything else
+competing for it — a worry, an undecided decision, a notification, an open loop — takes
+capacity away from the task. Disordered attention is the default state. Flow is the
+ordered one and it has to be built.
 
-Diagnose which of the four is the binding constraint FOR THIS TASK, then build all four with that
-one leading. Be concrete and physical about this specific activity. Never give general advice
-about focus, discipline, motivation or removing distractions in the abstract.`;
+THREE CONDITIONS produce it. These are the levers.
+
+1. A CLEAR GOAL — you know what done looks like at every moment, not only at the end.
+   Most tasks fail here. "Clean the kitchen" and "work on the essay" name a direction,
+   not a finish line, so there is never a moment of completion to aim at.
+
+2. UNAMBIGUOUS FEEDBACK — you can tell continuously whether you are getting closer. The
+   signal does NOT have to be inherent to the task. Any feedback works provided it is
+   logically tied to a goal actually invested in, which is why a scoreboard can be
+   invented and bolted on. The assembly-line worker who times his own 43-second operation
+   and works it down to 28 has not changed the job; he has supplied the signal the job
+   lacked. That move is the whole method.
+
+3. CHALLENGE AND SKILL BOTH RAISED ABOVE HIS ORDINARY LEVEL. This is the one that gets
+   got wrong. Matching challenge to skill is not sufficient — matched at a low level
+   produces apathy, not flow. A task he can do easily, done easily, yields nothing. Both
+   have to be stretched past the everyday. So for a familiar task the fix is never to
+   make it comfortable; it is to raise the difficulty until it asks something of him.
+   Only when a task genuinely exceeds his skill does cutting scope apply.
+
+WHAT FOLLOWS IS NOT A LEVER. Absorption, the sense of control, losing self-consciousness,
+time distorting — these are consequences of the three conditions, not things that can be
+acted on. Instructions to focus, be present, or want it more operate on nothing.
+
+WHAT A FLOW ACTIVITY IS. Games, sports, crafts and rituals produce flow reliably because
+they were built to: explicit rules, a goal, a way of keeping score, difficulty that rises
+with skill. An ordinary task has none of this. The work is to give this particular task
+those properties, using its own real materials — to make a game of the thing in front of
+him rather than a game beside it.
+
+ENJOYMENT IS NOT PLEASURE. Pleasure is restorative and demands nothing — food, rest,
+scrolling. Enjoyment requires spending attention and leaves him more capable than before.
+The aim is not to make the task pleasant. It is to make it demanding in a way that repays
+what it costs to attend to it.
+
+IT DECAYS. Skill rises with repetition, so a challenge that worked once stops working. The
+same constraint on the fifth run is no longer a constraint, and boredom returns. Where he
+has run something before and cleared it, the difficulty has to go up.
+
+Be concrete and physical about this specific activity. Never give general advice about
+focus, discipline, motivation, or removing distractions in the abstract.`;
 
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
@@ -182,7 +212,7 @@ const pad=n=>String(n).padStart(2,"0");
 const state={log:[],plans:[],loaded:false};
 let db=null,sample=null,tab="build",ctl=null;
 let task="",feel="",busy=false,err="";
-let plan=null, run=null, tick=null;
+let plan=null, run=null, tick=null, escalate=null;
 let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null},flashMsg="";
 const DOC="band/state", LS="band:v1";
 
@@ -322,6 +352,13 @@ ${ft?`HOW IT FEELS RIGHT NOW: ${ft}`:""}
 
 ${DOCTRINE}
 ${historyBlock()}
+${escalate?`
+HE HAS RUN THIS BEFORE AND CLEARED IT ${escalate.done} time(s), under this constraint:
+  "${escalate.dial}"
+with this finish line: "${escalate.finish}" and this scoreboard: ${escalate.board}.
+Skill has risen against it, so that constraint no longer constrains and the same plan
+would now produce boredom. Raise the difficulty. Do not restate the old rule, and do not
+merely reword it — it must ask more than it did. Keep the task recognisably the same.`:""}
 
 THE SCOREBOARD is the part that matters most and the part people get wrong. Invent a signal the
 task does not already emit, attached to something he actually controls, countable in the moment
@@ -351,7 +388,7 @@ Reply with only this JSON:
 "why":"one sentence on why this fix for this task"}`;
   try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
     plan=Object.assign({task:t},out,{example:false});
-    savePlan(plan)}
+    savePlan(plan);escalate=null}
   catch(e){if(!(e&&e.code==="cancelled"))err=errCopy(e)}
   busy=false;render()}
 
@@ -484,6 +521,7 @@ function savedPanel(){
       <p style="color:var(--dim);font-size:14px">${esc(p.finish||"")}</p>
       <div class="bar">
         <button class="go sig" data-act="openplan" data-v="${esc(r.id)}">Open</button>
+        ${r.done?`<button class="ghost" data-act="tighten" data-v="${esc(r.id)}">Tighten it</button>`:""}
         <span class="lab">${when.toLocaleDateString()}${r.runs?` · run ${r.runs}×${r.done?`, finished ${r.done}`:""}`:" · never run"}${r.lastOutcome?` · ${OUTLABEL[r.lastOutcome]||""}`:""}</span>
         <button class="del" data-act="delplan" data-v="${esc(r.id)}" aria-label="Delete" style="margin-left:auto">&times;</button>
       </div>
@@ -544,6 +582,13 @@ document.addEventListener("click",ev=>{
   if(act==="rebuild"){plan=null;return render()}
   if(act==="openplan"){const r=state.plans.find(x=>x.id===v);
     if(r){plan=r.plan;task=r.task;tab="build";err=""}return render()}
+  if(act==="tighten"){const r=state.plans.find(x=>x.id===v);
+    if(r){const q=r.plan||{},sc=q.scoreboard||{};
+      escalate={done:r.done||0,dial:q.dial||"",finish:q.finish||"",
+        board:`${sc.type||""} of ${sc.unit||"units"}${sc.target?" to "+sc.target:""}`};
+      task=r.task;plan=null;tab="build";err="";render();
+      return void doBuild()}
+    return render()}
   if(act==="delplan"){state.plans=state.plans.filter(x=>x.id!==v);saveState();return render()}
   if(act==="start"){if(plan)startRun();return}
   if(act==="tap"){run.count++;
