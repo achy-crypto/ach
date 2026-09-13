@@ -370,7 +370,7 @@ function startRun(){
     const r=document.getElementById("rate");if(r)r.textContent=rateText()},1000);
   render()}
 
-const elapsed=()=>Math.floor((Date.now()-run.started)/1000);
+const elapsed=()=>Math.floor(((run.stoppedAt||Date.now())-run.started)/1000);
 const fmt=s=>`${pad(Math.floor(s/60))}:${pad(s%60)}`;
 function rateText(){
   const base=run.target?`target ${run.target} ${run.unit}`:"";
@@ -387,6 +387,10 @@ function rateText(){
 function sessionPanel(){
   const p=plan||{},sc=p.scoreboard||{};
   const s=elapsed();
+  // A finished session replaces the live card. Appending the summary below it
+  // left the clock ticking and pushed the outcome question off the bottom of a
+  // phone, so Done looked like it had done nothing at all.
+  if(run.ended)return endedCard();
   let h=`<div class="sess">
     <div class="lab">${run.minutes} minute session</div>
     <div class="clock ${s>=run.minutes*60?"over":""}" id="clock">${fmt(s)}</div>
@@ -409,38 +413,56 @@ function sessionPanel(){
     </div>
   </div>`;
 
-  if(run.ended){
-    const s=elapsed(), beat=run.target?run.count>=run.target:null;
-    const bits=[fmt(s)];
-    if(run.count)bits.push(`${run.count} ${esc(run.unit)}`);
-    if(beat!==null)bits.push(beat?`target beaten`:`${run.target-run.count} short of target`);
-    h+=`<div class="sess" style="border-color:${run.hit?"var(--sig)":"var(--rule)"}">
-      <div class="lab" style="color:${run.hit?"var(--sig)":"var(--dim)"}">${run.hit?"Finish line crossed":"Stopped short"}</div>
-      <h3 style="font-size:19px;margin-top:4px">${run.hit?"Done.":"Ended before the finish line."}</h3>
-      <p class="sub mono" style="margin-top:6px">${bits.join(" · ")}</p>
-      <h3 style="font-size:17px;margin-top:18px">Did it hold?</h3>
-      <p class="sub">Whether you finished and whether you got absorbed are different things. This one teaches it which levers work on you.</p>
-      <div class="chips">
-        <button class="chip" data-act="out" data-v="locked">Got absorbed</button>
-        <button class="chip" data-act="out" data-v="partly">Partly</button>
-        <button class="chip" data-act="out" data-v="no">Didn't work</button>
-      </div></div>`}
   return h}
 
-async function endRun(outcome){
-  state.log.push({task:plan&&plan.task||task,at:Date.now(),
+function endedCard(){
+  const beat=run.target?run.count>=run.target:null;
+  const bits=[fmt(elapsed())];
+  if(run.count)bits.push(`${run.count} ${esc(run.unit)}`);
+  if(beat!==null)bits.push(beat?`target beaten`:`${run.target-run.count} short of target`);
+  const done=state.log.find(e=>e.id===run.logId);
+  return `<div class="sess" style="border-color:${run.hit?"var(--sig)":"var(--rule)"}">
+    <div class="lab" style="color:${run.hit?"var(--sig)":"var(--dim)"}">${run.hit?"Finish line crossed":"Stopped short"}</div>
+    <h3 style="font-size:22px;margin-top:4px">${run.hit?"Done.":"Ended before the finish line."}</h3>
+    <p class="sub mono" style="margin-top:6px">${bits.join(" · ")}</p>
+    <p class="sub" style="color:var(--sig)">Session saved.</p>
+    <h3 style="font-size:17px;margin-top:20px">Did it hold?</h3>
+    <p class="sub">Whether you finished and whether you got absorbed are different things. This one teaches it which levers work on you.</p>
+    <div class="chips">
+      ${[["locked","Got absorbed"],["partly","Partly"],["no","Didn't work"]].map(o=>
+        `<button class="chip" data-act="out" data-v="${o[0]}" aria-pressed="${done&&done.outcome===o[0]}">${o[1]}</button>`).join("")}
+    </div>
+    <div class="bar"><button class="ghost" data-act="close">Close</button></div>
+  </div>`}
+
+// The session is written the moment you stop, not when you answer the follow-up.
+// Waiting for the outcome meant a session you never answered was lost entirely.
+async function stopRun(hit){
+  run.hit=!!hit; run.stoppedAt=Date.now(); run.ended=true;
+  if(tick){clearInterval(tick);tick=null}
+  const id="s"+Date.now().toString(36);
+  run.logId=id;
+  state.log.push({id,task:(plan&&plan.task)||task,at:Date.now(),
     minutes:Math.round(elapsed()/60),count:run.count,
-    scoreType:run.type,missing:plan&&plan.missing,hit:!!run.hit,
-    target:run.target||0,outcome});
+    scoreType:run.type,missing:plan&&plan.missing,hit:!!hit,
+    target:run.target||0,outcome:null});
   state.log=state.log.slice(-200);
   const key=String((plan&&plan.task)||task||"").toLowerCase().trim();
   const sp=state.plans.find(x=>String(x.task||"").toLowerCase().trim()===key);
-  if(sp){sp.runs=(sp.runs||0)+1;sp.lastOutcome=outcome;
-  sp.done=(sp.done||0)+(run.hit?1:0)}
-  if(tick){clearInterval(tick);tick=null}
+  if(sp){sp.runs=(sp.runs||0)+1;sp.done=(sp.done||0)+(hit?1:0)}
+  render();
+  try{window.scrollTo({top:0,behavior:"smooth"})}catch(e){}
+  await saveState();render()}
+
+async function setOutcome(outcome){
+  const row=state.log.find(e=>e.id===(run&&run.logId));
+  if(row)row.outcome=outcome;
+  const key=String((plan&&plan.task)||task||"").toLowerCase().trim();
+  const sp=state.plans.find(x=>String(x.task||"").toLowerCase().trim()===key);
+  if(sp)sp.lastOutcome=outcome;
   run=null;
   const ok=await saveState();
-  flashMsg=ok?(lastSave.cloud?"Logged.":"Logged to this browser."):"Couldn't save that one.";
+  flashMsg=ok?(lastSave.cloud?"Logged.":"Logged to this browser."):"Saved on screen only.";
   render();setTimeout(()=>{flashMsg="";render()},2600)}
 
 /* ---------- saved plans ---------- */
@@ -482,7 +504,7 @@ function histPanel(){
   else h+=`<div class="readout">${keys.map(k=>`<div>
       <div class="n">${byType[k].g}/${byType[k].n}</div>
       <span class="lab">${esc(k)}</span></div>`).join("")}
-      <div><div class="n">${rows.filter(e=>e.hit).length}/${rows.length}</div>
+      <div><div class="n">${state.log.filter(e=>e.hit).length}/${state.log.length}</div>
       <span class="lab">Finished</span></div></div>
     <p class="note">Read as "got absorbed / sessions run". Once three sessions are in, the ones that work get preferred when it builds the next plan.</p>`;
 
@@ -531,9 +553,10 @@ document.addEventListener("click",ev=>{
   if(act==="minus"){run.count=Math.max(0,run.count-1);return render()}
   if(act==="broke"){run.count=0;return render()}
   if(act==="fell"){run.fell=true;return render()}
-  if(act==="done"){run.hit=true;run.ended=true;return render()}
-  if(act==="end"){run.hit=false;run.ended=true;return render()}
-  if(act==="out")return void endRun(v);
+  if(act==="done")return void stopRun(true);
+  if(act==="end")return void stopRun(false);
+  if(act==="close"){run=null;return render()}
+  if(act==="out")return void setOutcome(v);
   if(act==="dellog"){state.log.splice(Number(t.dataset.i),1);saveState();return render()}});
 
 document.addEventListener("input",ev=>{if(ev.target.id==="task")task=ev.target.value});
