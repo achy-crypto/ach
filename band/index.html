@@ -146,58 +146,68 @@ const PIECES = [
   { key:"finish", k:"Clear goal",       title:"The finish line" },
   { key:"score",  k:"Feedback",         title:"The scoreboard" },
   { key:"dial",   k:"Challenge / skill",title:"The dial" },
-  { key:"cut",    k:"No exits",         title:"The cut" },
+  { key:"cut",    k:"Set apart",        title:"The cut" },
 ];
 
 const MISSING_LABEL = {
-  goal:"No finish line", feedback:"No feedback", balance:"Out of the band", shield:"Too many exits",
+  goal:"No finish line", feedback:"No feedback", balance:"Out of the band", shield:"Not set apart",
 };
 
-const DOCTRINE = `FLOW — the conditions, on Csikszentmihalyi's model.
+const DOCTRINE = `FLOW — from Csikszentmihalyi, "Flow", chs. 4 and 7.
 
-Attention is a limited resource. Only so much can be processed at once, and anything else
-competing for it — a worry, an undecided decision, a notification, an open loop — takes
-capacity away from the task. Disordered attention is the default state. Flow is the
-ordered one and it has to be built.
+WHAT A FLOW ACTIVITY IS. Games, sport, ritual and art produce flow reliably because they
+were built to. In his words they "have rules that require the learning of skills, they set
+up goals, they provide feedback, they make control possible." An ordinary task has none of
+those. The job here is to give this particular task those four properties, using its own
+real materials. And it works on the structure, not the person: "The more a job inherently
+resembles a game — with variety, appropriate and flexible challenges, clear goals, and
+immediate feedback — the more enjoyable it will be regardless of the worker's level of
+development." He does not have to be the sort of person who finds flow. The activity is
+what gets changed.
 
-THREE CONDITIONS produce it. These are the levers.
+1. A CLEAR GOAL. What done looks like at every moment, not only at the end. Most tasks
+   fail here: "clean the kitchen" names a direction, not a finish line.
 
-1. A CLEAR GOAL — you know what done looks like at every moment, not only at the end.
-   Most tasks fail here. "Clean the kitchen" and "work on the essay" name a direction,
-   not a finish line, so there is never a moment of completion to aim at.
+2. FEEDBACK. Continuous evidence of getting closer. It need NOT be inherent to the task —
+   an invented signal works provided it is logically tied to a goal actually invested in.
+   One caution he is explicit about: a contest only helps while attention stays on the
+   activity itself. Once the number matters more than the work, the scoreboard becomes a
+   distraction rather than an incentive.
 
-2. UNAMBIGUOUS FEEDBACK — you can tell continuously whether you are getting closer. The
-   signal does NOT have to be inherent to the task. Any feedback works provided it is
-   logically tied to a goal actually invested in, which is why a scoreboard can be
-   invented and bolted on. The assembly-line worker who times his own 43-second operation
-   and works it down to 28 has not changed the job; he has supplied the signal the job
-   lacked. That move is the whole method.
+3. CHALLENGE AND SKILL BOTH RAISED. Matching them is not enough. His own data name the
+   low/low corner apathy — "below-average levels of both challenges and skills" — where
+   people report feeling "passive, weak, dull, and dissatisfied", and flow appears when
+   both run high. So the two failures need opposite fixes:
+   BORED — he is past the challenge. Then, in the tennis example, he "has essentially only
+   one choice: to increase the challenges he is facing." Raise difficulty. Never make a
+   familiar task more comfortable.
+   SWAMPED — the task exceeds him. The way back "requires that he increase his skills", and
+   he warns that simply reducing the challenge is harder than it sounds, since "it is
+   difficult to ignore challenges once one is aware that they exist." So prefer scaffolding
+   — a template, a worked example, doing the one part he already knows — over merely
+   shrinking the job.
 
-3. CHALLENGE AND SKILL BOTH RAISED ABOVE HIS ORDINARY LEVEL. This is the one that gets
-   got wrong. Matching challenge to skill is not sufficient — matched at a low level
-   produces apathy, not flow. A task he can do easily, done easily, yields nothing. Both
-   have to be stretched past the everyday. So for a familiar task the fix is never to
-   make it comfortable; it is to raise the difficulty until it asks something of him.
-   Only when a task genuinely exceeds his skill does cutting scope apply.
+4. SET APART FROM ORDINARY LIFE. Flow activities "facilitate concentration and involvement
+   by making the activity as distinct as possible from the so-called paramount reality of
+   everyday existence" — the uniform, the marked-off ground, the bounded stretch of time.
+   So the cut is not only removing an exit. It is a boundary that makes this stretch
+   visibly not-ordinary-life: a place, a signal, a thing done first, an end that is fixed.
 
-WHAT FOLLOWS IS NOT A LEVER. Absorption, the sense of control, losing self-consciousness,
-time distorting — these are consequences of the three conditions, not things that can be
-acted on. Instructions to focus, be present, or want it more operate on nothing.
+WAYS TO GO BEYOND ORDINARY EXPERIENCE. He takes Caillois's four: contest (agon), chance
+(alea), vertigo (ilinx), and pretence (mimicry). The scoreboard will usually be a contest
+against a rate or a streak, because that is what can be counted. But where racing a number
+would suit the task badly, chance and pretence are legitimate mechanisms rather than
+gimmicks — drawing the next item blind, working an order decided by something other than
+you, doing it as somebody who would do it differently — and belong in the constraint.
 
-WHAT A FLOW ACTIVITY IS. Games, sports, crafts and rituals produce flow reliably because
-they were built to: explicit rules, a goal, a way of keeping score, difficulty that rises
-with skill. An ordinary task has none of this. The work is to give this particular task
-those properties, using its own real materials — to make a game of the thing in front of
-him rather than a game beside it.
+WHAT IS NOT A LEVER. Absorption, the sense of control, self-consciousness dropping away,
+time distorting: consequences of the conditions above, not things to act on. Instructions
+to focus or be present operate on nothing.
 
-ENJOYMENT IS NOT PLEASURE. Pleasure is restorative and demands nothing — food, rest,
-scrolling. Enjoyment requires spending attention and leaves him more capable than before.
-The aim is not to make the task pleasant. It is to make it demanding in a way that repays
-what it costs to attend to it.
-
-IT DECAYS. Skill rises with repetition, so a challenge that worked once stops working. The
-same constraint on the fifth run is no longer a constraint, and boredom returns. Where he
-has run something before and cleared it, the difficulty has to go up.
+IT DECAYS, AND THAT IS THE MECHANISM, NOT A FLAW. "One cannot enjoy doing the same thing
+at the same level for long." Skill rises against a repeated challenge until it is no longer
+one, and boredom returns. Where he has run this before and cleared it, the difficulty must
+go up.
 
 Be concrete and physical about this specific activity. Never give general advice about
 focus, discipline, motivation, or removing distractions in the abstract.`;
@@ -375,8 +385,9 @@ THE FINISH LINE is for ONE session, not the whole task, and must be visible from
 THE DIAL is one constraint, in one sentence. Too easy, add difficulty. Too hard, cut scope or drop
 the quality bar. Never both.
 
-THE CUT is the single most likely exit for THIS task, named specifically, and what to do about it
-before starting.
+THE CUT does two jobs. Name the single most likely exit for THIS task specifically and what to
+do about it before starting — and make the stretch visibly separate from ordinary life. A place,
+a thing done first, a signal, a fixed end. Both halves, in one or two sentences.
 
 Reply with only this JSON:
 {"read":"one or two sentences on why this task does not hold attention. Specific to it, not general.",
