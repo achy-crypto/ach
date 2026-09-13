@@ -399,30 +399,44 @@ function sessionPanel(){
     </div>
     ${p.dial?`<div class="rule"><span class="lab" style="display:block;margin-bottom:3px">The rule</span>${esc(p.dial)}</div>`:""}
     ${run.fell&&p.reentry?`<div class="fell"><span class="lab" style="display:block;margin-bottom:3px">Get back in</span>${esc(p.reentry)}</div>`:""}
+    <div class="bar" style="margin-top:18px">
+      <button class="go sig" data-act="done" style="flex:1 1 100%">Done — finish line crossed</button>
+    </div>
     <div class="bar">
       <button class="ghost" data-act="fell">I drifted</button>
       ${run.type==="streak"?`<button class="ghost" data-act="broke">Broke the streak</button>`:`<button class="ghost" data-act="minus">&minus;1</button>`}
-      <button class="go" data-act="end">End session</button>
+      <button class="ghost" data-act="end" style="margin-left:auto">Stop short</button>
     </div>
   </div>`;
-  if(run.ended)h+=`<div class="sess" style="border-color:var(--sig)">
-    <h3 style="font-size:18px">Did it hold?</h3>
-    <p class="sub">This is the only thing that teaches it which levers work on you.</p>
-    <div class="chips">
-      <button class="chip" data-act="out" data-v="locked">Got absorbed</button>
-      <button class="chip" data-act="out" data-v="partly">Partly</button>
-      <button class="chip" data-act="out" data-v="no">Didn't work</button>
-    </div></div>`;
+
+  if(run.ended){
+    const s=elapsed(), beat=run.target?run.count>=run.target:null;
+    const bits=[fmt(s)];
+    if(run.count)bits.push(`${run.count} ${esc(run.unit)}`);
+    if(beat!==null)bits.push(beat?`target beaten`:`${run.target-run.count} short of target`);
+    h+=`<div class="sess" style="border-color:${run.hit?"var(--sig)":"var(--rule)"}">
+      <div class="lab" style="color:${run.hit?"var(--sig)":"var(--dim)"}">${run.hit?"Finish line crossed":"Stopped short"}</div>
+      <h3 style="font-size:19px;margin-top:4px">${run.hit?"Done.":"Ended before the finish line."}</h3>
+      <p class="sub mono" style="margin-top:6px">${bits.join(" · ")}</p>
+      <h3 style="font-size:17px;margin-top:18px">Did it hold?</h3>
+      <p class="sub">Whether you finished and whether you got absorbed are different things. This one teaches it which levers work on you.</p>
+      <div class="chips">
+        <button class="chip" data-act="out" data-v="locked">Got absorbed</button>
+        <button class="chip" data-act="out" data-v="partly">Partly</button>
+        <button class="chip" data-act="out" data-v="no">Didn't work</button>
+      </div></div>`}
   return h}
 
 async function endRun(outcome){
   state.log.push({task:plan&&plan.task||task,at:Date.now(),
     minutes:Math.round(elapsed()/60),count:run.count,
-    scoreType:run.type,missing:plan&&plan.missing,outcome});
+    scoreType:run.type,missing:plan&&plan.missing,hit:!!run.hit,
+    target:run.target||0,outcome});
   state.log=state.log.slice(-200);
   const key=String((plan&&plan.task)||task||"").toLowerCase().trim();
   const sp=state.plans.find(x=>String(x.task||"").toLowerCase().trim()===key);
-  if(sp){sp.runs=(sp.runs||0)+1;sp.lastOutcome=outcome}
+  if(sp){sp.runs=(sp.runs||0)+1;sp.lastOutcome=outcome;
+  sp.done=(sp.done||0)+(run.hit?1:0)}
   if(tick){clearInterval(tick);tick=null}
   run=null;
   const ok=await saveState();
@@ -448,7 +462,7 @@ function savedPanel(){
       <p style="color:var(--dim);font-size:14px">${esc(p.finish||"")}</p>
       <div class="bar">
         <button class="go sig" data-act="openplan" data-v="${esc(r.id)}">Open</button>
-        <span class="lab">${when.toLocaleDateString()}${r.runs?` · run ${r.runs}×`:" · never run"}${r.lastOutcome?` · ${OUTLABEL[r.lastOutcome]||""}`:""}</span>
+        <span class="lab">${when.toLocaleDateString()}${r.runs?` · run ${r.runs}×${r.done?`, finished ${r.done}`:""}`:" · never run"}${r.lastOutcome?` · ${OUTLABEL[r.lastOutcome]||""}`:""}</span>
         <button class="del" data-act="delplan" data-v="${esc(r.id)}" aria-label="Delete" style="margin-left:auto">&times;</button>
       </div>
     </div>`}
@@ -467,15 +481,18 @@ function histPanel(){
   if(!keys.length)h+=`<p class="empty">Nothing yet. Run a session and say whether it held.</p>`;
   else h+=`<div class="readout">${keys.map(k=>`<div>
       <div class="n">${byType[k].g}/${byType[k].n}</div>
-      <span class="lab">${esc(k)}</span></div>`).join("")}</div>
+      <span class="lab">${esc(k)}</span></div>`).join("")}
+      <div><div class="n">${rows.filter(e=>e.hit).length}/${rows.length}</div>
+      <span class="lab">Finished</span></div></div>
     <p class="note">Read as "got absorbed / sessions run". Once three sessions are in, the ones that work get preferred when it builds the next plan.</p>`;
 
   h+=`<h2 class="sec">Sessions</h2>`;
   if(!state.log.length)h+=`<p class="empty">No sessions yet.</p>`;
-  else h+=`<div class="tw"><table><thead><tr><th>Task</th><th>Min</th><th>Count</th><th>Board</th><th>Held?</th><th></th></tr></thead><tbody>
+  else h+=`<div class="tw"><table><thead><tr><th>Task</th><th>Min</th><th>Count</th><th>Board</th><th>Done</th><th>Held?</th><th></th></tr></thead><tbody>
     ${state.log.slice().reverse().map((e,i)=>`<tr>
       <td>${esc(e.task||"")}</td><td class="num">${e.minutes||0}</td><td class="num">${e.count||0}</td>
       <td class="num">${esc(e.scoreType||"—")}</td>
+      <td class="num">${e.hit?"yes":"—"}</td>
       <td>${({locked:"Absorbed",partly:"Partly",no:"No"})[e.outcome]||"—"}</td>
       <td class="num"><button class="del" data-act="dellog" data-i="${state.log.length-1-i}" aria-label="Remove">&times;</button></td>
     </tr>`).join("")}</tbody></table></div>`;
@@ -514,7 +531,8 @@ document.addEventListener("click",ev=>{
   if(act==="minus"){run.count=Math.max(0,run.count-1);return render()}
   if(act==="broke"){run.count=0;return render()}
   if(act==="fell"){run.fell=true;return render()}
-  if(act==="end"){run.ended=true;return render()}
+  if(act==="done"){run.hit=true;run.ended=true;return render()}
+  if(act==="end"){run.hit=false;run.ended=true;return render()}
   if(act==="out")return void endRun(v);
   if(act==="dellog"){state.log.splice(Number(t.dataset.i),1);saveState();return render()}});
 
