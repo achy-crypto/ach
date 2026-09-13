@@ -1,0 +1,478 @@
+<title>The Band</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --bg:#edf0ee;--card:#f8faf9;--ink:#121715;--dim:#5f6b66;
+  --rule:#ccd4d0;--soft:#dde3e0;--sig:#0f7167;--wash:#0f716719;
+  --cold:#7a6a3f;--hot:#a1434a;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1312;--card:#161c1a;--ink:#e6eae8;--dim:#8a9691;
+  --rule:#28302d;--soft:#1e2624;--sig:#45bcae;--wash:#45bcae1f;
+  --cold:#c4ab6a;--hot:#e07a80}}
+:root[data-theme="dark"]{
+  --bg:#0e1312;--card:#161c1a;--ink:#e6eae8;--dim:#8a9691;
+  --rule:#28302d;--soft:#1e2624;--sig:#45bcae;--wash:#45bcae1f;
+  --cold:#c4ab6a;--hot:#e07a80}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Instrument Sans",system-ui,sans-serif;
+  font-size:15.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:620px;margin:0 auto;padding:26px 18px 80px}
+.mono{font-family:"DM Mono",ui-monospace,Menlo,monospace}
+.lab{font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0}
+
+header.top h1{font-size:31px;font-weight:800;letter-spacing:-.02em}
+header.top p{margin:6px 0 0;color:var(--dim);font-size:13.5px;max-width:52ch}
+.hr{border-bottom:1px solid var(--ink);margin:12px 0 18px}
+
+.tabs{display:flex;border-bottom:1px solid var(--rule);margin-bottom:20px}
+.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--dim);padding:11px 14px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--sig)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+
+textarea,input[type=text]{width:100%;background:var(--card);border:1px solid var(--rule);border-radius:4px;
+  color:var(--ink);font-family:inherit;font-size:16px;padding:12px 13px;resize:vertical}
+textarea{min-height:72px}
+input::placeholder,textarea::placeholder{color:var(--dim)}
+input:focus,textarea:focus{outline:none;border-color:var(--sig)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+button.go{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--bg);border-radius:4px;
+  font-family:inherit;font-weight:600;font-size:15px;padding:13px 20px;cursor:pointer;min-height:48px}
+button.go:hover{background:transparent;color:var(--ink)}
+button.go.sig{background:var(--sig);border-color:var(--sig);color:#fff}
+button.go[disabled]{opacity:.45}
+button.ghost{appearance:none;background:none;border:1px solid var(--rule);color:var(--dim);border-radius:4px;
+  font-family:"DM Mono",monospace;font-size:11.5px;padding:11px 13px;cursor:pointer;min-height:44px;
+  touch-action:manipulation}
+button.ghost[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.status{margin-top:15px;font-size:13.5px;color:var(--dim);display:flex;align-items:center;gap:9px}
+.status .dot{width:6px;height:6px;border-radius:50%;background:var(--sig);animation:p 1.1s ease-in-out infinite}
+@keyframes p{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.status .dot{animation:none}}
+.err{margin-top:14px;border-left:2px solid var(--hot);padding:8px 0 8px 12px;font-size:13.5px}
+.note{color:var(--dim);font-size:13px;margin-top:12px;max-width:58ch}
+.sub{color:var(--dim);font-size:13px;margin:4px 0 0;max-width:58ch}
+
+/* the band — the one picture this subject owns */
+.bandwrap{margin-top:22px}
+.bandbar{display:flex;height:34px;border:1px solid var(--rule);border-radius:4px;overflow:hidden;background:var(--card)}
+.bandbar div{flex:1;display:flex;align-items:center;justify-content:center;
+  font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.bandbar div.mid{flex:1.1;background:var(--wash);color:var(--sig);border-left:1px solid var(--rule);border-right:1px solid var(--rule)}
+.bandbar div.on{background:var(--ink);color:var(--bg)}
+.bandbar div.mid.on{background:var(--sig);color:#fff}
+.bandwhy{margin-top:9px;font-size:14px;color:var(--dim)}
+
+.read{margin-top:20px;border-top:2px solid var(--ink);padding-top:14px;font-size:17px;line-height:1.45}
+
+/* the four pieces */
+.piece{border:1px solid var(--rule);border-radius:4px;background:var(--card);padding:14px 16px;margin-top:11px}
+.piece.key{border-color:var(--sig);border-left-width:3px}
+.piece h3{font-size:16px;font-weight:600;display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+.piece h3 .k{font-family:"DM Mono",monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);font-weight:400}
+.piece.key h3 .k{color:var(--sig)}
+.piece p{margin:7px 0 0;font-size:14.5px}
+
+/* session */
+.sess{margin-top:18px;border:2px solid var(--ink);border-radius:5px;background:var(--card);padding:18px}
+.clock{font-family:"Bricolage Grotesque",sans-serif;font-size:56px;font-weight:800;line-height:1;
+  letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.clock.over{color:var(--sig)}
+.goalline{font-size:16px;margin-top:6px}
+.meter{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;margin-top:18px;
+  border-top:1px solid var(--soft);padding-top:14px}
+.count{font-family:"DM Mono",monospace;font-size:40px;line-height:1;font-variant-numeric:tabular-nums;color:var(--sig)}
+.rate{font-family:"DM Mono",monospace;font-size:12px;color:var(--dim);margin-top:5px}
+button.tap{appearance:none;border:2px solid var(--sig);background:var(--sig);color:#fff;border-radius:5px;
+  font-family:inherit;font-weight:600;font-size:17px;padding:0 26px;min-height:64px;cursor:pointer;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button.tap:active{background:transparent;color:var(--sig)}
+.rule{margin-top:16px;border-left:3px solid var(--sig);background:var(--wash);padding:10px 13px;font-size:14.5px}
+.fell{margin-top:14px;border-left:3px solid var(--hot);background:var(--card);padding:11px 13px;font-size:14.5px}
+
+/* history */
+.tw{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-family:"DM Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);font-weight:400;border-bottom:1px solid var(--ink);padding:0 10px 6px 0;white-space:nowrap}
+td{border-bottom:1px solid var(--soft);padding:9px 10px 9px 0;vertical-align:top}
+td.num{font-family:"DM Mono",monospace;white-space:nowrap}
+.del{appearance:none;background:none;border:0;color:var(--dim);cursor:pointer;font:inherit;font-size:18px;padding:4px 6px}
+.readout{margin-top:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule)}
+.readout div{background:var(--card);padding:11px 12px}
+.readout .n{font-family:"DM Mono",monospace;font-size:20px}
+.empty{color:var(--dim);font-size:13.5px;margin-top:12px;font-style:italic}
+h2.sec{font-size:20px;font-weight:800;margin:28px 0 0;letter-spacing:-.01em}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.chip{appearance:none;background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:4px;
+  font-family:inherit;font-size:14px;padding:12px 16px;cursor:pointer;min-height:46px;flex:1 1 auto;min-width:120px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+[hidden]{display:none!important}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>The Band</h1>
+    <p>Flow isn't a mood you summon. It's four conditions. Give it a task and it builds the missing ones.</p>
+  </header>
+  <div class="hr"></div>
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="build" aria-selected="true">Build it</button>
+    <button class="tab" data-tab="hist" aria-selected="false">What works on you</button>
+  </div>
+  <section id="panel-build"></section>
+  <section id="panel-hist" hidden></section>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- the four conditions ---------- */
+// Csikszentmihalyi's list, cut down to the ones you can actually engineer for
+// an arbitrary task. The rest — time distortion, loss of self-consciousness —
+// are symptoms of flow, not levers on it, so there is nothing to do with them.
+
+const PIECES = [
+  { key:"finish", k:"Clear goal",       title:"The finish line" },
+  { key:"score",  k:"Feedback",         title:"The scoreboard" },
+  { key:"dial",   k:"Challenge / skill",title:"The dial" },
+  { key:"cut",    k:"No exits",         title:"The cut" },
+];
+
+const MISSING_LABEL = {
+  goal:"No finish line", feedback:"No feedback", balance:"Out of the band", shield:"Too many exits",
+};
+
+const DOCTRINE = `Flow has entry conditions. It cannot be summoned by wanting it, and advice to
+"focus" or "be present" does nothing. Four conditions can be built on purpose for almost any task:
+
+1. A CLEAR GOAL — you know what done looks like at every moment. Most tasks fail here: "clean the
+   kitchen" and "work on the essay" have no visible finish line, so there is never a moment of
+   completion and attention has nothing to aim at.
+2. IMMEDIATE FEEDBACK — you can tell continuously whether you are getting somewhere. Boring tasks
+   are usually boring because they emit no signal. If the task has no scoreboard, one must be
+   invented and attached to it.
+3. CHALLENGE MATCHED TO SKILL — absorption sits in a narrow band. Below it is boredom, above it is
+   anxiety, and the two need OPPOSITE fixes. Too easy: add a constraint. Too hard: cut scope or
+   lower the bar until it is doable, then start.
+4. NO AVAILABLE EXITS — one specific escape route is what actually ends the session, and it is
+   usually a particular device, tab or room. Naming the one that matters beats a list of tips.
+
+Diagnose which of the four is the binding constraint FOR THIS TASK, then build all four with that
+one leading. Be concrete and physical about this specific activity. Never give general advice
+about focus, discipline, motivation or removing distractions in the abstract.`;
+
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+const pad=n=>String(n).padStart(2,"0");
+
+/* ---------- state ---------- */
+
+const state={log:[],loaded:false};
+let db=null,sample=null,tab="build",ctl=null;
+let task="",feel="",busy=false,err="";
+let plan=null, run=null, tick=null;
+let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null},flashMsg="";
+const DOC="band/state", LS="band:v1";
+
+const FEELS=[
+  ["bored","Bored by it","He is under-challenged. Add constraint; do not reduce scope."],
+  ["dread","Dreading it","He is over-faced. Cut scope and lower the bar until starting is trivial."],
+  ["blank","Can't tell","Work out which it is from the nature of the task itself."],
+];
+
+const EXAMPLE={
+  task:"Wash a sink full of dishes",
+  read:"Nothing about this emits a signal. There is no score, no visible end until it is suddenly over, and your hands know the job well enough that there is no challenge left in it at all.",
+  missing:"feedback",
+  band:{where:"too easy",why:"You have done this a thousand times. Skill is far above the challenge, which is the boredom side of the band, so the fix is to add difficulty rather than reduce it."},
+  finish:"The left half of the sink is empty and the draining board is full. Not the whole sink.",
+  minutes:12,
+  scoreboard:{type:"beat",unit:"items",target:40,how:"Count every item as it hits the rack. Forty in twelve minutes is the bar."},
+  dial:"No rinsing twice, and nothing gets set down once picked up. One journey per item.",
+  cut:"Phone face-down in the other room before the water runs. Not in your pocket.",
+  reentry:"If you drift, stop and do five items deliberately slowly, then go back to pace.",
+  why:"The dishes cannot be made interesting. A rate you are trying to beat can be, and that is the only part you control.",
+  example:true,
+};
+
+function payload(){return{log:state.log.slice(-200)}}
+function adopt(d){if(!d)return false;if(Array.isArray(d.log))state.log=d.log;return true}
+
+async function loadState(){let got=false;
+  try{db=await claude.use("db");
+    if(!db){dbUnavailable=true;dbErr="not available in this view"}
+    else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(s.data())}}
+  catch(e){db=null;dbUnavailable=true;dbErr=(e&&(e.code||e.message))||"unknown error"}
+  try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
+  catch(e){lastSave.local=false}
+  if(!got){try{const raw=localStorage.getItem(LS);if(raw)adopt(JSON.parse(raw))}catch(e){}}
+  state.loaded=true;render()}
+
+async function saveState(){const body=payload();let local=false,cloud=false;
+  try{localStorage.setItem(LS,JSON.stringify(body));local=true}catch(e){}
+  if(db){try{await db.doc(DOC).set(body);cloud=true;dbErr=""}catch(e){dbErr=(e&&(e.code||e.message))||"unknown"}}
+  lastSave={cloud,local};return local||cloud}
+
+// What has actually worked on this person, fed back in. The levers are generic;
+// which ones land is not.
+function historyBlock(){
+  const rows=state.log.filter(e=>e.outcome).slice(-20);
+  if(rows.length<3)return"";
+  const w={locked:"got absorbed",partly:"partly held",no:"did not work"};
+  const byType={};
+  for(const e of rows){const t=e.scoreType||"?";(byType[t]=byType[t]||{n:0,good:0}).n++;
+    if(e.outcome==="locked")byType[t].good++}
+  const tally=Object.keys(byType).map(k=>`  ${k}: worked ${byType[k].good} of ${byType[k].n}`).join("\n");
+  return`\nWHAT HAS ACTUALLY WORKED ON HIM — sessions he ran, with outcomes. Lean on the kinds of
+scoreboard that land for him and away from the ones that do not:\n${tally}\n`+
+  rows.slice(-8).map(e=>`  ${e.task} — ${e.scoreType||"?"} scoreboard — ${w[e.outcome]||""}`).join("\n");}
+
+function errCopy(e){const c=e&&e.code;
+  if(c==="not_granted"||c==="sampling_disabled"||c==="not_declared"||c==="capability_disabled")
+    return"This page can't reach Claude. Open it from your Claude account and allow it.";
+  if(c==="rate_limited")return"Too many requests, or you've hit your usage limit. Give it a minute.";
+  if(c==="invalid_json")return"That came back malformed. Try again.";
+  if(c==="refused")return"Claude declined that one. Reword the task.";
+  return"That didn't go through. Try again."}
+
+/* ---------- build ---------- */
+
+function buildPanel(){
+  if(run)return sessionPanel();
+  const p=plan;
+  let h=`<label class="lab" for="task">The task</label>
+    <textarea id="task" placeholder="What you're trying to do. Be specific — &quot;reconcile the invoices&quot; beats &quot;work&quot;.">${esc(task)}</textarea>
+    <div class="bar"><span class="lab" style="margin-right:2px">Right now it feels</span>
+      ${FEELS.map(f=>`<button class="ghost" data-act="feel" data-v="${f[0]}" aria-pressed="${feel===f[0]}">${f[1]}</button>`).join("")}</div>
+    <div class="bar"><button class="go sig" data-act="build" ${busy?"disabled":""}>${busy?"Working":"Build the conditions"}</button></div>`;
+  if(busy)h+=`<div class="status"><span class="dot"></span>Finding which condition is missing.</div>`;
+  if(err)h+=`<div class="err">${esc(err)}</div>`;
+
+  if(p){
+    const b=p.band||{}, where=String(b.where||"").toLowerCase();
+    h+=`<div class="read">${esc(p.read||"")}</div>
+      <div class="bandwrap">
+        <div class="bandbar">
+          <div class="${where.includes("easy")?"on":""}">Bored</div>
+          <div class="mid ${where.includes("band")?"on":""}">The band</div>
+          <div class="${where.includes("hard")?"on":""}">Swamped</div>
+        </div>
+        <div class="bandwhy">${esc(b.why||"")}</div>
+      </div>`;
+
+    const miss=String(p.missing||"").toLowerCase();
+    const keyFor={goal:"finish",feedback:"score",balance:"dial",shield:"cut"}[miss];
+    const sc=p.scoreboard||{};
+    const body={
+      finish:`${esc(p.finish||"")}${p.minutes?` <span class="mono" style="color:var(--dim)">· ${Number(p.minutes)} min</span>`:""}`,
+      score:`${esc(sc.how||"")}${sc.target?` <span class="mono" style="color:var(--dim)">· target ${Number(sc.target)} ${esc(sc.unit||"")}</span>`:""}`,
+      dial:esc(p.dial||""),
+      cut:esc(p.cut||""),
+    };
+    for(const pc of PIECES){
+      h+=`<div class="piece ${pc.key===keyFor?"key":""}">
+        <h3>${pc.title}<span class="k">${pc.k}${pc.key===keyFor?" · the missing one":""}</span></h3>
+        <p>${body[pc.key]}</p></div>`}
+    if(p.why)h+=`<p class="note">${esc(p.why)}</p>`;
+    h+=`<div class="bar"><button class="go sig" data-act="start">Start the session</button>
+      <button class="ghost" data-act="rebuild">Build it differently</button></div>`;
+    if(p.example)h+=`<p class="note">An example, so you can see the shape. Put your own task in.</p>`;
+  }
+  if(dbUnavailable)h=`<div class="err" style="margin-top:0;margin-bottom:14px">Cloud storage isn't available here — this browser only.</div>`+h;
+  return h}
+
+async function doBuild(){
+  const t=(document.getElementById("task").value||"").trim();
+  task=t;
+  if(!t){err="Put the task in first.";return render()}
+  err="";busy=true;render();ctl=new AbortController();
+  const ft=(FEELS.find(f=>f[0]===feel)||[])[2]||"";
+  const prompt=`Build the conditions for flow on this specific task.
+
+TASK: ${t}
+${ft?`HOW IT FEELS RIGHT NOW: ${ft}`:""}
+
+${DOCTRINE}
+${historyBlock()}
+
+THE SCOREBOARD is the part that matters most and the part people get wrong. Invent a signal the
+task does not already emit, attached to something he actually controls, countable in the moment
+without stopping to check. Pick its type:
+  count  — tally units as they happen, no target
+  beat   — a rate to beat inside the session
+  streak — consecutive units without a named failure
+Give the unit as a short plural noun ("items", "lines", "reps"). Give a target only for beat and
+streak, and make it demanding but hittable.
+
+THE FINISH LINE is for ONE session, not the whole task, and must be visible from across the room
+— a state you can see, not an amount of effort. Give the session length in minutes.
+
+THE DIAL is one constraint, in one sentence. Too easy, add difficulty. Too hard, cut scope or drop
+the quality bar. Never both.
+
+THE CUT is the single most likely exit for THIS task, named specifically, and what to do about it
+before starting.
+
+Reply with only this JSON:
+{"read":"one or two sentences on why this task does not hold attention. Specific to it, not general.",
+"missing":"goal|feedback|balance|shield",
+"band":{"where":"too easy|in the band|too hard","why":"one sentence"},
+"finish":"","minutes":20,
+"scoreboard":{"type":"count|beat|streak","unit":"","target":0,"how":"how to score it, in one sentence"},
+"dial":"","cut":"","reentry":"what to do the moment you notice you have drifted, in one sentence",
+"why":"one sentence on why this fix for this task"}`;
+  try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
+    plan=Object.assign({task:t},out,{example:false})}
+  catch(e){if(!(e&&e.code==="cancelled"))err=errCopy(e)}
+  busy=false;render()}
+
+/* ---------- session ---------- */
+
+function startRun(){
+  const sc=(plan&&plan.scoreboard)||{};
+  run={started:Date.now(),count:0,fell:false,
+    minutes:Number(plan&&plan.minutes)||20,
+    type:String(sc.type||"count").toLowerCase(),
+    unit:String(sc.unit||"units"),target:Number(sc.target)||0};
+  if(tick)clearInterval(tick);
+  tick=setInterval(()=>{const el=document.getElementById("clock");
+    if(el){const s=elapsed();el.textContent=fmt(s);
+      el.classList.toggle("over",s>=run.minutes*60)}
+    const r=document.getElementById("rate");if(r)r.textContent=rateText()},1000);
+  render()}
+
+const elapsed=()=>Math.floor((Date.now()-run.started)/1000);
+const fmt=s=>`${pad(Math.floor(s/60))}:${pad(s%60)}`;
+function rateText(){
+  const base=run.target?`target ${run.target} ${run.unit}`:"";
+  // A rate over the first few seconds is noise — five taps in six seconds reads
+  // as "pace for 750". The scoreboard is the one thing that has to be credible,
+  // so say nothing until the sample is worth something.
+  const s=elapsed();
+  if(!run.count||s<45)return base;
+  const mins=s/60;
+  const per=(run.count/mins).toFixed(1);
+  const pace=run.target?` · on for ${Math.round(run.count/mins*run.minutes)}`:"";
+  return `${per} ${run.unit}/min${pace}`}
+
+function sessionPanel(){
+  const p=plan||{},sc=p.scoreboard||{};
+  const s=elapsed();
+  let h=`<div class="sess">
+    <div class="lab">${run.minutes} minute session</div>
+    <div class="clock ${s>=run.minutes*60?"over":""}" id="clock">${fmt(s)}</div>
+    <div class="goalline">${esc(p.finish||"")}</div>
+    <div class="meter">
+      <div><div class="count" id="count">${run.count}${run.target?`<span style="font-size:18px;color:var(--dim)"> / ${run.target}</span>`:""}</div>
+        <div class="rate" id="rate">${rateText()}</div>
+        <div class="lab" style="margin-top:6px">${esc(run.unit)}${run.type==="streak"?" in a row":""}</div></div>
+      <button class="tap" data-act="tap">+1</button>
+    </div>
+    ${p.dial?`<div class="rule"><span class="lab" style="display:block;margin-bottom:3px">The rule</span>${esc(p.dial)}</div>`:""}
+    ${run.fell&&p.reentry?`<div class="fell"><span class="lab" style="display:block;margin-bottom:3px">Get back in</span>${esc(p.reentry)}</div>`:""}
+    <div class="bar">
+      <button class="ghost" data-act="fell">I drifted</button>
+      ${run.type==="streak"?`<button class="ghost" data-act="broke">Broke the streak</button>`:`<button class="ghost" data-act="minus">&minus;1</button>`}
+      <button class="go" data-act="end">End session</button>
+    </div>
+  </div>`;
+  if(run.ended)h+=`<div class="sess" style="border-color:var(--sig)">
+    <h3 style="font-size:18px">Did it hold?</h3>
+    <p class="sub">This is the only thing that teaches it which levers work on you.</p>
+    <div class="chips">
+      <button class="chip" data-act="out" data-v="locked">Got absorbed</button>
+      <button class="chip" data-act="out" data-v="partly">Partly</button>
+      <button class="chip" data-act="out" data-v="no">Didn't work</button>
+    </div></div>`;
+  return h}
+
+async function endRun(outcome){
+  state.log.push({task:plan&&plan.task||task,at:Date.now(),
+    minutes:Math.round(elapsed()/60),count:run.count,
+    scoreType:run.type,missing:plan&&plan.missing,outcome});
+  state.log=state.log.slice(-200);
+  if(tick){clearInterval(tick);tick=null}
+  run=null;
+  const ok=await saveState();
+  flashMsg=ok?(lastSave.cloud?"Logged.":"Logged to this browser."):"Couldn't save that one.";
+  render();setTimeout(()=>{flashMsg="";render()},2600)}
+
+/* ---------- history ---------- */
+
+function histPanel(){
+  const rows=state.log.filter(e=>e.outcome);
+  const byType={};
+  for(const e of rows){const t=e.scoreType||"?";(byType[t]=byType[t]||{n:0,g:0}).n++;
+    if(e.outcome==="locked")byType[t].g++}
+  const keys=Object.keys(byType);
+  let h=`<h2 class="sec">Which scoreboards land</h2>
+    <p class="sub">Same four conditions for everyone. Which lever actually moves you is not the same for everyone, so it only learns this from sessions you ran.</p>`;
+  if(!keys.length)h+=`<p class="empty">Nothing yet. Run a session and say whether it held.</p>`;
+  else h+=`<div class="readout">${keys.map(k=>`<div>
+      <div class="n">${byType[k].g}/${byType[k].n}</div>
+      <span class="lab">${esc(k)}</span></div>`).join("")}</div>
+    <p class="note">Read as "got absorbed / sessions run". Once three sessions are in, the ones that work get preferred when it builds the next plan.</p>`;
+
+  h+=`<h2 class="sec">Sessions</h2>`;
+  if(!state.log.length)h+=`<p class="empty">No sessions yet.</p>`;
+  else h+=`<div class="tw"><table><thead><tr><th>Task</th><th>Min</th><th>Count</th><th>Board</th><th>Held?</th><th></th></tr></thead><tbody>
+    ${state.log.slice().reverse().map((e,i)=>`<tr>
+      <td>${esc(e.task||"")}</td><td class="num">${e.minutes||0}</td><td class="num">${e.count||0}</td>
+      <td class="num">${esc(e.scoreType||"—")}</td>
+      <td>${({locked:"Absorbed",partly:"Partly",no:"No"})[e.outcome]||"—"}</td>
+      <td class="num"><button class="del" data-act="dellog" data-i="${state.log.length-1-i}" aria-label="Remove">&times;</button></td>
+    </tr>`).join("")}</tbody></table></div>`;
+  h+=`<h2 class="sec">Storage</h2><p class="sub">Cloud: <b>${db?(dbErr?`failing (${esc(dbErr)})`:"working"):"unavailable"}</b><br>This browser: <b>${lastSave.local===true?"working":lastSave.local===false?"blocked":"untested"}</b></p>`;
+  return h}
+
+/* ---------- plumbing ---------- */
+
+function render(){
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.tab===tab)));
+  const m={build:["panel-build",buildPanel],hist:["panel-hist",histPanel]};
+  for(const k of Object.keys(m)){const el=document.getElementById(m[k][0]);
+    el.hidden=k!==tab;if(k===tab)el.innerHTML=m[k][1]()}
+  if(flashMsg&&tab==="build"){const d=document.createElement("p");
+    d.className="note";d.style.color="var(--sig)";d.textContent=flashMsg;
+    document.getElementById("panel-build").prepend(d)}}
+
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("[data-act],.tab");if(!t)return;
+  if(t.classList.contains("tab")){
+    if(tab==="build"&&!run){const el=document.getElementById("task");if(el)task=el.value}
+    tab=t.dataset.tab;err="";return render()}
+  const act=t.dataset.act,v=t.dataset.v;
+  if(act==="feel"){const el=document.getElementById("task");if(el)task=el.value;
+    feel=feel===v?"":v;return render()}
+  if(act==="build")return void doBuild();
+  if(act==="rebuild"){plan=null;return render()}
+  if(act==="start"){if(plan)startRun();return}
+  if(act==="tap"){run.count++;
+    const c=document.getElementById("count");
+    if(c)c.innerHTML=run.count+(run.target?`<span style="font-size:18px;color:var(--dim)"> / ${run.target}</span>`:"");
+    const r=document.getElementById("rate");if(r)r.textContent=rateText();return}
+  if(act==="minus"){run.count=Math.max(0,run.count-1);return render()}
+  if(act==="broke"){run.count=0;return render()}
+  if(act==="fell"){run.fell=true;return render()}
+  if(act==="end"){run.ended=true;return render()}
+  if(act==="out")return void endRun(v);
+  if(act==="dellog"){state.log.splice(Number(t.dataset.i),1);saveState();return render()}});
+
+document.addEventListener("input",ev=>{if(ev.target.id==="task")task=ev.target.value});
+
+plan=EXAMPLE;
+render();
+(async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}
+  if(!sample){err="This page can't reach Claude from here. Open it from your Claude account.";render()}
+  loadState()})();
+</script>
