@@ -7,7 +7,7 @@ and the artifact is published as one file. They differ only in the
 wrapper — the artifact host supplies its own head, so that copy must not
 carry one.
 """
-import os
+import hashlib, os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ADDONS = ["spark.js", "language.js"]
@@ -31,8 +31,18 @@ HEAD = '''<!doctype html>
 '''
 
 
+def build_id():
+    h = hashlib.sha256()
+    for name in ["index.html"] + ADDONS:
+        path = os.path.join(HERE, name)
+        if os.path.exists(path):
+            h.update(open(path, "rb").read())
+    return h.hexdigest()[:10]
+
+
 def main():
     body = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
+    body = '<script>window.__BUILD__=%r;</script>\n' % build_id() + body
     tail = ""
     for name in ADDONS:
         path = os.path.join(HERE, name)

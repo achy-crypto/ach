@@ -1316,6 +1316,7 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
 <div class="foot">
   <span class="lab" id="save-state">local only</span>
+  <span class="lab" id="build-id" hidden></span>
   <button class="back" id="sound-toggle" style="margin:0">Sound: on</button>
 </div>
 
@@ -5004,6 +5005,12 @@ $("sound-toggle").addEventListener("click", () => {
 });
 
 function boot() {
+  /* The build stamp is injected at build time; showing it means "which
+     version am I actually running" is answerable rather than guessed. */
+  if (typeof window.__BUILD__ === "string") {
+    $("build-id").textContent = "build " + window.__BUILD__;
+    $("build-id").hidden = false;
+  }
   $("sound-toggle").textContent = "Sound: " + (state.sound ? "on" : "off");
   if (typeof state.soundVol === "number") { snd.vol = state.soundVol; $("sndvol").value = Math.round(snd.vol * 100); }
   $("save-state").textContent = !state.loaded ? "checking storage"

@@ -1,5 +1,12 @@
-/* Cold Start — cache-first shell so it opens with no signal at all. */
-const CACHE = "coldstart-v1";
+/* Cold Start — offline shell.
+
+   The cache name carries the build id, so a new build installs a fresh
+   cache and the activate handler drops every older one. Navigations go to
+   the network first and fall back to the cache, so an online visit always
+   gets the current page instead of whatever was cached first; everything
+   else stays cache-first for speed and for no-signal use. */
+const BUILD = "5a7b446e04";
+const CACHE = "coldstart-" + BUILD;
 const SHELL = ["./", "./index.html", "./spark.js", "./language.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -12,21 +19,40 @@ self.addEventListener("activate", (e) => {
     .then(() => self.clients.claim()));
 });
 
+const isPage = (req) =>
+  req.mode === "navigate" || (req.destination === "document") || /\/(index\.html)?$/.test(new URL(req.url).pathname);
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+
+  if (isPage(req)) {
+    /* Fresh when there is a connection, cached when there is not. */
+    /* cache: "reload" so the browser's own HTTP cache cannot hand back the
+       stale page underneath us — that defeats the whole point. */
+    e.respondWith(
+      fetch(new Request(req.url, { cache: "reload", credentials: "same-origin" })).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match("./index.html", { ignoreSearch: true })
+        .then((hit) => hit || caches.match("./", { ignoreSearch: true })))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(req, { ignoreSearch: true }).then((hit) => {
       if (hit) return hit;
       return fetch(req).then((res) => {
-        /* Cache what comes back, web fonts included — they're opaque
-           cross-origin responses but they replay fine. */
         if (res && (res.ok || res.type === "opaque")) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         }
         return res;
-      }).catch(() => (req.mode === "navigate" ? caches.match("./index.html") : Response.error()));
+      }).catch(() => Response.error());
     })
   );
 });
