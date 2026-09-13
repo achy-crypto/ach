@@ -126,9 +126,11 @@ h2.sec{font-size:20px;font-weight:800;margin:28px 0 0;letter-spacing:-.01em}
   <div class="hr"></div>
   <div class="tabs" role="tablist">
     <button class="tab" data-tab="build" aria-selected="true">Build it</button>
-    <button class="tab" data-tab="hist" aria-selected="false">What works on you</button>
+    <button class="tab" data-tab="saved" aria-selected="false">Saved</button>
+    <button class="tab" data-tab="hist" aria-selected="false">What works</button>
   </div>
   <section id="panel-build"></section>
+  <section id="panel-saved" hidden></section>
   <section id="panel-hist" hidden></section>
 </div>
 
@@ -177,7 +179,7 @@ const pad=n=>String(n).padStart(2,"0");
 
 /* ---------- state ---------- */
 
-const state={log:[],loaded:false};
+const state={log:[],plans:[],loaded:false};
 let db=null,sample=null,tab="build",ctl=null;
 let task="",feel="",busy=false,err="";
 let plan=null, run=null, tick=null;
@@ -205,8 +207,24 @@ const EXAMPLE={
   example:true,
 };
 
-function payload(){return{log:state.log.slice(-200)}}
-function adopt(d){if(!d)return false;if(Array.isArray(d.log))state.log=d.log;return true}
+function payload(){return{log:state.log.slice(-200),plans:state.plans.slice(-40)}}
+function adopt(d){if(!d)return false;
+  if(Array.isArray(d.log))state.log=d.log;
+  if(Array.isArray(d.plans))state.plans=d.plans;
+  return true}
+
+// A built plan is worth keeping: it costs a model call to make, and a task you
+// do weekly deserves the same conditions every time rather than a fresh guess.
+function savePlan(p){
+  const key=String(p.task||"").toLowerCase().trim();
+  const i=state.plans.findIndex(x=>String(x.task||"").toLowerCase().trim()===key);
+  const row={id:i>=0?state.plans[i].id:"p"+Date.now().toString(36),
+    task:p.task,plan:p,at:Date.now(),
+    runs:i>=0?(state.plans[i].runs||0):0,
+    lastOutcome:i>=0?state.plans[i].lastOutcome:null};
+  if(i>=0)state.plans[i]=row;else state.plans.push(row);
+  state.plans=state.plans.slice(-40);
+  saveState()}
 
 async function loadState(){let got=false;
   try{db=await claude.use("db");
@@ -332,7 +350,8 @@ Reply with only this JSON:
 "dial":"","cut":"","reentry":"what to do the moment you notice you have drifted, in one sentence",
 "why":"one sentence on why this fix for this task"}`;
   try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
-    plan=Object.assign({task:t},out,{example:false})}
+    plan=Object.assign({task:t},out,{example:false});
+    savePlan(plan)}
   catch(e){if(!(e&&e.code==="cancelled"))err=errCopy(e)}
   busy=false;render()}
 
@@ -401,11 +420,39 @@ async function endRun(outcome){
     minutes:Math.round(elapsed()/60),count:run.count,
     scoreType:run.type,missing:plan&&plan.missing,outcome});
   state.log=state.log.slice(-200);
+  const key=String((plan&&plan.task)||task||"").toLowerCase().trim();
+  const sp=state.plans.find(x=>String(x.task||"").toLowerCase().trim()===key);
+  if(sp){sp.runs=(sp.runs||0)+1;sp.lastOutcome=outcome}
   if(tick){clearInterval(tick);tick=null}
   run=null;
   const ok=await saveState();
   flashMsg=ok?(lastSave.cloud?"Logged.":"Logged to this browser."):"Couldn't save that one.";
   render();setTimeout(()=>{flashMsg="";render()},2600)}
+
+/* ---------- saved plans ---------- */
+
+const OUTLABEL={locked:"Absorbed",partly:"Partly",no:"Didn't work"};
+
+function savedPanel(){
+  let h=`<h2 class="sec">Saved plans</h2>
+    <p class="sub">Every set of conditions you've built, kept. Reopen one and start it again rather than paying for a fresh guess at a task you already solved.</p>`;
+  if(!state.plans.length)
+    return h+`<p class="empty">Nothing yet. Build a set of conditions and it lands here automatically.</p>`;
+
+  const rows=state.plans.slice().sort((a,b)=>(b.at||0)-(a.at||0));
+  for(const r of rows){
+    const p=r.plan||{},sc=p.scoreboard||{};
+    const when=new Date(r.at||Date.now());
+    h+=`<div class="piece">
+      <h3>${esc(r.task||"")}<span class="k">${esc(sc.type||"")}${p.minutes?` · ${Number(p.minutes)} min`:""}</span></h3>
+      <p style="color:var(--dim);font-size:14px">${esc(p.finish||"")}</p>
+      <div class="bar">
+        <button class="go sig" data-act="openplan" data-v="${esc(r.id)}">Open</button>
+        <span class="lab">${when.toLocaleDateString()}${r.runs?` · run ${r.runs}×`:" · never run"}${r.lastOutcome?` · ${OUTLABEL[r.lastOutcome]||""}`:""}</span>
+        <button class="del" data-act="delplan" data-v="${esc(r.id)}" aria-label="Delete" style="margin-left:auto">&times;</button>
+      </div>
+    </div>`}
+  return h}
 
 /* ---------- history ---------- */
 
@@ -439,7 +486,7 @@ function histPanel(){
 
 function render(){
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.tab===tab)));
-  const m={build:["panel-build",buildPanel],hist:["panel-hist",histPanel]};
+  const m={build:["panel-build",buildPanel],saved:["panel-saved",savedPanel],hist:["panel-hist",histPanel]};
   for(const k of Object.keys(m)){const el=document.getElementById(m[k][0]);
     el.hidden=k!==tab;if(k===tab)el.innerHTML=m[k][1]()}
   if(flashMsg&&tab==="build"){const d=document.createElement("p");
@@ -456,6 +503,9 @@ document.addEventListener("click",ev=>{
     feel=feel===v?"":v;return render()}
   if(act==="build")return void doBuild();
   if(act==="rebuild"){plan=null;return render()}
+  if(act==="openplan"){const r=state.plans.find(x=>x.id===v);
+    if(r){plan=r.plan;task=r.task;tab="build";err=""}return render()}
+  if(act==="delplan"){state.plans=state.plans.filter(x=>x.id!==v);saveState();return render()}
   if(act==="start"){if(plan)startRun();return}
   if(act==="tap"){run.count++;
     const c=document.getElementById("count");
