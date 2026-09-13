@@ -66,6 +66,8 @@ HEAD = """<!doctype html>
 <body>
 """
 
+ADDONS = ["spark.js", "language.js"]
+
 REGISTER = """
 <script>
 /* Registered last so a failure here can never stop the app booting. */
@@ -73,13 +75,15 @@ if ("serviceWorker" in navigator) {
   addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
 </script>
+<script src="./spark.js"></script>
+<script src="./language.js"></script>
 </body>
 </html>
 """
 
 SW = """/* Cold Start — cache-first shell so it opens with no signal at all. */
 const CACHE = "%s";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+const SHELL = ["./", "./index.html", "./spark.js", "./language.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -137,6 +141,11 @@ def main():
     open(os.path.join(OUT, "sw.js"), "w", encoding="utf-8").write(SW)
     open(os.path.join(OUT, "manifest.webmanifest"), "w", encoding="utf-8").write(MANIFEST)
     open(os.path.join(OUT, ".nojekyll"), "w").write("")
+    for name in ADDONS:                      # user-authored, copied verbatim
+        src = os.path.join(HERE, name)
+        if os.path.exists(src):
+            open(os.path.join(OUT, name), "w", encoding="utf-8").write(
+                open(src, encoding="utf-8").read())
     for n in (192, 512):
         png(n, os.path.join(OUT, "icon-%d.png" % n))
     for f in sorted(os.listdir(OUT)):
