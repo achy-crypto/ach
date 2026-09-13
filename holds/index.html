@@ -1,0 +1,659 @@
+<title>Will It Hold</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&family=Roboto+Mono:wght@400;500&display=swap">
+
+<style>
+:root{
+  --ground:#e9ecee;--card:#f7f8f9;--ink:#16191d;--dim:#666d75;
+  --rule:#ccd2d7;--soft:#dde1e4;--sig:#b8620a;--sig-wash:#b8620a1a;--ok:#2f7a55;--bad:#a33227;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#101316;--card:#181c20;--ink:#e7e9ea;--dim:#8b939b;
+  --rule:#2a2f35;--soft:#212529;--sig:#e2933f;--sig-wash:#e2933f24;--ok:#6db98c;--bad:#e0776a}}
+:root[data-theme="dark"]{
+  --ground:#101316;--card:#181c20;--ink:#e7e9ea;--dim:#8b939b;
+  --rule:#2a2f35;--soft:#212529;--sig:#e2933f;--sig-wash:#e2933f24;--ok:#6db98c;--bad:#e0776a}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:"Barlow",system-ui,sans-serif;
+  font-size:15.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:640px;margin:0 auto;padding:26px 18px 80px}
+.mono{font-family:"Roboto Mono",ui-monospace,Menlo,monospace}
+.lab{font-family:"Roboto Mono",monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim)}
+
+header.top{border-bottom:2px solid var(--ink);padding-bottom:10px}
+header.top h1{font-family:"Barlow Condensed",sans-serif;font-size:33px;font-weight:700;
+  letter-spacing:.01em;margin:0;text-transform:uppercase}
+header.top p{margin:5px 0 0;color:var(--dim);font-size:13.5px;max-width:54ch}
+.hr{border-bottom:1px solid var(--ink);margin-bottom:18px}
+
+.tabs{display:flex;border-bottom:1px solid var(--rule);margin-bottom:20px}
+.tab{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+  font-family:inherit;font-size:13.5px;font-weight:600;color:var(--dim);padding:11px 14px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--sig)}
+.tab:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+
+.row{display:flex;gap:8px}
+input[type=text]{flex:1;min-width:0;background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  color:var(--ink);font-family:inherit;font-size:16px;padding:12px 13px}
+input[type=text]::placeholder{color:var(--dim)}
+input[type=text]:focus{outline:none;border-color:var(--sig)}
+button.go{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--ground);
+  font-family:inherit;font-weight:600;font-size:15px;padding:12px 20px;border-radius:3px;cursor:pointer;min-height:46px}
+button.go:hover{background:transparent;color:var(--ink)}
+button.go[disabled]{opacity:.45}
+.seg{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.seg button{appearance:none;background:none;border:1px solid var(--rule);color:var(--dim);border-radius:3px;
+  font-family:"Roboto Mono",monospace;font-size:11.5px;padding:10px 12px;cursor:pointer;min-height:42px;
+  touch-action:manipulation}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.fieldlab{margin:18px 0 0}
+
+.status{margin-top:15px;font-size:13.5px;color:var(--dim);display:flex;align-items:center;gap:9px}
+.status .dot{width:6px;height:6px;border-radius:50%;background:var(--sig);animation:p 1.1s ease-in-out infinite}
+@keyframes p{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.status .dot{animation:none}}
+.err{margin-top:15px;border-left:2px solid var(--sig);padding:8px 0 8px 12px;font-size:13.5px}
+.saved{color:var(--ok);font-size:13px;margin-top:9px}
+.note{color:var(--dim);font-size:13px;margin-top:12px;max-width:58ch}
+.subtle{color:var(--dim);font-size:13px;margin:4px 0 0;max-width:60ch}
+h2.sec{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.03em;
+  font-size:19px;font-weight:700;margin:30px 0 0}
+
+/* verdict */
+.sheet{margin-top:22px}
+.flagx{display:inline-block;border:1px solid var(--rule);color:var(--dim);font-family:"Roboto Mono",monospace;
+  font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;margin-bottom:10px}
+.verdict{border-top:2px solid var(--ink);border-bottom:1px solid var(--rule);padding:15px 0 17px}
+.vtop{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.vname{font-size:19px;font-weight:600;line-height:1.25}
+.vident{color:var(--dim);font-size:13px;margin-top:3px;max-width:42ch}
+.vnum{font-family:"Barlow Condensed",sans-serif;font-size:62px;font-weight:700;line-height:.82;
+  color:var(--sig);font-variant-numeric:tabular-nums;text-align:right}
+.vband{text-align:right;font-family:"Roboto Mono",monospace;font-size:10.5px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--dim);margin-top:6px;max-width:21ch;margin-left:auto;text-wrap:balance}
+.dock{margin-top:13px;border-left:2px solid var(--sig);background:var(--sig-wash);padding:9px 12px;font-size:13.5px}
+
+/* shape stats */
+.shape{display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);margin-top:16px}
+.shape div{background:var(--card);padding:10px 11px}
+.shape .n{font-family:"Roboto Mono",monospace;font-size:18px;font-variant-numeric:tabular-nums;line-height:1.15}
+.shape .k{display:block;margin-top:3px}
+.wall{margin-top:12px;border-left:2px solid var(--bad);padding:9px 12px;font-size:13.5px;background:var(--card)}
+
+/* axes */
+.axis{padding:13px 0;border-bottom:1px solid var(--soft)}
+.arow{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.alab{font-size:14.5px;font-weight:600}
+.ahint{display:block;color:var(--dim);font-size:12px;font-weight:400;margin-top:1px}
+.aval{font-family:"Roboto Mono",monospace;font-size:12px;color:var(--dim)}
+.ticks{display:flex;gap:3px;margin:8px 0 7px}
+.ticks i{height:6px;flex:1;background:var(--rule);border-radius:1px}
+.ticks i.on{background:var(--sig)}
+.anote{color:var(--dim);font-size:13.5px}
+
+/* tactics — the actual payload */
+.plan{margin-top:20px;border:1px solid var(--ink);border-radius:3px;background:var(--card);padding:15px 17px}
+.plan h3{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.04em;
+  font-size:17px;font-weight:700;margin:0 0 4px}
+.plan ul{margin:10px 0 0;padding-left:19px}
+.plan li{margin-bottom:7px;font-size:14.5px}
+.plan li:last-child{margin-bottom:0}
+.ss{display:inline-block;font-family:"Roboto Mono",monospace;font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;padding:3px 8px;border:1px solid var(--rule);margin-top:11px}
+.ss.yes{border-color:var(--ok);color:var(--ok)}
+.ss.no{border-color:var(--bad);color:var(--bad)}
+
+/* verdict capture */
+.after{margin-top:20px;border-top:1px solid var(--rule);padding-top:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.chip{appearance:none;background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:3px;
+  font-family:inherit;font-size:14px;padding:12px 16px;cursor:pointer;
+  min-height:46px;flex:1 1 auto;min-width:128px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.chip:active{background:var(--ink);color:var(--ground)}
+
+/* picks */
+.pick{border-top:1px solid var(--rule);padding:15px 0}
+.pick:first-of-type{border-top:2px solid var(--ink)}
+.ptop{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+.pname{font-size:16.5px;font-weight:600}
+.pname span{color:var(--dim);font-weight:400}
+.pnum{font-family:"Roboto Mono",monospace;font-size:19px;font-weight:500;color:var(--sig)}
+.pident{color:var(--dim);font-size:12.5px;margin-top:3px}
+.pwhy{margin-top:8px;font-size:14.5px}
+.tags{margin-top:9px;display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-family:"Roboto Mono",monospace;font-size:10.5px;border:1px solid var(--rule);color:var(--dim);padding:3px 8px}
+
+/* tables */
+.tw{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-family:"Roboto Mono",monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);font-weight:400;border-bottom:1px solid var(--ink);padding:0 10px 6px 0;white-space:nowrap}
+td{border-bottom:1px solid var(--soft);padding:9px 10px 9px 0;vertical-align:top}
+td.num{font-family:"Roboto Mono",monospace;white-space:nowrap}
+.del{appearance:none;background:none;border:0;color:var(--dim);cursor:pointer;font:inherit;font-size:18px;padding:4px 6px}
+.del:hover{color:var(--sig)}
+.addrow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.addrow input[type=text]{flex:2;min-width:140px}
+.addrow input.sc{flex:0 0 78px;min-width:78px;text-align:center}
+.justadded td{background:var(--sig-wash)}
+.readout{margin-top:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule)}
+.readout div{background:var(--card);padding:11px 12px}
+.readout .n{font-family:"Roboto Mono",monospace;font-size:20px}
+.empty{color:var(--dim);font-size:13.5px;margin-top:12px;font-style:italic}
+[hidden]{display:none!important}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Will It Hold</h1>
+    <p>Not whether a show is good — whether you'll actually get through it. Two different questions, and the answers often disagree.</p>
+  </header>
+  <div class="hr"></div>
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="read" aria-selected="true">Check one</button>
+    <button class="tab" data-tab="find" aria-selected="false">Find one</button>
+    <button class="tab" data-tab="cal" aria-selected="false">Your scale</button>
+  </div>
+  <section id="panel-read"></section>
+  <section id="panel-find" hidden></section>
+  <section id="panel-cal" hidden></section>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- what actually decides whether you finish something ---------- */
+
+const AXES = [
+  { key:"hook",     label:"Grabs you fast",        hint:"Something pulls in the first few minutes, not the third episode", w:2.5 },
+  { key:"payoff",   label:"Pays off often",        hint:"A joke, a turn, a reveal lands regularly. Little dead air",       w:2.5 },
+  { key:"tracking", label:"Easy to follow",        hint:"Few names and threads to hold. Look away and you're not lost",    w:2.5 },
+  { key:"reentry",  label:"Easy to come back to",  hint:"Drop it three weeks, pick it up without rewatching",              w:2   },
+  { key:"epload",   label:"Cheap to start one",    hint:"Short episodes. Low cost to press play on the next",             w:1.5 },
+  { key:"pull",     label:"Makes you want more",   hint:"Ends leaving you wanting the next one",                          w:1.5 },
+];
+const WSUM = AXES.reduce((a,x)=>a+x.w,0);
+
+const VERDICTS = [
+  { key:"finished", label:"Finished it" },
+  { key:"stuck",    label:"Still watching" },
+  { key:"drifted",  label:"Drifted off" },
+  { key:"bailed",   label:"Bailed early" },
+];
+
+// Starting estimates, deliberately including titles from the aura scale so the
+// two rulers share a vocabulary. Justified is the point of the whole app: low
+// on aura, high here. Quality and holdability are not the same axis.
+const BASE_ANCHORS = [
+  { title:"It's Always Sunny in Philadelphia", score:9.5, note:"22 minutes, no continuity to hold, funny inside a minute. The ceiling for holdability." },
+  { title:"Eastbound & Down", score:9, note:"Half-hour, per-episode payoff, nothing to track." },
+  { title:"Mr Inbetween", score:9, note:"25-minute episodes, largely self-contained, no homework." },
+  { title:"Justified", score:7.5, note:"Case of the week. Low tracking load, easy re-entry. Holds fine even if the aura score is a 3 — that is the point of this scale." },
+  { title:"The Shield", score:6.5, note:"Propulsive, but the serialised arcs punish a long gap." },
+  { title:"Fargo (season 1)", score:6.5, note:"Hour-long, moderate tracking, strong pull forward." },
+  { title:"Severance", score:6, note:"Hooks hard and pulls hard, but it is deliberately slow and the mystery demands you hold details." },
+  { title:"Ozark", score:4.5, note:"Hour-long, grim, heavy plot tracking, long flat stretches." },
+  { title:"The Wire", score:3, note:"Enormous cast, no hand-holding, four episodes before it opens up. Needs a locked-in brain." },
+];
+
+const DOCTRINE = `HOLDABILITY is whether this person actually gets through the thing. It is NOT
+quality, prestige, taste, or whether the show is worth watching. A brilliant show can score 3
+and a mediocre one can score 9. Never let your opinion of the work move this number.
+
+What raises it: something grabbing inside the first few minutes; frequent payoff so attention
+gets fed; a low load on working memory — few names, factions, timelines to hold; episodes
+short enough that starting one is cheap; being able to return after weeks away without
+rewatching; ending in a way that makes the next one easy to start.
+
+What sinks it: a slow burn that asks for patience up front; long atmospheric stretches with
+nothing landing; a large cast and dense plot you must track or be lost; hour-plus episodes;
+heavy serialisation that punishes a gap; subtitles combined with a second-screen habit;
+a season count that reads as impossible before you begin.
+
+Be concrete about the work. Runtimes, cast size, how fast the first episode moves, whether
+episodes close anything. Do not speak in generalities about attention.`;
+
+const PLACEMENT = `THE USER'S SCALE IS THE FINAL AUTHORITY.
+Pick exactly ONE anchor below that is closest in HOLDABILITY — not genre, quality or subject.
+Copy its title EXACTLY. Then give a delta from -1.5 to +1.5. 0 means the same difficulty to
+finish; +0.5 clearly easier to finish; -0.5 clearly harder. Usually stay within +/-0.75.
+Final score = anchor score + delta. The axes are evidence for the placement, never an override.`;
+
+const SHAPE = `FAMILIARITY 0-3: 3 thoroughly; 2 well enough; 1 mostly reputation; 0 unknown.
+IDENT: creator, years, and the premise in one line so a wrong match is caught.`;
+
+const STATES = [
+  ["fried",  "Fried",     "He is depleted. Only recommend things that need almost nothing from him: short, funny or propulsive, no tracking load, no subtitles."],
+  ["normal", "Normal",    ""],
+  ["locked", "Locked in", "He has real attention available. Heavier, slower, denser work is allowed — but it still has to be genuinely finishable, not merely worthwhile."],
+];
+
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const ax05=v=>clamp(Number(v)||0,0,5);
+const norm=s=>String(s||"").toLowerCase().replace(/\s+/g," ").trim();
+function band(v){
+  if(v>=9)return"You'll finish it";
+  if(v>=8)return"Sticks";
+  if(v>=7)return"Holds, with effort";
+  if(v>=5.5)return"You'll drift";
+  if(v>=4)return"You'll drop it";
+  return"Won't survive episode two";
+}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+
+/* ---------- state ---------- */
+
+const state={anchors:BASE_ANCHORS.map(x=>({...x})),log:[],seen:[],loaded:false};
+let db=null,sample=null,tab="read",ctl=null;
+let readTitle="",readBusy=false,readErr="";
+let mood="normal",floor=7,findBusy=false,findErr="",picks=[];
+let justAdded=null,addErr="",dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
+const saveStatus={};
+const DOC="holds/state", LS="holds:v1";
+
+let reading={name:"The Wire",example:true,
+  ident:"David Simon, 2002-2008. Baltimore drug trade and the police who chase it, one institution per season.",
+  placement:{anchor:"The Wire",delta:0},
+  scores:{hook:1,payoff:2,tracking:1,reentry:1,epload:2,pull:3},
+  notes:{hook:"Four episodes before the shape of it arrives. The pilot asks for patience it never promises to repay quickly.",
+    payoff:"Long procedural stretches where nothing lands. Rewards accumulate over a season, not a sitting.",
+    tracking:"Dozens of named characters across two organisations, no recaps, no hand-holding.",
+    reentry:"Come back after a fortnight and you will not remember who half these people are.",
+    epload:"Hour-long, and the episodes do not close anything.",
+    pull:"Genuinely strong once you are in — the problem is getting in."},
+  shape:{epMinutes:60,episodes:60,seasons:5,hookMinutes:180,wall:"Most people stop somewhere in the first four episodes of season one."},
+  tactics:["Commit to five episodes before judging it, or don't start.",
+    "Subtitles on — the sound mix and the slang both work against you.",
+    "No second screen. This is the one show where it does not survive divided attention.",
+    "One episode a night, same time, so re-entry is never cold."],
+  secondScreen:"no",familiarity:3};
+
+function payload(){return{anchors:state.anchors,log:state.log.slice(-300),seen:state.seen.slice(-300),
+  last:reading&&!reading.example?reading:null,lastPicks:picks.slice(0,8)}}
+function adopt(d){if(!d)return false;
+  if(Array.isArray(d.anchors))state.anchors=d.anchors;
+  if(Array.isArray(d.log))state.log=d.log;
+  if(Array.isArray(d.seen))state.seen=d.seen;
+  if(d.last&&d.last.name){reading=d.last;readTitle=d.last.name}
+  if(Array.isArray(d.lastPicks))picks=d.lastPicks;return true}
+
+async function loadState(){let got=false;
+  try{db=await claude.use("db");
+    if(!db){dbUnavailable=true;dbErr="not available in this view"}
+    else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(s.data())}}
+  catch(e){db=null;dbUnavailable=true;dbErr=(e&&(e.code||e.message))||"unknown error"}
+  try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
+  catch(e){lastSave.local=false}
+  if(!got){try{const raw=localStorage.getItem(LS);if(raw)adopt(JSON.parse(raw))}catch(e){}}
+  state.loaded=true;render()}
+
+async function saveState(){const body=payload();let local=false,cloud=false;
+  try{localStorage.setItem(LS,JSON.stringify(body));local=true}catch(e){}
+  if(db){try{await db.doc(DOC).set(body);cloud=true;dbErr=""}catch(e){dbErr=(e&&(e.code||e.message))||"unknown error"}}
+  lastSave={cloud,local};return local||cloud}
+
+/* ---------- prompt blocks ---------- */
+
+function anchorBlock(){return"HIS HOLDABILITY ANCHORS (1-10; his numbers are ground truth):\n"+
+  state.anchors.slice().sort((a,b)=>b.score-a.score)
+  .map(a=>`  ${a.title} = ${a.score}${a.note?" — "+a.note:""}`).join("\n")}
+
+function correctionBlock(){const rows=state.log.filter(e=>Number.isFinite(Number(e.actual))).slice(-30);
+  if(!rows.length)return"";
+  return`HIS CORRECTIONS — these outrank any prediction:\n`+
+    rows.map(e=>`  ${e.title}: app said ${Number(e.score).toFixed(1)}; he says ${Number(e.actual).toFixed(1)}`).join("\n")+
+    `\nTreat each as an anchor.`}
+
+// What he actually did with a show is the ground truth this scale exists to predict.
+function outcomeBlock(){const rows=state.log.filter(e=>e.verdict).slice(-24);
+  if(!rows.length)return"";
+  const w={finished:"finished it",stuck:"is still watching it",drifted:"drifted off it",bailed:"bailed early"};
+  return`WHAT ACTUALLY HAPPENED — the outcomes this scale exists to predict. Where a prediction\nmissed, correct toward the outcome:\n`+
+    rows.map(e=>`  ${e.title} — predicted ${Number(e.score).toFixed(1)} — he ${w[e.verdict]}`).join("\n")}
+
+function fallbackComposite(s){let t=0;for(const a of AXES)t+=ax05(s&&s[a.key])*a.w;
+  return clamp(1+9*Math.pow(t/(5*WSUM),1.15),1,10)}
+function placedScore(r){if(!r)return 1;const p=r.placement;
+  if(p&&p.anchor){const a=state.anchors.find(x=>norm(x.title)===norm(p.anchor));const d=Number(p.delta);
+    if(a&&Number.isFinite(d))return clamp(Number(a.score)+clamp(d,-1.5,1.5),1,10)}
+  const direct=Number(r.scaleScore);if(Number.isFinite(direct))return clamp(direct,1,10);
+  return fallbackComposite(r.scores)}
+
+function errCopy(e){const c=e&&e.code;
+  if(c==="not_granted"||c==="sampling_disabled"||c==="not_declared"||c==="capability_disabled")
+    return"This page can't reach Claude. Open it from your Claude account and allow it.";
+  if(c==="rate_limited")return"Too many requests, or you've hit your usage limit. Give it a minute.";
+  if(c==="session_expired")return"Session expired. Sign in again, then retry.";
+  if(c==="invalid_json")return"The reply came back malformed. Try again.";
+  if(c==="refused")return"Claude declined that one. Try a different title.";
+  return"That didn't go through. Try again."}
+
+function saveLine(title,done){const s=saveStatus[title];
+  if(s==="saving")return`<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;
+  if(s==="failed")return`<div class="err" style="margin-top:9px">On screen only — the write to storage failed.</div>`;
+  if(s==="ok"||done)return`<div class="saved">${lastSave.cloud?"Saved.":"Saved to this browser."}</div>`;
+  return""}
+
+/* ---------- CHECK ONE ---------- */
+
+function readPanel(){
+  const r=reading;
+  let h=`<div class="row">
+    <input type="text" id="q" placeholder="A show, or a film" value="${esc(readTitle)}" autocomplete="off">
+    <button class="go" data-act="read" ${readBusy?"disabled":""}>${readBusy?"Checking":"Check it"}</button>
+  </div>`;
+  if(readBusy)h+=`<div class="status"><span class="dot"></span>Working out whether you'd finish it.</div>`;
+  if(readErr)h+=`<div class="err">${esc(readErr)}</div>`;
+
+  if(r){
+    const score=placedScore(r), sh=r.shape||{};
+    h+=`<div class="sheet">${r.example?`<span class="flagx">Example</span>`:""}
+      <div class="verdict">
+        <div class="vtop">
+          <div><div class="vname">${esc(r.name)}</div>
+            ${r.ident?`<div class="vident">${esc(r.ident)}</div>`:""}</div>
+          <div><div class="vnum">${score.toFixed(1)}</div><div class="vband">${band(score)}</div></div>
+        </div>
+        ${r.placement&&r.placement.anchor?`<div class="dock"><b>As hard to finish as ${esc(r.placement.anchor)}</b>${Number(r.placement.delta)?`, ${Math.abs(Number(r.placement.delta)).toFixed(1)} ${Number(r.placement.delta)>0?"easier":"harder"}`:""}. ${esc(r.near||"")}</div>`:""}
+        ${Number(r.familiarity)<=1?`<div class="dock" style="border-left-color:var(--rule);background:none">Claude only knows this by reputation — treat it as a guess.</div>`:""}
+      </div>`;
+
+    const cells=[];
+    if(sh.epMinutes)cells.push([`${sh.epMinutes}<span style="font-size:12px">min</span>`,"Per episode"]);
+    if(sh.episodes)cells.push([sh.episodes,"Episodes"]);
+    if(sh.seasons)cells.push([sh.seasons,"Seasons"]);
+    if(sh.hookMinutes)cells.push([`${sh.hookMinutes}<span style="font-size:12px">min</span>`,"Until it grabs"]);
+    if(cells.length)h+=`<div class="shape">${cells.map(c=>`<div><div class="n">${c[0]}</div><span class="lab k">${c[1]}</span></div>`).join("")}</div>`;
+    if(sh.wall)h+=`<div class="wall"><span class="lab" style="display:block;margin-bottom:3px">Where people stop</span>${esc(sh.wall)}</div>`;
+
+    for(const a of AXES){const v=ax05(r.scores&&r.scores[a.key]);
+      h+=`<div class="axis"><div class="arow">
+        <div class="alab">${a.label}<span class="ahint">${a.hint}</span></div>
+        <div class="aval">${v}/5</div></div>
+        <div class="ticks">${[0,1,2,3,4].map(i=>`<i class="${i<v?"on":""}"></i>`).join("")}</div>
+        <div class="anote">${esc((r.notes&&r.notes[a.key])||"")}</div></div>`}
+
+    const tac=Array.isArray(r.tactics)?r.tactics:[];
+    if(tac.length){
+      const ss=String(r.secondScreen||"").toLowerCase();
+      h+=`<div class="plan"><h3>How to actually watch it</h3>
+        <p class="subtle">The number says whether it holds. This says what to do about it.</p>
+        <ul>${tac.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>
+        ${ss?`<span class="ss ${ss==="yes"?"yes":ss==="no"?"no":""}">${ss==="yes"?"Second screen fine":ss==="no"?"No second screen":"Second screen — partly"}</span>`:""}
+      </div>`}
+
+    if(!r.example){
+      const done=state.log.find(e=>e.title===r.name);
+      h+=`<div class="after">
+        <div class="lab">Fix the number</div>
+        <p class="subtle">If it's wrong, put yours in. It becomes an anchor and outranks the app next time.</p>
+        <div class="row" style="margin-top:9px">
+          <input type="text" id="actual" inputmode="decimal" placeholder="Your score, 1-10" value="${done&&Number.isFinite(Number(done.actual))?Number(done.actual).toFixed(1):""}">
+          <button class="go" data-act="correct">Save</button></div>
+        <div class="lab" style="margin-top:18px">What happened when you tried it</div>
+        <div class="chips">${VERDICTS.map(v=>`<button class="chip" data-act="verdict" data-v="${v.key}" aria-pressed="${done&&done.verdict===v.key}">${v.label}</button>`).join("")}</div>
+        ${saveLine(r.name,!!done)}</div>`}
+    h+=`</div>`}
+
+  if(dbUnavailable)h=`<div class="err" style="margin-top:0;margin-bottom:14px">Cloud storage isn't available here — this browser only.</div>`+h;
+  return h}
+
+async function doRead(){
+  const name=(document.getElementById("q").value||"").trim();readTitle=name;
+  if(!name){readErr="Type a title first.";return render()}
+  readBusy=true;readErr="";render();ctl=new AbortController();
+  const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
+  const prompt=`Work out whether this person would actually get through "${name}".
+
+${DOCTRINE}
+
+${anchorBlock()}
+
+${correctionBlock()}
+
+${outcomeBlock()}
+
+${PLACEMENT}
+
+Score each axis 0-5 as evidence:
+${rubric}
+
+${SHAPE}
+
+Also give the SHAPE of the thing — real numbers: typical episode length in minutes, total
+episodes, seasons, and roughly how many minutes in before it genuinely grabs. For a film,
+use epMinutes as the runtime and leave episodes and seasons at 0.
+Give WALL: where people typically stop, in one sentence, or an empty string if there isn't one.
+
+TACTICS: three to five concrete things that would get him through it specifically — where to
+start, what to skip, subtitles or dubbed, whether it survives a second screen, how many
+episodes to commit to before judging, when not to start it. Practical, specific to this
+work, no general advice about focus.
+
+Reply with only this JSON:
+{"ident":"","placement":{"anchor":"EXACT title from the anchors","delta":0},"scaleScore":0,
+"near":"why that anchor is the closest match for difficulty of finishing",
+"scores":{"hook":0,"payoff":0,"tracking":0,"reentry":0,"epload":0,"pull":0},
+"notes":{"hook":"","payoff":"","tracking":"","reentry":"","epload":"","pull":""},
+"shape":{"epMinutes":0,"episodes":0,"seasons":0,"hookMinutes":0,"wall":""},
+"tactics":[""],"secondScreen":"yes|partly|no","familiarity":3}`;
+  try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
+    reading=Object.assign({name},out,{example:false})}
+  catch(e){if(!(e&&e.code==="cancelled"))readErr=errCopy(e)}
+  readBusy=false;render()}
+
+/* ---------- FIND ---------- */
+
+function findPanel(){
+  let h=`<div class="fieldlab lab">Right now you're</div>
+    <div class="seg">${STATES.map(s=>`<button data-act="mood" data-v="${s[0]}" aria-pressed="${mood===s[0]}">${s[1]}</button>`).join("")}</div>
+    <div class="fieldlab lab">Floor</div>
+    <div class="seg">${[6,7,8].map(f=>`<button data-act="floor" data-v="${f}" aria-pressed="${floor===f}">${f}+ · ${band(f)}</button>`).join("")}</div>
+    <div class="seg" style="margin-top:16px">
+      <button class="go" data-act="find" ${findBusy?"disabled":""}>${findBusy?"Looking":"Find something"}</button>
+    </div>`;
+  if(findBusy)h+=`<div class="status"><span class="dot"></span>Finding things you'd get through.</div>`;
+  if(findErr)h+=`<div class="err">${esc(findErr)}</div>`;
+  if(picks.length){
+    h+=`<div class="sheet">`;
+    picks.forEach((p,i)=>{const s=placedScore(p),logged=state.log.find(e=>e.title===p.title),sh=p.shape||{};
+      h+=`<div class="pick">
+        <div class="ptop"><div><div class="pname">${esc(p.title)} ${p.year?`<span>${esc(String(p.year))}</span>`:""}</div>
+          ${p.ident?`<div class="pident">${esc(p.ident)}</div>`:""}</div>
+          <div class="pnum">${s.toFixed(1)}</div></div>
+        <div class="pwhy">${esc(p.why||"")}</div>
+        ${p.placement&&p.placement.anchor?`<div class="pident" style="margin-top:7px"><span class="lab">Like yours</span> ${esc(p.placement.anchor)} — ${esc(p.near||"")}</div>`:""}
+        <div class="tags">
+          ${sh.epMinutes?`<span class="tag">${sh.epMinutes} min</span>`:""}
+          ${sh.seasons?`<span class="tag">${sh.seasons} season${sh.seasons===1?"":"s"}</span>`:""}
+          ${sh.episodes?`<span class="tag">${sh.episodes} eps</span>`:""}
+          ${String(p.secondScreen||"").toLowerCase()==="yes"?`<span class="tag">second screen ok</span>`:""}
+          ${Number(p.familiarity)<=1?`<span class="tag">low confidence</span>`:""}
+        </div>
+        <div class="chips">${VERDICTS.map(v=>`<button class="chip" data-act="pverdict" data-i="${i}" data-v="${v.key}" aria-pressed="${logged&&logged.verdict===v.key}">${v.label}</button>`).join("")}</div>
+        ${saveLine(p.title,!!logged)}</div>`});
+    h+=`</div>`}
+  return h}
+
+async function doFind(){
+  findBusy=true;findErr="";picks=[];render();ctl=new AbortController();
+  const st=(STATES.find(s=>s[0]===mood)||[])[2]||"";
+  const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
+  const prompt=`Recommend up to 6 things this person would actually finish.
+
+${DOCTRINE}
+
+${anchorBlock()}
+
+${correctionBlock()}
+
+${outcomeBlock()}
+
+${st}
+
+${PLACEMENT}
+
+Score each candidate on the axes as evidence:
+${rubric}
+
+${SHAPE}
+
+HOW TO CHOOSE
+1. Build a pool of at least 15 candidates internally, chosen for FINISHABILITY first.
+2. Place each on his anchor scale, then keep the strongest. Never choose first and inflate after.
+3. Only return a title whose placed score is at least ${floor}. Fewer than six is fine.
+4. Do not recommend something merely because it is good. Something acclaimed that he will
+   abandon in episode two is a failure of this tool, not a good suggestion.
+5. Vary the register — not everything should be a half-hour comedy — but finishability wins
+   over variety every time.
+6. Skip anything on his anchor list, and skip: ${state.seen.slice(-120).join("; ")||"none"}.
+
+Reply with only this JSON:
+{"picks":[{"title":"","year":0,"ident":"","placement":{"anchor":"EXACT title from the anchors","delta":0},
+"scaleScore":0,"near":"why that anchor matches for difficulty of finishing",
+"scores":{"hook":0,"payoff":0,"tracking":0,"reentry":0,"epload":0,"pull":0},
+"shape":{"epMinutes":0,"episodes":0,"seasons":0},"secondScreen":"yes|partly|no","familiarity":3,
+"why":"the specific thing about its shape that makes it finishable"}]}`;
+  try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
+    const raw=(out&&Array.isArray(out.picks)?out.picks:[]).filter(p=>p&&p.title);
+    picks=raw.filter(p=>placedScore(p)>=floor).sort((a,b)=>placedScore(b)-placedScore(a)).slice(0,6);
+    const notes=[];
+    if(raw.length-picks.length)notes.push(`${raw.length-picks.length} fell below your ${floor} floor.`);
+    if(!picks.length)notes.push("Nothing cleared it. Lower the floor, or try again.");
+    else{state.seen=state.seen.concat(picks.map(p=>p.title)).slice(-300);saveState()}
+    findErr=notes.join(" ")}
+  catch(e){if(!(e&&e.code==="cancelled"))findErr=errCopy(e)}
+  findBusy=false;render()}
+
+/* ---------- logging ---------- */
+
+async function logVerdict(title,score,verdict){
+  const i=state.log.findIndex(e=>e.title===title);
+  const row=Object.assign({},i>=0?state.log[i]:{},{title,score:Number(score),verdict,at:Date.now()});
+  if(i>=0)state.log[i]=row;else state.log.push(row);
+  saveStatus[title]="saving";render();
+  const ok=await saveState();saveStatus[title]=ok?"ok":"failed";render()}
+
+async function logCorrection(title,predicted,actual){
+  const n=Number(actual);if(!Number.isFinite(n))return;
+  const v=clamp(n,1,10);
+  const i=state.log.findIndex(e=>e.title===title);
+  const row=Object.assign({},i>=0?state.log[i]:{},{title,score:Number(predicted),actual:v,at:Date.now()});
+  if(i>=0)state.log[i]=row;else state.log.push(row);
+  const ex=state.anchors.find(a=>norm(a.title)===norm(title));
+  if(ex)ex.score=v;else state.anchors.push({title,score:v,note:`Yours, after the app said ${Number(predicted).toFixed(1)}.`});
+  saveStatus[title]="saving";render();
+  const ok=await saveState();saveStatus[title]=ok?"ok":"failed";render()}
+
+async function mutateAnchors(fn){fn();saveStatus.anchors="saving";render();
+  const ok=await saveState();saveStatus.anchors=ok?"ok":"failed";render();
+  const row=document.getElementById("justadded");
+  if(row&&row.scrollIntoView)row.scrollIntoView({block:"center",behavior:"smooth"})}
+
+/* ---------- YOUR SCALE ---------- */
+
+function calPanel(){
+  const corr=state.log.filter(e=>Number.isFinite(Number(e.actual)));
+  const mae=corr.length?corr.reduce((s,e)=>s+Math.abs(Number(e.score)-Number(e.actual)),0)/corr.length:null;
+  const fin=state.log.filter(e=>e.verdict==="finished"||e.verdict==="stuck");
+  const bail=state.log.filter(e=>e.verdict==="bailed"||e.verdict==="drifted");
+  const avg=rows=>rows.length?(rows.reduce((s,e)=>s+Number(e.score),0)/rows.length).toFixed(1):"—";
+
+  let h=`<h2 class="sec">Is it reading you</h2>
+    <p class="subtle">The scale works if what it scores high is what you actually finish. These are its predictions against what happened.</p>
+    <div class="readout">
+      <div><div class="n">${avg(fin)}</div><span class="lab">Finished / watching</span><div class="aval">${fin.length} logged</div></div>
+      <div><div class="n">${avg(bail)}</div><span class="lab">Dropped</span><div class="aval">${bail.length} logged</div></div>
+      <div><div class="n">${mae===null?"—":mae.toFixed(2)}</div><span class="lab">Avg miss</span><div class="aval">${corr.length} corrections</div></div>
+    </div>
+    <p class="note">The top-left number should sit well above the middle one. If they converge, the scale isn't tracking you — correct a few numbers below.</p>`;
+
+  h+=`<h2 class="sec">Log</h2>`;
+  if(!state.log.length)h+=`<p class="empty">Nothing yet. Check something, watch it, then say what happened.</p>`;
+  else h+=`<div class="tw"><table><thead><tr><th>Title</th><th>Said</th><th>You</th><th>Outcome</th><th></th></tr></thead><tbody>
+    ${state.log.slice().reverse().map(e=>`<tr><td>${esc(e.title)}</td>
+      <td class="num">${Number(e.score).toFixed(1)}</td>
+      <td class="num">${Number.isFinite(Number(e.actual))?Number(e.actual).toFixed(1):"—"}</td>
+      <td>${(VERDICTS.find(v=>v.key===e.verdict)||{}).label||"—"}</td>
+      <td class="num"><button class="del" data-act="dellog" data-t="${esc(e.title)}" aria-label="Remove">&times;</button></td></tr>`).join("")}
+    </tbody></table></div>`;
+
+  h+=`<h2 class="sec">Anchors</h2>
+    <p class="subtle">The actual ruler. Every check and every recommendation is placed against these, so fix any number you disagree with — ADHD is not one thing and these are only starting estimates.</p>
+    <div class="tw"><table><thead><tr><th>Title</th><th>Score</th><th>Note</th><th></th></tr></thead><tbody>
+    ${state.anchors.slice().sort((a,b)=>b.score-a.score).map(a=>`<tr${a.title===justAdded?` class="justadded" id="justadded"`:""}>
+      <td>${esc(a.title)}${a.title===justAdded?` <span class="lab" style="color:var(--sig)">added</span>`:""}</td>
+      <td class="num"><input type="text" class="anchsc" data-t="${esc(a.title)}" value="${a.score}" style="width:62px;padding:7px 6px" inputmode="decimal"></td>
+      <td style="color:var(--dim);font-size:13px">${esc(a.note||"")}</td>
+      <td class="num"><button class="del" data-act="delanch" data-t="${esc(a.title)}" aria-label="Remove">&times;</button></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="addrow">
+      <input type="text" id="na" placeholder="Title" autocomplete="off">
+      <input type="text" id="ns" class="sc" placeholder="8" inputmode="decimal">
+      <button class="go" data-act="addanch">Add</button></div>
+    ${addErr?`<div class="err">${esc(addErr)}</div>`:""}
+    ${saveStatus.anchors==="ok"&&justAdded?`<div class="saved">Added. It's the ruler now.</div>`:""}
+    ${storageLine()}`;
+  return h}
+
+function storageLine(){
+  const cloud=db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;
+  const local=lastSave.local===true?"working":lastSave.local===false?"blocked":"untested";
+  return`<h2 class="sec">Storage</h2><p class="subtle">Cloud: <b>${cloud}</b><br>This browser: <b>${local}</b></p>`}
+
+/* ---------- plumbing ---------- */
+
+function render(){
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.tab===tab)));
+  const m={read:["panel-read",readPanel],find:["panel-find",findPanel],cal:["panel-cal",calPanel]};
+  for(const k of Object.keys(m)){const el=document.getElementById(m[k][0]);
+    el.hidden=k!==tab;if(k===tab)el.innerHTML=m[k][1]()}}
+
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("[data-act],.tab");if(!t)return;
+  if(t.classList.contains("tab")){tab=t.dataset.tab;addErr="";return render()}
+  const act=t.dataset.act,v=t.dataset.v;
+  if(act==="read")return void doRead();
+  if(act==="find")return void doFind();
+  if(act==="mood"){mood=v;return render()}
+  if(act==="floor"){floor=Number(v);return render()}
+  if(act==="correct"&&reading&&!reading.example){
+    const el=document.getElementById("actual"),raw=(el&&el.value||"").trim();
+    if(!raw||!Number.isFinite(Number(raw))){readErr="Give a score from 1 to 10.";return render()}
+    readErr="";return void logCorrection(reading.name,placedScore(reading),Number(raw))}
+  if(act==="verdict"&&reading&&!reading.example)
+    return void logVerdict(reading.name,placedScore(reading),v);
+  if(act==="pverdict"){const p=picks[Number(t.dataset.i)];
+    if(p)void logVerdict(p.title,placedScore(p),v);return}
+  if(act==="dellog"){state.log=state.log.filter(e=>e.title!==t.dataset.t);saveState();return render()}
+  if(act==="delanch")return void mutateAnchors(()=>{state.anchors=state.anchors.filter(a=>a.title!==t.dataset.t)});
+  if(act==="addanch"){
+    const ti=document.getElementById("na"),sc=document.getElementById("ns");
+    const title=(ti.value||"").trim(),raw=(sc.value||"").trim();
+    if(!title){addErr="Type a title first.";return render()}
+    if(!raw||!Number.isFinite(Number(raw))){addErr="Give it a score out of 10.";return render()}
+    addErr="";const score=clamp(Number(raw),1,10);justAdded=title;
+    return void mutateAnchors(()=>{
+      state.anchors=state.anchors.filter(a=>norm(a.title)!==norm(title));
+      state.anchors.push({title,score,note:""})})}});
+
+document.addEventListener("keydown",ev=>{
+  if(ev.key==="Enter"&&ev.target.id==="q")doRead();
+  if(ev.key==="Enter"&&(ev.target.id==="na"||ev.target.id==="ns")){
+    const b=document.querySelector('[data-act="addanch"]');if(b)b.click()}});
+
+document.addEventListener("change",ev=>{
+  if(!ev.target.classList.contains("anchsc"))return;
+  const v=Number(ev.target.value),a=state.anchors.find(x=>x.title===ev.target.dataset.t);
+  if(a&&Number.isFinite(v))void mutateAnchors(()=>{a.score=clamp(v,1,10)})});
+
+render();
+(async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}
+  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";findErr=readErr;render()}
+  loadState()})();
+</script>
