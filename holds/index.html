@@ -217,6 +217,20 @@ a season count that reads as impossible before you begin.
 Be concrete about the work. Runtimes, cast size, how fast the first episode moves, whether
 episodes close anything. Do not speak in generalities about attention.`;
 
+const FILM_RULES = `IF IT IS A FILM the shape of the problem changes and these override:
+- There is no next episode to rescue a slow open, so the first ten minutes carry far more
+  weight than they do for a series.
+- Cost to start is the entire runtime as one commitment, not one cheap episode. Ninety
+  minutes and a hundred and fifty are genuinely different propositions, and a long film is
+  a harder ask than a long series made of short parts.
+- Re-entry mostly does not exist. A film paused forty minutes in is usually never resumed,
+  so the real question is whether he finishes it in one sitting. Score re-entry on whether
+  it survives being stopped at all, and say so in the note.
+- Judge pull as whether the middle sags, not whether there is a cliffhanger — the failure
+  mode is drifting out during the second act, not failing to start episode four.
+- The wall is a point in the runtime, not an episode number.
+Set epMinutes to the runtime and leave episodes and seasons at 0.`;
+
 const PLACEMENT = `THE USER'S SCALE IS THE FINAL AUTHORITY.
 Pick exactly ONE anchor below that is closest in HOLDABILITY — not genre, quality or subject.
 Copy its title EXACTLY. Then give a delta from -1.5 to +1.5. 0 means the same difficulty to
@@ -251,7 +265,7 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 const state={anchors:BASE_ANCHORS.map(x=>({...x})),log:[],seen:[],loaded:false};
 let db=null,sample=null,tab="read",ctl=null;
 let readTitle="",readBusy=false,readErr="";
-let mood="normal",floor=7,findBusy=false,findErr="",picks=[];
+let mood="normal",form="either",floor=7,findBusy=false,findErr="",picks=[];
 let setEasy="",setHard="",setDrop="",setErr="";
 let justAdded=null,addErr="",dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
 const saveStatus={};
@@ -365,7 +379,7 @@ function readPanel(){
       </div>`;
 
     const cells=[];
-    if(sh.epMinutes)cells.push([`${sh.epMinutes}<span style="font-size:12px">min</span>`,"Per episode"]);
+    if(sh.epMinutes)cells.push([`${sh.epMinutes}<span style="font-size:12px">min</span>`,sh.episodes?"Per episode":"Runtime"]);
     if(sh.episodes)cells.push([sh.episodes,"Episodes"]);
     if(sh.seasons)cells.push([sh.seasons,"Seasons"]);
     if(sh.hookMinutes)cells.push([`${sh.hookMinutes}<span style="font-size:12px">min</span>`,"Until it grabs"]);
@@ -429,6 +443,8 @@ ${rubric}
 
 ${SHAPE}
 
+${FILM_RULES}
+
 Also give the SHAPE of the thing — real numbers: typical episode length in minutes, total
 episodes, seasons, and roughly how many minutes in before it genuinely grabs. For a film,
 use epMinutes as the runtime and leave episodes and seasons at 0.
@@ -456,6 +472,9 @@ Reply with only this JSON:
 function findPanel(){
   let h=`<div class="fieldlab lab">Right now you're</div>
     <div class="seg">${STATES.map(s=>`<button data-act="mood" data-v="${s[0]}" aria-pressed="${mood===s[0]}">${s[1]}</button>`).join("")}</div>
+    <div class="fieldlab lab">Looking for</div>
+    <div class="seg">${[["either","Either"],["show","Series"],["film","Films"]].map(f=>
+      `<button data-act="form" data-v="${f[0]}" aria-pressed="${form===f[0]}">${f[1]}</button>`).join("")}</div>
     <div class="fieldlab lab">Floor</div>
     <div class="seg">${[6,7,8].map(f=>`<button data-act="floor" data-v="${f}" aria-pressed="${floor===f}">${f}+ · ${band(f)}</button>`).join("")}</div>
     <div class="seg" style="margin-top:16px">
@@ -488,7 +507,7 @@ async function doFind(){
   findBusy=true;findErr="";picks=[];render();ctl=new AbortController();
   const st=(STATES.find(s=>s[0]===mood)||[])[2]||"";
   const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
-  const prompt=`Recommend up to 6 things this person would actually finish.
+  const prompt=`Recommend up to 6 ${form==="film"?"feature films":form==="show"?"television series":"things"} this person would actually finish.${form==="film"?"\nEvery pick must be a feature film.":form==="show"?"\nEvery pick must be a series, not a film.":""}
 
 ${DOCTRINE}
 
@@ -506,6 +525,8 @@ Score each candidate on the axes as evidence:
 ${rubric}
 
 ${SHAPE}
+
+${FILM_RULES}
 
 HOW TO CHOOSE
 1. Build a pool of at least 15 candidates internally, chosen for FINISHABILITY first.
@@ -641,6 +662,7 @@ document.addEventListener("click",ev=>{
   if(act==="read")return void doRead();
   if(act==="find")return void doFind();
   if(act==="mood"){mood=v;return render()}
+  if(act==="form"){form=v;return render()}
   if(act==="floor"){floor=Number(v);return render()}
   if(act==="correct"&&reading&&!reading.example){
     const el=document.getElementById("actual"),raw=(el&&el.value||"").trim();
