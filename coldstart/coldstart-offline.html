@@ -14,7 +14,7 @@
 </style>
 </head>
 <body>
-<script>window.__BUILD__='841c8e040b';</script>
+<script>window.__BUILD__='d1034dd40f';</script>
 <title>Cold Start</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -631,6 +631,15 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 }
 .eyeover .x:hover{color:#c08a5e}
 @media (prefers-reduced-motion:reduce){.eyeover .bar i{transition:none}}
+/* ---- the error bar: a dead button and a broken app look identical
+   from the outside, so anything that throws says so out loud ---- */
+.errbar{
+  border:1px solid var(--warn);border-left:3px solid var(--warn);
+  background:var(--panel-2);color:var(--ink);
+  padding:11px 13px;margin-bottom:16px;font-size:13.5px;line-height:1.45;
+  overflow-wrap:anywhere;
+}
+.errbar b{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--warn);display:block;margin-bottom:4px;font-weight:500}
 /* ---- today: the orienting surface ---- */
 .now{border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--panel);padding:15px 16px;margin-bottom:18px}
 .now.live{border-left-color:var(--go);background:var(--go-w)}
@@ -656,6 +665,8 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 </style>
 
 <div class="app">
+
+<div class="errbar" id="err-bar" hidden></div>
 
 <header class="mast">
   <h1><span class="lamp" id="lamp"></span>Cold Start</h1>
@@ -1348,6 +1359,43 @@ body.night img,body.night .lamp{filter:saturate(.6)}
 
 const $  = (id) => document.getElementById(id);
 const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+/* ---- errors, out loud ----
+   Everything below is one long top-level script, so a single throw part
+   way down leaves every control declared after it unwired — and an
+   unwired button looks exactly like a working one that does nothing.
+   Rather than let that happen quietly, anything that throws gets put on
+   the screen where it can be read back to me. */
+const errSeen = [];
+function showError(msg) {
+  if (!msg || errSeen.indexOf(msg) > -1) return;
+  errSeen.push(msg);
+  const bar = $("err-bar");
+  if (!bar) return;
+  bar.hidden = false;
+  bar.innerHTML = "<b>something in the app broke</b>" +
+    "This is a bug on my side, not something you did. If you can, tell me what it says: " +
+    errSeen.map((m) => "<code>" + m.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;")) + "</code>").join(" · ");
+}
+addEventListener("error", (e) => showError((e.message || "error") + (e.lineno ? " @" + e.lineno : "")));
+addEventListener("unhandledrejection", (e) =>
+  showError("promise: " + String((e.reason && e.reason.message) || e.reason || "?")));
+function guard(fn) { return function (ev) { try { fn(ev); } catch (err) { showError(String(err && err.message || err)); } }; }
+
+/* ---- Today, wired from the document ----
+   The list is the one surface that has to work every time, so its
+   handlers hang off `document` and are installed here, above anything
+   that could throw, instead of binding to the elements themselves
+   further down. The functions they call are declarations, so they are
+   hoisted and available by the time a tap can happen. */
+document.addEventListener("click", guard((e) => {
+  if (e.target.closest("#today-add-b")) { addToday(); return; }
+  const row = e.target.closest("#today-list [data-tick],#today-list [data-del],#today-list [data-up],#today-list [data-startit]");
+  if (row) todayRow(row);
+}));
+document.addEventListener("keydown", guard((e) => {
+  if (e.key === "Enter" && e.target && e.target.id === "today-add") addToday();
+}));
 
 const LS_KEY = "coldstart:state:v1";
 const DOC    = "state/coldstart";
@@ -3189,32 +3237,33 @@ function renderToday() {
   paintTodayFeed();
 }
 
-$("today-add-b").addEventListener("click", addToday);
-$("today-add").addEventListener("keydown", (e) => { if (e.key === "Enter") addToday(); });
+/* Both of these are called from the document-level handlers at the top
+   of the file, not from listeners bound here. */
 function addToday() {
-  const v = $("today-add").value.trim();
+  const box = $("today-add");
+  if (!box) return;
+  const v = box.value.trim();
   if (!v) return;
   today().items.push({ id: uid(), text: v, done: false, at: now() });
-  $("today-add").value = "";
+  box.value = "";
   save(); paintTodayList(); paintTodayNow();
 }
 
-$("today-list").addEventListener("click", (e) => {
+function todayRow(el) {
   const t = today();
-  const tick = e.target.closest("[data-tick]"), del = e.target.closest("[data-del]");
-  const up = e.target.closest("[data-up]"), st = e.target.closest("[data-startit]");
-  if (st) { const i = t.items.find((x) => x.id === st.dataset.startit); if (i) openStart(i.text, ""); return; }
-  if (tick) {
-    const i = t.items.find((x) => x.id === tick.dataset.tick);
+  const d = el.dataset;
+  if (d.startit) { const i = t.items.find((x) => x.id === d.startit); if (i) openStart(i.text, ""); return; }
+  if (d.tick) {
+    const i = t.items.find((x) => x.id === d.tick);
     if (i) { i.done = !i.done; i.doneAt = i.done ? now() : null; }
   }
-  if (del) t.items = t.items.filter((x) => x.id !== del.dataset.del);
-  if (up) {
-    const ix = t.items.findIndex((x) => x.id === up.dataset.up);
+  if (d.del) t.items = t.items.filter((x) => x.id !== d.del);
+  if (d.up) {
+    const ix = t.items.findIndex((x) => x.id === d.up);
     if (ix > 0) { const [m] = t.items.splice(ix, 1); t.items.splice(ix - 1, 0, m); }
   }
   save(); paintTodayList(); paintTodayNow();
-});
+}
 
 /* ---------- running on empty ----------
    You cannot top dopamine up, and anything selling that is selling you
