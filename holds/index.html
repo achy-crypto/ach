@@ -189,15 +189,15 @@ const VERDICTS = [
 // two rulers share a vocabulary. Justified is the point of the whole app: low
 // on aura, high here. Quality and holdability are not the same axis.
 const BASE_ANCHORS = [
-  { title:"It's Always Sunny in Philadelphia", score:9.5, note:"22 minutes, no continuity to hold, funny inside a minute. The ceiling for holdability." },
-  { title:"Eastbound & Down", score:9, note:"Half-hour, per-episode payoff, nothing to track." },
-  { title:"Mr Inbetween", score:9, note:"25-minute episodes, largely self-contained, no homework." },
-  { title:"Justified", score:7.5, note:"Case of the week. Low tracking load, easy re-entry. Holds fine even if the aura score is a 3 — that is the point of this scale." },
-  { title:"The Shield", score:6.5, note:"Propulsive, but the serialised arcs punish a long gap." },
-  { title:"Fargo (season 1)", score:6.5, note:"Hour-long, moderate tracking, strong pull forward." },
-  { title:"Severance", score:6, note:"Hooks hard and pulls hard, but it is deliberately slow and the mystery demands you hold details." },
-  { title:"Ozark", score:4.5, note:"Hour-long, grim, heavy plot tracking, long flat stretches." },
-  { title:"The Wire", score:3, note:"Enormous cast, no hand-holding, four episodes before it opens up. Needs a locked-in brain." },
+  { title:"It's Always Sunny in Philadelphia", score:9.5, note:"22 minutes, no continuity to hold, funny inside a minute. The ceiling for holdability.", seed:true },
+  { title:"Eastbound & Down", score:9, note:"Half-hour, per-episode payoff, nothing to track.", seed:true },
+  { title:"Mr Inbetween", score:9, note:"25-minute episodes, largely self-contained, no homework.", seed:true },
+  { title:"Justified", score:7.5, note:"Case of the week. Low tracking load, easy re-entry. Holds fine even if the aura score is a 3 — that is the point of this scale.", seed:true },
+  { title:"The Shield", score:6.5, note:"Propulsive, but the serialised arcs punish a long gap.", seed:true },
+  { title:"Fargo (season 1)", score:6.5, note:"Hour-long, moderate tracking, strong pull forward.", seed:true },
+  { title:"Severance", score:6, note:"Hooks hard and pulls hard, but it is deliberately slow and the mystery demands you hold details.", seed:true },
+  { title:"Ozark", score:4.5, note:"Hour-long, grim, heavy plot tracking, long flat stretches.", seed:true },
+  { title:"The Wire", score:3, note:"Enormous cast, no hand-holding, four episodes before it opens up. Needs a locked-in brain.", seed:true },
 ];
 
 const DOCTRINE = `HOLDABILITY is whether this person actually gets through the thing. It is NOT
@@ -252,6 +252,7 @@ const state={anchors:BASE_ANCHORS.map(x=>({...x})),log:[],seen:[],loaded:false};
 let db=null,sample=null,tab="read",ctl=null;
 let readTitle="",readBusy=false,readErr="";
 let mood="normal",floor=7,findBusy=false,findErr="",picks=[];
+let setEasy="",setHard="",setDrop="",setErr="";
 let justAdded=null,addErr="",dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
 const saveStatus={};
 const DOC="holds/state", LS="holds:v1";
@@ -400,6 +401,9 @@ function readPanel(){
         ${saveLine(r.name,!!done)}</div>`}
     h+=`</div>`}
 
+  if(state.anchors.some(a=>a.seed))h=`<div class="wall" style="margin-top:0;margin-bottom:16px;background:var(--card)">
+    <span class="lab" style="display:block;margin-bottom:3px">The scale is still guesswork</span>
+    These anchors are my estimates about a generic viewer, not your history — and every score is placed against them, so a wrong one drags the rest. Set yours under <b>Your scale</b>.</div>`+h;
   if(dbUnavailable)h=`<div class="err" style="margin-top:0;margin-bottom:14px">Cloud storage isn't available here — this browser only.</div>`+h;
   return h}
 
@@ -583,11 +587,27 @@ function calPanel(){
       <td class="num"><button class="del" data-act="dellog" data-t="${esc(e.title)}" aria-label="Remove">&times;</button></td></tr>`).join("")}
     </tbody></table></div>`;
 
+  if(state.anchors.some(a=>a.seed))h+=`
+    <h2 class="sec">Build your scale</h2>
+    <p class="subtle">The nine anchors below are mine — estimates about a generic viewer, not your history. Everything gets placed against them, so they need to be yours. Name shows you have actually watched and it will replace mine with those.</p>
+    <label class="fieldlab lab" for="s-easy">Got through without effort</label>
+    <input type="text" id="s-easy" placeholder="Comma separated" value="${esc(setEasy)}">
+    <label class="fieldlab lab" for="s-hard">Finished, but it was work</label>
+    <input type="text" id="s-hard" placeholder="Comma separated" value="${esc(setHard)}">
+    <label class="fieldlab lab" for="s-drop">Started and dropped</label>
+    <input type="text" id="s-drop" placeholder="Comma separated" value="${esc(setDrop)}">
+    <div class="seg" style="margin-top:14px">
+      <button class="go" data-act="setscale">Use these as my scale</button>
+      <button data-act="dropseeds">Just delete yours</button>
+    </div>
+    ${setErr?`<div class="err">${esc(setErr)}</div>`:""}
+    <p class="note">Scored 9 / 6.5 / 3 to start. Adjust any of them below — those numbers are the ruler.</p>`;
+
   h+=`<h2 class="sec">Anchors</h2>
     <p class="subtle">The actual ruler. Every check and every recommendation is placed against these, so fix any number you disagree with — ADHD is not one thing and these are only starting estimates.</p>
     <div class="tw"><table><thead><tr><th>Title</th><th>Score</th><th>Note</th><th></th></tr></thead><tbody>
     ${state.anchors.slice().sort((a,b)=>b.score-a.score).map(a=>`<tr${a.title===justAdded?` class="justadded" id="justadded"`:""}>
-      <td>${esc(a.title)}${a.title===justAdded?` <span class="lab" style="color:var(--sig)">added</span>`:""}</td>
+      <td>${esc(a.title)}${a.title===justAdded?` <span class="lab" style="color:var(--sig)">added</span>`:""}${a.seed?` <span class="lab">my guess</span>`:""}</td>
       <td class="num"><input type="text" class="anchsc" data-t="${esc(a.title)}" value="${a.score}" style="width:62px;padding:7px 6px" inputmode="decimal"></td>
       <td style="color:var(--dim);font-size:13px">${esc(a.note||"")}</td>
       <td class="num"><button class="del" data-act="delanch" data-t="${esc(a.title)}" aria-label="Remove">&times;</button></td></tr>`).join("")}
@@ -632,6 +652,21 @@ document.addEventListener("click",ev=>{
     if(p)void logVerdict(p.title,placedScore(p),v);return}
   if(act==="dellog"){state.log=state.log.filter(e=>e.title!==t.dataset.t);saveState();return render()}
   if(act==="delanch")return void mutateAnchors(()=>{state.anchors=state.anchors.filter(a=>a.title!==t.dataset.t)});
+  if(act==="setscale"){
+    const grab=id=>(document.getElementById(id).value||"").split(",").map(x=>x.trim()).filter(Boolean);
+    const easy=grab("s-easy"),hard=grab("s-hard"),drop=grab("s-drop");
+    setEasy=easy.join(", ");setHard=hard.join(", ");setDrop=drop.join(", ");
+    if(easy.length+hard.length+drop.length<3){setErr="Name at least three between them, and try to fill more than one row — a scale needs a spread.";return render()}
+    if(!easy.length||!drop.length){setErr="It needs both ends: something you got through easily and something you dropped.";return render()}
+    setErr="";
+    const mk=(list,score,note)=>list.map(t=>({title:t,score,note}));
+    return void mutateAnchors(()=>{
+      state.anchors=state.anchors.filter(a=>!a.seed).concat(
+        mk(easy,9,"You got through it without effort."),
+        mk(hard,6.5,"You finished it, but it was work."),
+        mk(drop,3,"You started it and dropped it."));
+      setEasy=setHard=setDrop=""})}
+  if(act==="dropseeds")return void mutateAnchors(()=>{state.anchors=state.anchors.filter(a=>!a.seed)});
   if(act==="addanch"){
     const ti=document.getElementById("na"),sc=document.getElementById("ns");
     const title=(ti.value||"").trim(),raw=(sc.value||"").trim();
