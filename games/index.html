@@ -447,10 +447,15 @@ function adopt(d){if(!d)return false;
   if(d.lastError)state.lastError=d.lastError;
   return true}
 
+// The store hands back FROZEN objects. Everything adopted is mutated later — a game added
+// to the cache, a feedback row pushed, a preference dragged — so it has to be copied out
+// first, or the second session onwards throws "object is not extensible" on every write.
+function thaw(v){try{return v==null?v:JSON.parse(JSON.stringify(v))}catch(e){return null}}
+
 async function loadState(){let got=false;
   try{db=await claude.use("db");
     if(!db){dbUnavailable=true;dbErr="not available in this view"}
-    else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(s.data())}}
+    else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(thaw(s.data()))}}
   catch(e){db=null;dbUnavailable=true;dbErr=(e&&(e.code||e.message))||"unknown error"}
   try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
   catch(e){lastSave.local=false}
@@ -934,6 +939,18 @@ function mePanel(){
   const pr=activePrefs(),w=normW(pr.w),fi=state.fitInfo||{pairs:0,liked:0,dropped:0};
   const bad=prefsValid(pr);
   let h="";
+  const le=state.lastError;
+  if(le)h+=`<h2 class="sec">Last failure</h2>
+    <p class="subtle">Kept so it can be reported instead of described. Nothing here is sent anywhere on its own.</p>
+    <div class="tw"><table><tbody>
+      <tr><td>Where</td><td>${esc(le.where)}</td></tr>
+      <tr><td>Code</td><td>${esc(le.code||"(none — a fault in the page)")}</td></tr>
+      <tr><td>Message</td><td>${esc(le.message)}</td></tr>
+      ${le.text?`<tr><td>Reply began</td><td style="font-size:12px">${esc(le.text.slice(0,200))}</td></tr>`:""}
+      <tr><td>When</td><td>${esc(new Date(le.at).toLocaleString())}</td></tr>
+    </tbody></table></div>
+    <div class="seg"><button data-act="clearerr">Clear it</button></div>`;
+
 
   const didOnboard=state.feedback.some(f=>f.src==="onboarding");
   const openOB=showOnboard||(!didOnboard&&!state.onboardSkipped);
@@ -1019,18 +1036,6 @@ function mePanel(){
     <p class="subtle">Feature ratings are cached per game, so checking one again costs nothing and the ranking stays stable between sessions.</p>
     <p class="note">${Object.keys(state.cache).length} games cached.
       <span class="seg" style="display:inline-flex"><button data-act="clearcache">Clear the cache</button></span></p>`;
-
-  const le=state.lastError;
-  if(le)h+=`<h2 class="sec">Last failure</h2>
-    <p class="subtle">Kept so it can be reported instead of described. Nothing here is sent anywhere on its own.</p>
-    <div class="tw"><table><tbody>
-      <tr><td>Where</td><td>${esc(le.where)}</td></tr>
-      <tr><td>Code</td><td>${esc(le.code||"(none — a fault in the page)")}</td></tr>
-      <tr><td>Message</td><td>${esc(le.message)}</td></tr>
-      ${le.text?`<tr><td>Reply began</td><td style="font-size:12px">${esc(le.text.slice(0,200))}</td></tr>`:""}
-      <tr><td>When</td><td>${esc(new Date(le.at).toLocaleString())}</td></tr>
-    </tbody></table></div>
-    <div class="seg"><button data-act="clearerr">Clear it</button></div>`;
 
   const cloud=db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;
   const local=lastSave.local===true?"working":lastSave.local===false?"blocked":"untested";
