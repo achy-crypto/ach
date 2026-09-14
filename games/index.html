@@ -177,18 +177,59 @@ td.num{font-family:"Roboto Mono",monospace;white-space:nowrap}
 .readout .n{font-family:"Roboto Mono",monospace;font-size:20px}
 .empty{color:var(--dim);font-size:13.5px;margin-top:12px;font-style:italic}
 [hidden]{display:none!important}
+
+/* expandable detail */
+details{margin-top:14px;border-top:1px solid var(--rule);padding-top:10px}
+details>summary{cursor:pointer;font-family:"Roboto Mono",monospace;font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--dim);list-style:none;padding:8px 0;min-height:36px;display:flex;align-items:center;gap:8px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"+";font-size:14px;line-height:1}
+details[open]>summary::before{content:"\2212"}
+details>summary:hover{color:var(--ink)}
+
+/* one result card */
+.card{border-top:1px solid var(--rule);padding:16px 0}
+.card:first-of-type{border-top:2px solid var(--ink)}
+.chead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.cname{font-size:17px;font-weight:600;line-height:1.25}
+.cmeta{color:var(--dim);font-size:12.5px;margin-top:3px}
+.cscore{font-family:"Barlow Condensed",sans-serif;font-size:40px;font-weight:700;line-height:.85;
+  color:var(--sig);font-variant-numeric:tabular-nums;text-align:right}
+.cprov{font-family:"Roboto Mono",monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--dim);text-align:right;margin-top:4px}
+.closest{margin-top:11px;font-size:14.5px}
+.closest b{font-weight:600}
+.bul{margin:9px 0 0;padding-left:18px}
+.bul li{font-size:14px;margin-bottom:4px}
+.bul li.fr{color:var(--bad)}
+.prov{margin-top:11px;display:flex;flex-wrap:wrap;gap:6px}
+.prov span{font-family:"Roboto Mono",monospace;font-size:10.5px;border:1px solid var(--rule);color:var(--dim);padding:3px 8px}
+.prov span.est{border-color:var(--sig);color:var(--sig)}
+.prov span.thin{border-color:var(--bad);color:var(--bad)}
+.setup{border:1px solid var(--sig);background:var(--sig-wash);padding:13px 15px;margin-top:16px;font-size:13.5px}
+.setup h3{font-family:"Barlow Condensed",sans-serif;text-transform:uppercase;letter-spacing:.04em;
+  font-size:16px;font-weight:700;margin:0 0 6px}
+.setup code{font-family:"Roboto Mono",monospace;font-size:12px;background:var(--card);padding:1px 5px}
+.setup ol{margin:8px 0 0;padding-left:20px}
+.setup li{margin-bottom:5px}
+.rs{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+.rs button{appearance:none;background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:3px;
+  font-family:inherit;font-size:13.5px;padding:10px 12px;cursor:pointer;min-height:44px;touch-action:manipulation}
+.rs button[aria-pressed="true"]{background:var(--bad);border-color:var(--bad);color:var(--ground)}
+.sugg{margin-top:10px;border-left:2px solid var(--sig);padding:8px 0 8px 12px;font-size:13.5px}
+.sugg .rs button{min-height:40px;font-size:13px}
 </style>
 
 <div class="wrap">
   <header class="top">
     <h1>Two Hours In</h1>
-    <p>Not whether a game is good — whether it holds <em>you</em>. It rates nine things about how a game plays, compares them to a profile built from games that hooked you and games you dropped, and shows its working.</p>
+    <p>Not whether a game is good — whether it holds <em>you</em>. Every game you enjoyed is kept as its own example, and a candidate only has to resemble one of them.</p>
   </header>
   <div class="hr"></div>
   <div class="tabs" role="tablist">
     <button class="tab" data-tab="read" aria-selected="true">Check one</button>
     <button class="tab" data-tab="find" aria-selected="false">Find one</button>
-    <button class="tab" data-tab="me" aria-selected="false">Your profile</button>
+    <button class="tab" data-tab="me" aria-selected="false">Your games</button>
   </div>
   <section id="panel-read"></section>
   <section id="panel-find" hidden></section>
@@ -199,177 +240,310 @@ td.num{font-family:"Roboto Mono",monospace;white-space:nowrap}
 "use strict";
 
 /* ============================================================================
-   THE MODEL
+   1. THE SCORING ENGINE
 
-   Every game is described by nine gameplay features rated 0-10. The user has, per
-   feature, a preferred LEVEL p, an importance WEIGHT w and a TOLERANCE t.
+   Each liked game is a separate example of an experience that worked. A
+   candidate matches whichever example it most resembles; liked games are never
+   averaged into one imaginary game, so two unrelated tastes do not cancel out.
 
-     distance = sum( w[i] * (game[i] - p[i])^2 )
-     scale    = 2 * sum( w[i] * t[i]^2 )
-     match    = 100 * exp( -distance / scale )
+   The constants here are initial heuristics. They are not validated
+   probabilities, and nothing below learns clusters or optimises weights.
+   ========================================================================== */
 
-   It is a distance to a preferred level, not a "more is better" sum, so a game
-   does not score higher merely by being louder or faster. It is a heuristic match
-   score — not a probability, and not any kind of clinical assessment.
+const MATCH_KEYS = [
+  "pace", "feedback", "decisions", "variety", "clarity",
+  "overhead", "challenge", "downtime", "onramp"
+];
+
+function featureValue(features, key) {
+  const value = features?.[key]?.value;
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.max(0, Math.min(10, value))
+    : null;
+}
+
+// Importance weights are applied only to known feature pairs.
+// Missing information is never interpreted as a zero rating.
+function featureSimilarity(a, b, weights = {}, tolerance = 3) {
+  let distance = 0;
+  let knownWeight = 0;
+  let totalWeight = 0;
+  let knownCount = 0;
+  const parts = [];
+
+  for (const key of MATCH_KEYS) {
+    const raw = weights[key];
+    const weight = Number.isFinite(raw) ? Math.max(0, raw) : 1;
+    totalWeight += weight;
+
+    const av = featureValue(a, key);
+    const bv = featureValue(b, key);
+    if (av === null || bv === null || weight === 0) continue;
+
+    const gap = av - bv;
+    const cost = weight * gap * gap;
+    distance += cost;
+    knownWeight += weight;
+    knownCount++;
+    parts.push({ key, gap, cost, candidate: av, reference: bv });
+  }
+
+  const coverage = totalWeight > 0 ? knownWeight / totalWeight : 0;
+
+  if (knownCount < 5 || coverage < 0.6) return null;
+
+  const similarity = Math.exp(
+    -distance / (2 * knownWeight * tolerance ** 2)
+  );
+
+  return {
+    similarity,
+    coverage,
+    parts: parts.sort((a, b) => b.cost - a.cost)
+  };
+}
+
+// Structured feedback prevents "bad tutorial" from meaning
+// "dislikes every feature this game has."
+const REASON_RULES = {
+  slow_start:       { feature: "onramp", direction: 1 },
+  too_repetitive:   { feature: "variety", direction: -1 },
+  confusing_goals:  { feature: "clarity", direction: -1 },
+  too_much_admin:   { feature: "overhead", direction: 1 },
+  too_hard:         { feature: "challenge", direction: 1 },
+  too_easy:         { feature: "challenge", direction: -1 },
+  too_slow:         { feature: "pace", direction: -1 },
+  too_frantic:      { feature: "pace", direction: 1 },
+  too_much_waiting: { feature: "downtime", direction: 1 }
+};
+
+function reasonPenalty(candidate, droppedExamples) {
+  const strongestByFeature = new Map();
+
+  for (const example of droppedExamples) {
+    for (const reason of example.reasons || []) {
+      const rule = REASON_RULES[reason];
+      if (!rule) continue;
+
+      const candidateValue = featureValue(candidate, rule.feature);
+      const dislikedValue = featureValue(example.features, rule.feature);
+
+      if (candidateValue === null || dislikedValue === null) continue;
+
+      // Similar or worse on the explicitly disliked dimension
+      // receives a penalty. Improving by 3 points removes it.
+      const badness =
+        rule.direction * (candidateValue - dislikedValue);
+
+      const severity = Math.max(0, Math.min(1, (badness + 3) / 3));
+      const previous = strongestByFeature.get(rule.feature) || 0;
+
+      strongestByFeature.set(
+        rule.feature,
+        Math.max(previous, severity)
+      );
+    }
+  }
+
+  const triggers = [...strongestByFeature.entries()]
+    .filter(([, severity]) => severity > 0)
+    .map(([feature, severity]) => ({ feature, severity }))
+    .sort((a, b) => b.severity - a.severity);
+
+  // Bounded penalty; repeated ratings cannot multiply it forever.
+  const points = Math.min(
+    25,
+    triggers.reduce((sum, trigger) => sum + trigger.severity * 8, 0)
+  );
+
+  return { points, triggers };
+}
+
+function scoreGame(candidate, profile) {
+  const liked = profile.liked || [];
+  const dropped = profile.dropped || [];
+  const weights = profile.weights || {};
+  const tolerance = Number.isFinite(profile.tolerance) ? profile.tolerance : 3;
+
+  const matches = liked
+    .filter(example => example.id !== candidate.id)
+    .map(example => {
+      const result = featureSimilarity(
+        candidate.features,
+        example.features,
+        weights,
+        tolerance
+      );
+      return result ? {
+        ...result,
+        id: example.id,
+        title: example.title
+      } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.similarity - a.similarity);
+
+  if (!matches.length) {
+    return {
+      ok: false,
+      reason: liked.length
+        ? "Not enough comparable gameplay data"
+        : "Add a game you enjoyed to personalize results"
+    };
+  }
+
+  // Strongest matching experience wins. Different taste patterns
+  // don't cancel each other out.
+  const best = matches[0];
+  const baseScore = best.similarity * 100;
+  const friction = reasonPenalty(candidate.features, dropped);
+
+  return {
+    ok: true,
+    score: Math.round(Math.max(0, baseScore - friction.points)),
+    baseScore,
+    coverage: best.coverage,
+    matchedGame: best.title,
+    similarExamples: matches.slice(0, 3),
+    matchingFeatures: best.parts
+      .filter(part => Math.abs(part.gap) <= 2)
+      .sort((a, b) => Math.abs(a.gap) - Math.abs(b.gap))
+      .slice(0, 3),
+    mismatches: best.parts
+      .filter(part => Math.abs(part.gap) > 2)
+      .slice(0, 3),
+    frictionTriggers: friction.triggers,
+    provisional: liked.length < 3
+  };
+}
+
+/* ============================================================================
+   FEATURE VOCABULARY
    ========================================================================== */
 
 const FEATURES = [
-  { key:"pace",      label:"Pace",                 hint:"How fast things happen moment to moment",              lo:"Slow",       hi:"Relentless" },
-  { key:"feedback",  label:"Feedback speed",       hint:"How fast an action produces a visible result",         lo:"Delayed",    hi:"Instant" },
-  { key:"decisions", label:"Meaningful decisions", hint:"How often a choice that actually matters comes up",    lo:"Rare",       hi:"Constant" },
-  { key:"variety",   label:"Variety",              hint:"How much the activity changes as you keep playing",    lo:"Repetitive", hi:"Always new" },
-  { key:"clarity",   label:"Goal clarity",         hint:"How plainly it tells you what to do next",             lo:"Work it out",hi:"Always obvious" },
-  { key:"overhead",  label:"Mental overhead",      hint:"Systems, inventory, map and build you must hold",      lo:"Almost none",hi:"Heavy" },
-  { key:"challenge", label:"Challenge",            hint:"How demanding it is to keep up",                       lo:"Forgiving",  hi:"Punishing" },
-  { key:"downtime",  label:"Downtime",             hint:"Travel, menus, cutscenes, waiting, loading",           lo:"Almost none",hi:"Constant" },
-  { key:"onramp",    label:"Time to the good part",hint:"How long before it is genuinely engaging",             lo:"Minutes",    hi:"Many hours" },
+  { key:"pace",      label:"Pace",                 hint:"How fast things happen moment to moment",          lo:"Slow",       hi:"Relentless" },
+  { key:"feedback",  label:"Feedback speed",       hint:"How fast an action produces a visible result",     lo:"Delayed",    hi:"Instant" },
+  { key:"decisions", label:"Meaningful decisions", hint:"How often a choice that actually matters comes up",lo:"Rare",       hi:"Constant" },
+  { key:"variety",   label:"Variety",              hint:"How much the activity changes as you keep playing",lo:"Repetitive", hi:"Always new" },
+  { key:"clarity",   label:"Goal clarity",         hint:"How plainly it tells you what to do next",         lo:"Work it out",hi:"Always obvious" },
+  { key:"overhead",  label:"Mental overhead",      hint:"Systems, inventory, map and build you must hold",  lo:"Almost none",hi:"Heavy" },
+  { key:"challenge", label:"Challenge",            hint:"How demanding it is to keep up",                   lo:"Forgiving",  hi:"Punishing" },
+  { key:"downtime",  label:"Downtime",             hint:"Travel, menus, cutscenes, waiting, loading",       lo:"Almost none",hi:"Constant" },
+  { key:"onramp",    label:"Time to the good part",hint:"How long before it is genuinely engaging",         lo:"Minutes",    hi:"Many hours" },
 ];
-const FKEYS = FEATURES.map(f=>f.key);
-const NF = FEATURES.length;
+const FLABEL = Object.fromEntries(FEATURES.map(f=>[f.key,f.label]));
 
-const DEF_P = 5, DEF_W = 1, DEF_T = 3;          // neutral, uniform, generous
-const MIN_KNOWN = 5;                            // below this, no authoritative score
-const MIN_COVER = 0.5;                          // and at least half the weight must be known
-const SCHEMA = 3;                               // bump to invalidate cached ratings
+const REASON_LABELS = {
+  slow_start:"Slow start", too_repetitive:"Got repetitive", confusing_goals:"Never knew what to do",
+  too_much_admin:"Too much admin", too_hard:"Too hard", too_easy:"Too easy",
+  too_slow:"Too slow", too_frantic:"Too frantic", too_much_waiting:"Too much waiting"
+};
+const REASON_KEYS = Object.keys(REASON_RULES);
+
+// Free text is never turned into a penalty on its own. These only PROPOSE a tag,
+// which does nothing until it is tapped.
+const REASON_HINTS = [
+  [/tutorial|slow (start|open)|takes (too )?long to get go|first (few )?hours?|ramp/i, "slow_start"],
+  [/repetitive|same thing|samey|grind|got old|stale/i, "too_repetitive"],
+  [/confus|didn'?t know what|no idea what|unclear|lost|aimless/i, "confusing_goals"],
+  [/inventory|menus?|admin|micromanag|bookkeep|spreadsheet|管理|upkeep/i, "too_much_admin"],
+  [/too hard|difficult|brutal|kept dying|unfair|wall/i, "too_hard"],
+  [/too easy|no challenge|trivial|braindead/i, "too_easy"],
+  [/too slow|sluggish|plodding|crawl/i, "too_slow"],
+  [/frantic|chaotic|too fast|overwhelm|stressful/i, "too_frantic"],
+  [/waiting|travel|loading|walking sim|downtime|backtrack/i, "too_much_waiting"],
+];
+function suggestReasons(text){
+  const t=String(text||"");if(t.trim().length<4)return[];
+  const out=[];for(const [re,key] of REASON_HINTS)if(re.test(t)&&!out.includes(key))out.push(key);
+  return out}
 
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 const num=v=>{if(v===null||v===undefined||v==="")return null;
   const n=Number(v);return Number.isFinite(n)?n:null};
 const norm=s=>String(s||"").toLowerCase().replace(/\s+/g," ").replace(/[^a-z0-9 ]/g,"").trim();
+const slug=s=>norm(s).replace(/ /g,"-").slice(0,60);
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
   .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
 
-/* ---- preferences ---- */
+/* ============================================================================
+   3. CATALOG
 
-function blankPrefs(){const p={},w={},t={};
-  for(const k of FKEYS){p[k]=DEF_P;w[k]=DEF_W;t[k]=DEF_T}
-  return{p,w,t,pinned:[]}}
+   Gameplay feature RECORDS live here, keyed by a stable id and stored apart
+   from anything about the user. Catalog metadata (who made it, when, what it
+   runs on) is kept separate from the inferred gameplay ratings, and a rating
+   carries whether it was sourced or is an unverified estimate.
 
-// Weights are kept nonnegative and normalised to sum to 1 at the point of use, so the
-// user can type raw importances without having to make them add up.
-function normW(w){const out={};let s=0;
-  for(const k of FKEYS){const v=Math.max(0,num(w&&w[k])??0);out[k]=v;s+=v}
-  if(s<=0)return null;
-  for(const k of FKEYS)out[k]=out[k]/s;
+   A live catalog is NOT connected. See catalogStatus() for exactly what that
+   needs — this page cannot reach one on its own, and an AI-written list of
+   titles is not a catalog search, so it is labelled as what it is.
+   ========================================================================== */
+
+const CATALOG = {
+  // Fill in to enable real search. Nothing here is guessed at runtime.
+  connector: null,      // {server:"<claude.ai connector name>", searchTool:"", lookupTool:""}
+  endpoint: null,       // {url:"https://your-proxy.example/igdb", note:"needs a backend; see setup"}
+};
+function catalogConnected(){return !!(CATALOG.connector||CATALOG.endpoint)}
+
+function catalogStatus(){
+  return {connected:catalogConnected(),
+    provider:CATALOG.connector?"connector":CATALOG.endpoint?"endpoint":"none"}}
+
+const SOURCE = {
+  catalog:  {label:"catalog", sourced:true},
+  estimate: {label:"unverified estimate", sourced:false},
+  manual:   {label:"entered by you", sourced:false},
+};
+
+// id is stable across sessions and is what feedback, shown-lists and scoring key on.
+function makeId(source,title,externalId){
+  if(externalId)return `${source}:${externalId}`;
+  return `est:${slug(title)}`}
+
+function getGame(id){return state.games[id]||null}
+function findGameByTitle(title){const n=norm(title);
+  return Object.values(state.games).find(g=>norm(g.title)===n)||null}
+
+function putGame(rec){
+  const prev=state.games[rec.id]||{};
+  state.games[rec.id]=Object.assign({},prev,rec,{
+    meta:Object.assign({},prev.meta,rec.meta),
+    ratings:rec.ratings?Object.assign({},prev.ratings,rec.ratings):prev.ratings});
+  const ids=Object.keys(state.games);
+  if(ids.length>300){ids.sort((a,b)=>(state.games[a].at||0)-(state.games[b].at||0));
+    for(const id of ids.slice(0,ids.length-300))
+      if(!state.feedback.some(f=>f.id===id))delete state.games[id]}
+  return state.games[rec.id]}
+
+// Ratings are shaped {features:{key:{value,evidence,confidence}}, sourced, refs[], selfConfidence}.
+// selfConfidence is the MODEL's own claim and is never shown as verified confidence.
+function cleanFeatures(raw){const out={};
+  let get;
+  if(Array.isArray(raw))get=i=>{const a=raw[i];
+    return Array.isArray(a)?{value:a[0],confidence:a[1],evidence:a[2]}:(a||{})};
+  else get=i=>(raw&&raw[MATCH_KEYS[i]])||{};
+  for(let i=0;i<MATCH_KEYS.length;i++){const c=get(i);
+    const v=num(c.value);
+    const cell={value:v===null?null:clamp(v,0,10),
+      confidence:clamp(num(c.confidence)??0,0,1),
+      evidence:String(c.evidence||"").slice(0,220)};
+    if(cell.confidence<=0.05||!cell.evidence){cell.value=null;cell.confidence=0}
+    out[MATCH_KEYS[i]]=cell}
   return out}
 
-function prefsValid(pr){
-  if(!pr)return"no profile";
-  if(!normW(pr.w))return"every importance is zero — at least one feature has to matter";
-  for(const k of FKEYS){const t=num(pr.t[k]);if(t===null||t<=0)return"tolerances must be above zero";}
-  return""}
+function knownCount(features){return MATCH_KEYS.filter(k=>featureValue(features,k)!==null).length}
+function selfConfidence(features){
+  let s=0,n=0;for(const k of MATCH_KEYS){const c=features&&features[k];
+    if(!c||featureValue(features,k)===null)continue;s+=clamp(num(c.confidence)??0,0,1);n++}
+  return n?s/n:0}
 
-/* ---- the match score ---- */
+/* ============================================================================
+   2. PROFILE FROM SAVED FEEDBACK
+   ========================================================================== */
 
-// features: {key:{value:0-10|null, confidence:0-1, evidence:""}}
-function matchScore(features,pr){
-  const bad=prefsValid(pr);
-  if(bad)return{ok:false,reason:bad};
-  const w=normW(pr.w);
-  let distance=0,scale=0,knownW=0,conf=0;
-  const parts=[],unknown=[];
-  for(const f of FEATURES){
-    const cell=features&&features[f.key];
-    const v=cell?num(cell.value):null;
-    if(v===null){unknown.push(f.key);continue}
-    const g=clamp(v,0,10),p=clamp(num(pr.p[f.key])??DEF_P,0,10),t=num(pr.t[f.key]);
-    const gap=g-p, cost=w[f.key]*gap*gap;
-    distance+=cost; scale+=2*w[f.key]*t*t; knownW+=w[f.key];
-    conf+=w[f.key]*clamp(num(cell.confidence)??0.5,0,1);
-    parts.push({key:f.key,value:g,pref:p,tol:t,weight:w[f.key],gap,cost,
-      evidence:String(cell.evidence||""),confidence:clamp(num(cell.confidence)??0.5,0,1)});
-  }
-  const cover={known:parts.length,total:NF,weight:knownW,
-    confidence:knownW>0?conf/knownW:0,unknown};
-  // A missing feature is unknown, never zero: it is left out of both sums, and how much
-  // was left out is reported separately rather than folded into the score.
-  if(parts.length<MIN_KNOWN||knownW<MIN_COVER||scale<=0)
-    return{ok:false,reason:"insufficient data",cover,parts,distance:null};
-  const score=100*Math.exp(-distance/scale);
-  for(const part of parts)part.share=distance>0?part.cost/distance:0;
-  return{ok:true,score,distance,scale,cover,parts}}
-
-// The wording comes from whichever features actually moved the number.
-function explain(m){
-  if(!m.ok&&!m.parts)return{good:[],bad:[]};
-  const parts=m.parts.slice();
-  const good=parts.filter(x=>Math.abs(x.gap)<=x.tol)
-    .map(x=>Object.assign({},x,{strength:x.weight*(1-Math.abs(x.gap)/x.tol)}))
-    .sort((a,b)=>b.strength-a.strength).filter(x=>x.strength>0.02).slice(0,4);
-  const bad=parts.filter(x=>Math.abs(x.gap)>x.tol)
-    .sort((a,b)=>b.cost-a.cost).slice(0,4);
-  return{good,bad}}
-
-function gapWord(part){
-  const f=FEATURES.find(x=>x.key===part.key)||{lo:"low",hi:"high"};
-  return part.gap>0?`more than you want (${f.hi.toLowerCase()})`:`less than you want (${f.lo.toLowerCase()})`}
-
-/* ---- fitting the profile to feedback ----
-   Pairwise ranking: for every (game that hooked you, game you dropped) pair, push the
-   liked game's match above the dropped one's. Regularised toward the starting profile so
-   six games cannot invent a personality. Weights stay nonnegative and normalised.
-   Tolerances are NOT fitted — with feedback this sparse they would only overfit. */
-
-// Data is summed, not averaged, and the prior is worth a fixed number of comparisons —
-// so six games barely move the profile and sixty move it a long way.
-const FIT = {lr:0.06, epochs:2500, lamP:0.006, lamW:1.1, prior:6};
-
-// Mean ranking loss per comparison, with no regularisation: the honest readout of how
-// well the profile separates the games that hooked him from the ones he dropped.
-function pairLoss(pairs,pr){
-  let L=0,n=0;const w=normW(pr.w);if(!w)return Infinity;
-  for(const pair of pairs){
-    const keys=pair.keys;
-    let scale=0;for(const k of keys)scale+=2*w[k]*pr.t[k]*pr.t[k];
-    if(scale<=0)continue;
-    let dL=0,dD=0;
-    for(const k of keys){const a=pair.like[k]-pr.p[k],b=pair.drop[k]-pr.p[k];
-      dL+=w[k]*a*a;dD+=w[k]*b*b}
-    const m=(dD-dL)/scale;
-    L+=Math.log(1+Math.exp(-m));n++;
-  }
-  return n?L/n:0}
-
-function fitPreferences(pairs,start){
-  const pinned=new Set((start.pinned||[]));
-  const pr={p:Object.assign({},start.p),w:Object.assign({},start.w),
-            t:Object.assign({},start.t),pinned:start.pinned||[]};
-  if(!pairs.length)return pr;
-  const p0=Object.assign({},pr.p), w0=Object.assign({},pr.w);
-  for(let it=0;it<FIT.epochs;it++){
-    const w=normW(pr.w);if(!w)break;
-    const gp={},gw={};for(const k of FKEYS){gp[k]=0;gw[k]=0}
-    for(const pair of pairs){
-      const keys=pair.keys;
-      let scale=0;for(const k of keys)scale+=2*w[k]*pr.t[k]*pr.t[k];
-      if(scale<=0)continue;
-      let N=0;const a={};
-      for(const k of keys){const dl=pair.like[k]-pr.p[k],dd=pair.drop[k]-pr.p[k];
-        a[k]=dd*dd-dl*dl;N+=w[k]*a[k]}
-      const m=N/scale;
-      const dL=-1/(1+Math.exp(m));            // d/dm of log(1+e^-m)
-      for(const k of keys){
-        gp[k]+=dL*(2*w[k]*(pair.like[k]-pair.drop[k])/scale);
-        gw[k]+=dL*((a[k]-m*2*pr.t[k]*pr.t[k])/scale);
-      }
-    }
-    const den=pairs.length+FIT.prior;
-    for(const k of FKEYS){
-      if(pinned.has(k))continue;
-      pr.p[k]=clamp(pr.p[k]-FIT.lr*(gp[k]+FIT.prior*2*FIT.lamP*(pr.p[k]-p0[k]))/den,0,10);
-      pr.w[k]=Math.max(0,pr.w[k]-FIT.lr*(gw[k]+FIT.prior*2*FIT.lamW*(pr.w[k]-w0[k]))/den);
-    }
-    let s=0;for(const k of FKEYS)s+=pr.w[k];
-    if(s<=0){for(const k of FKEYS)pr.w[k]=DEF_W}
-    else{const scaleTo=FKEYS.length*DEF_W/s;for(const k of FKEYS)if(!pinned.has(k))pr.w[k]*=scaleTo}
-  }
-  return pr}
-
-/* ---- feedback -> labels ----
-   Enjoyment is recorded but deliberately does NOT decide the label: a game can be loved
-   and still dropped. The label comes from whether it caught you and whether you wanted to
-   go back. A game you never played is not a dislike and produces no label at all. */
-
+// A game never played is not a dislike. A middling rating is neither.
 function labelOf(fb){
   if(!fb||fb.played===false)return"";
   const e=num(fb.engage),r=num(fb.ret);
@@ -379,78 +553,83 @@ function labelOf(fb){
   if(pull<=4)return"dropped";
   return"mixed"}
 
-/* ---- the catalog cache ---- */
-
-function cacheGet(title){const e=state.cache[norm(title)];
-  return e&&e.v===SCHEMA?e:null}
-function cachePut(title,rec){
-  state.cache[norm(title)]=Object.assign({v:SCHEMA,at:Date.now(),title},rec);
-  const keys=Object.keys(state.cache);
-  if(keys.length>160){keys.sort((a,b)=>(state.cache[a].at||0)-(state.cache[b].at||0));
-    for(const k of keys.slice(0,keys.length-160))delete state.cache[k]}}
-
-// Accepts either {pace:{value,evidence,confidence}} or the compact [[v,c,"ev"],...] form
-// used where output length is the binding constraint.
-function cleanFeatures(raw){const out={};
-  let get;
-  if(Array.isArray(raw))get=i=>{const a=raw[i];return Array.isArray(a)?{value:a[0],confidence:a[1],evidence:a[2]}:(a||{})};
-  else get=i=>(raw&&raw[FKEYS[i]])||{};
-  for(let i=0;i<FEATURES.length;i++){const f=FEATURES[i],c=get(i);
-    const v=num(c.value);
-    const cell={value:v===null?null:clamp(v,0,10),
-      confidence:clamp(num(c.confidence)??0,0,1),
-      evidence:String(c.evidence||"").slice(0,220)};
-    // A number with no evidence and no confidence behind it is a guess, not a rating.
-    if(cell.confidence<=0.05||!cell.evidence){cell.value=null;cell.confidence=0}
-    out[f.key]=cell;
-  }
-  return out}
+function buildProfile(){
+  const liked=[],dropped=[],unrated=[];
+  for(const fb of state.feedback){
+    const g=getGame(fb.id);
+    const lab=labelOf(fb);
+    if(!g||!g.ratings||!g.ratings.features){if(lab)unrated.push(fb.title);continue}
+    const ex={id:fb.id,title:g.title,features:g.ratings.features,
+      reasons:Array.isArray(fb.reasons)?fb.reasons.filter(r=>REASON_RULES[r]):[]};
+    if(lab==="liked")liked.push(ex);
+    else if(lab==="dropped")dropped.push(ex)}
+  return {liked,dropped,unrated,weights:state.weights,tolerance:state.tolerance}}
 
 /* ============================================================================
-   STATE
+   STATE AND STORAGE
    ========================================================================== */
 
-const state={prefs:blankPrefs(),fitted:null,feedback:[],cache:{},seen:[],
-  onboarded:false,onboardSkipped:false,themesLike:"",themesAvoid:"",lastError:null,loaded:false};
+const SCHEMA=4;
+const state={games:{},feedback:[],weights:{},tolerance:3,
+  themesLike:"",themesAvoid:"",shown:[],lastError:null,loaded:false};
+for(const k of MATCH_KEYS)state.weights[k]=1;
+
 let db=null,sample=null,tab="read",ctl=null;
-let readTitle="",readBusy=false,readErr="",reading=null;
-let form="either",company="alone",platform="",findBusy=false,findErr="",picks=[],findNotes=[],findSeen=0;
-let obLike=[{t:"",r:""},{t:"",r:""},{t:"",r:""}],obDrop=[{t:"",r:""},{t:"",r:""},{t:"",r:""}];
-let obBusy=false,obErr="",obSeen=0,showOnboard=false;
+let readTitle="",readBusy=false,readErr="",readingId=null,readStep="";
+let form="either",company="alone",offlineOnly=false,platform="";
+let findBusy=false,findErr="",findNotes=[],findStep="",pickIds=[];
+let includeRated=false;
 let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
-const saveStatus={};
+const saveStatus={},suggested={};
 const DOC="games/profile", LS="games:v2";
 
-function payload(){return{v:SCHEMA,prefs:state.prefs,feedback:state.feedback.slice(-400),
-  cache:state.cache,seen:state.seen.slice(-300),onboarded:state.onboarded,
-  onboardSkipped:state.onboardSkipped,themesLike:state.themesLike,themesAvoid:state.themesAvoid,
-  platform,last:reading||null,lastError:state.lastError}}
+function payload(){return{v:SCHEMA,games:state.games,feedback:state.feedback.slice(-400),
+  weights:state.weights,tolerance:state.tolerance,
+  themesLike:state.themesLike,themesAvoid:state.themesAvoid,
+  shown:state.shown.slice(-400),platform,lastReadId:readingId,lastError:state.lastError}}
+
+// The store hands back FROZEN objects and everything here gets mutated later, so
+// loaded state is copied out before it is adopted.
+function thaw(v){try{return v==null?v:JSON.parse(JSON.stringify(v))}catch(e){return null}}
 
 function adopt(d){if(!d)return false;
-  if(d.prefs&&d.prefs.p&&d.prefs.w&&d.prefs.t){
-    const pr=blankPrefs();
-    for(const k of FKEYS){
-      if(num(d.prefs.p[k])!==null)pr.p[k]=clamp(num(d.prefs.p[k]),0,10);
-      if(num(d.prefs.w[k])!==null)pr.w[k]=Math.max(0,num(d.prefs.w[k]));
-      if(num(d.prefs.t[k])!==null&&num(d.prefs.t[k])>0)pr.t[k]=num(d.prefs.t[k]);
-    }
-    pr.pinned=Array.isArray(d.prefs.pinned)?d.prefs.pinned.filter(k=>FKEYS.includes(k)):[];
-    state.prefs=pr}
+  if(d.games&&typeof d.games==="object")state.games=d.games;
   if(Array.isArray(d.feedback))state.feedback=d.feedback;
-  if(d.cache&&typeof d.cache==="object")state.cache=d.cache;
-  if(Array.isArray(d.seen))state.seen=d.seen;
-  state.onboarded=!!d.onboarded;state.onboardSkipped=!!d.onboardSkipped;
+  if(d.weights)for(const k of MATCH_KEYS)
+    if(num(d.weights[k])!==null)state.weights[k]=Math.max(0,num(d.weights[k]));
+  if(num(d.tolerance)!==null&&num(d.tolerance)>0)state.tolerance=num(d.tolerance);
+  if(Array.isArray(d.shown))state.shown=d.shown;
   if(typeof d.themesLike==="string")state.themesLike=d.themesLike;
   if(typeof d.themesAvoid==="string")state.themesAvoid=d.themesAvoid;
   if(typeof d.platform==="string")platform=d.platform;
-  if(d.last&&d.last.name){reading=d.last;readTitle=d.last.name}
   if(d.lastError)state.lastError=d.lastError;
+  if(d.lastReadId)readingId=d.lastReadId;
+  if((d.v||0)<SCHEMA)migrate(d);
+  if(readingId&&!getGame(readingId))readingId=null;
+  if(readingId)readTitle=getGame(readingId).title;
   return true}
 
-// The store hands back FROZEN objects. Everything adopted is mutated later — a game added
-// to the cache, a feedback row pushed, a preference dragged — so it has to be copied out
-// first, or the second session onwards throws "object is not extensible" on every write.
-function thaw(v){try{return v==null?v:JSON.parse(JSON.stringify(v))}catch(e){return null}}
+// Everything saved under the old title-keyed shape is carried over, not dropped.
+function migrate(d){
+  const cache=d.cache&&typeof d.cache==="object"?d.cache:null;
+  if(cache)for(const key of Object.keys(cache)){const c=cache[key];
+    if(!c||!c.features)continue;
+    const title=c.title||key;const id=makeId("est",title);
+    putGame({id,title,source:"estimate",at:c.at||Date.now(),
+      meta:{ident:c.ident||"",theme:c.theme||"",frictions:c.frictions||[]},
+      ratings:{features:cleanFeatures(c.features),sourced:false,refs:[],
+        selfConfidence:selfConfidence(cleanFeatures(c.features)),at:c.at||Date.now()},
+      tactics:c.tactics||[],stopRule:c.stopRule||""})}
+  for(const fb of state.feedback){
+    if(fb.id&&getGame(fb.id))continue;
+    const g=findGameByTitle(fb.title);
+    fb.id=g?g.id:makeId("est",fb.title);
+    if(!Array.isArray(fb.reasons))fb.reasons=[];
+    if(fb.reason&&!fb.note)fb.note=fb.reason}
+  if(d.last&&d.last.name&&!readingId){const g=findGameByTitle(d.last.name);if(g)readingId=g.id}
+  if(Array.isArray(d.seen))state.shown=d.seen.map(t=>makeId("est",t));
+  if(d.prefs&&d.prefs.w)for(const k of MATCH_KEYS)
+    if(num(d.prefs.w[k])!==null)state.weights[k]=Math.max(0,num(d.prefs.w[k]))}
 
 async function loadState(){let got=false;
   try{db=await claude.use("db");
@@ -460,144 +639,28 @@ async function loadState(){let got=false;
   try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
   catch(e){lastSave.local=false}
   if(!got){try{const raw=localStorage.getItem(LS);if(raw)adopt(JSON.parse(raw))}catch(e){}}
-  // Nothing else refits on load, so without this the page shows the pre-load blank profile.
-  state.loaded=true;rebuildProfile();render()}
+  state.loaded=true;render()}
 
 async function saveState(){const body=payload();let local=false,cloud=false;
   try{localStorage.setItem(LS,JSON.stringify(body));local=true}catch(e){}
   if(db){try{await db.doc(DOC).set(body);cloud=true;dbErr=""}catch(e){dbErr=(e&&(e.code||e.message))||"unknown error"}}
   lastSave={cloud,local};return local||cloud}
 
-/* ---- training pairs out of stored feedback ---- */
-
-function featuresFor(title){const c=cacheGet(title);return c?c.features:null}
-
-function trainingPairs(){
-  const liked=[],dropped=[];
-  for(const fb of state.featureSourceRows||state.feedback){
-    const lab=labelOf(fb);if(lab!=="liked"&&lab!=="dropped")continue;
-    const f=featuresFor(fb.title);if(!f)continue;
-    (lab==="liked"?liked:dropped).push({title:fb.title,f})}
-  const pairs=[];
-  for(const L of liked)for(const D of dropped){
-    const keys=FKEYS.filter(k=>num(L.f[k]&&L.f[k].value)!==null&&num(D.f[k]&&D.f[k].value)!==null);
-    if(keys.length<MIN_KNOWN)continue;
-    const like={},drop={};
-    for(const k of keys){like[k]=L.f[k].value;drop[k]=D.f[k].value}
-    pairs.push({keys,like,drop,titles:[L.title,D.title]})}
-  return{pairs,liked,dropped}}
-
-function likedMeanPrefs(liked,base){
-  const pr={p:Object.assign({},base.p),w:Object.assign({},base.w),
-            t:Object.assign({},base.t),pinned:base.pinned||[]};
-  const pinned=new Set(pr.pinned);
-  for(const k of FKEYS){
-    if(pinned.has(k))continue;
-    let s=0,n=0;
-    for(const L of liked){const c=L.f[k],v=c?num(c.value):null;
-      if(v===null)continue;const cf=clamp(num(c.confidence)??0.5,0,1);s+=v*cf;n+=cf}
-    if(n>0)pr.p[k]=clamp(s/n,0,10)}
-  return pr}
-
-// Recomputed whenever feedback or the cache changes.
-function rebuildProfile(){
-  const {pairs,liked,dropped}=trainingPairs();
-  const manual=state.prefs;
-  let start=liked.length?likedMeanPrefs(liked,manual):manual;
-  const fitted=pairs.length?fitPreferences(pairs,start):start;
-  state.fitted=fitted;
-  state.fitInfo={pairs:pairs.length,liked:liked.length,dropped:dropped.length,
-    start,loss:pairs.length?pairLoss(pairs,fitted):null,
-    baseLoss:pairs.length?pairLoss(pairs,start):null};
-  return fitted}
-
-function activePrefs(){return state.fitted||state.prefs}
-function provisional(){return !state.feedback.some(f=>f.src==="onboarding")
-  ||!state.fitInfo||state.fitInfo.pairs<3}
-
-/* ---- prompt fragments ---- */
-
-const FEATURE_SPEC = FEATURES.map(f=>
-  `  ${f.key} (0-10) — ${f.label}: ${f.hint}. 0 = ${f.lo}, 10 = ${f.hi}.`).join("\n");
-
-const RATING_RULES = `RATE THE GAME ITSELF, NOT ITS QUALITY, REPUTATION OR REVIEW SCORE. These are
-descriptions of how it plays, and none of them is good or bad on its own — a person can want
-low pace and heavy overhead, or the reverse.
-
-Genre is not enough. Two roguelikes, two shooters, two RPGs can sit at opposite ends of most
-of these. Rate from how the game actually plays minute to minute: what you do, how often, how
-long the gaps are, what the screen gives back.
-
-For EVERY feature return three things:
-  value      — 0 to 10, or null if you genuinely do not know this game well enough
-  evidence   — the concrete detail that justifies the number, in under 20 words. Name real
-               things: the run length, the menu, the travel, the tutorial, the mission type.
-  confidence — 0 to 1, how sure you are for THIS feature of THIS game
-
-NEVER fill a gap with a guess dressed as a fact. If you do not know the game, or only know it
-by reputation, set value to null and confidence to 0 for the features you cannot support. A
-null is more useful here than a plausible invention, because the app reports coverage
-separately and will refuse to show a score it cannot stand behind.`;
-
-function profileBlock(){
-  const pr=activePrefs(),w=normW(pr.w)||{};
-  const rows=FEATURES.map(f=>`  ${f.key}: wants about ${Number(pr.p[f.key]).toFixed(1)}/10, `+
-    `importance ${(w[f.key]*100||0).toFixed(0)}%, tolerance +/-${Number(pr.t[f.key]).toFixed(1)}`).join("\n");
-  return`HIS PROFILE (the app scores the match itself — this is context for CHOOSING candidates,\nnot for you to score with):\n${rows}`}
-
-function tasteBlock(){
-  const rows=[];
-  const {liked,dropped}=trainingPairs();
-  const reason=t=>{const fb=state.feedback.find(x=>norm(x.title)===norm(t));
-    return fb&&fb.reason?` (${fb.reason})`:""};
-  if(liked.length)rows.push("HOOKED HIM: "+liked.map(x=>x.title+reason(x.title)).join("; "));
-  if(dropped.length)rows.push("HE DROPPED: "+dropped.map(x=>x.title+reason(x.title)).join("; "));
-  const th=[];
-  if(state.themesLike)th.push("Settings and themes he likes: "+state.themesLike);
-  if(state.themesAvoid)th.push("Settings and themes to avoid: "+state.themesAvoid);
-  if(th.length)rows.push(th.join("\n")+"\nTheme is a separate filter from the gameplay match. Use it to choose candidates; never let it change a feature rating.");
-  return rows.join("\n")}
-
-function platformBlock(){const p=(platform||"").trim();
-  return p?`HE PLAYS ON: ${p}. Only suggest things playable there.`:""}
-
-// A reply cut off by the length limit still holds complete objects. Rather than throwing
-// the whole call away, walk the array and keep every candidate that closed.
-function salvageObjects(text,key){
-  const out=[];const s=String(text||"");
-  let i=s.indexOf('"'+key+'"');if(i<0)return out;
-  i=s.indexOf("[",i);if(i<0)return out;
-  let depth=0,start=-1,inStr=false,esc=false;
-  for(let j=i+1;j<s.length;j++){const ch=s[j];
-    if(inStr){if(esc)esc=false;else if(ch==="\\")esc=true;else if(ch==='"')inStr=false;continue}
-    if(ch==='"'){inStr=true;continue}
-    if(ch==="{"){if(depth===0)start=j;depth++;continue}
-    if(ch==="}"){depth--;
-      if(depth===0&&start>=0){try{out.push(JSON.parse(s.slice(start,j+1)))}catch(e){}start=-1}
-      continue}
-    if(ch==="]"&&depth===0)break}
-  return out}
-
-// Every failure is kept — code, message, and the head of the raw reply — and saved with the
-// profile, so "it didn't go through" can be looked at instead of guessed at.
 function noteError(where,e){
-  state.lastError={where,at:Date.now(),
-    code:(e&&e.code)||"",
-    name:(e&&e.name)||(e&&e.code?"":"Error"),
-    message:String((e&&e.message)||e||"").slice(0,300),
+  state.lastError={where,at:Date.now(),code:(e&&e.code)||"",
+    name:(e&&e.name)||"",message:String((e&&e.message)||e||"").slice(0,300),
     text:e&&e.text?String(e.text).slice(0,400):""};
   try{saveState()}catch(x){}
   return errCopy(e)}
 
 function errCopy(e){const c=e&&e.code;
-  // A throw with no code is a fault in the page, not a refusal from the service.
   if(!c)return`The page hit an error: ${String((e&&e.message)||e||"unknown").slice(0,120)}`;
   if(c==="not_granted"||c==="sampling_disabled"||c==="not_declared"||c==="capability_disabled")
     return"This page can't reach Claude. Open it from your Claude account and allow it.";
   if(c==="rate_limited")return"Too many requests, or you've hit your usage limit. Give it a minute.";
   if(c==="session_expired")return"Session expired. Sign in again, then retry.";
   if(c==="invalid_json")return"The reply was cut short or came back malformed. Try again.";
-  if(c==="prompt_too_large")return"Too much to send at once — clear some cached ratings under Your profile.";
+  if(c==="prompt_too_large")return"Too much to send at once. Clear some saved games.";
   if(c==="empty_completion")return"Nothing came back. Try again.";
   if(c==="upstream_error")return"The connection dropped part-way. Try again.";
   if(c==="refused")return"Claude declined that one. Try a different title.";
@@ -609,57 +672,209 @@ function saveLine(key,done){const s=saveStatus[key];
   if(s==="ok"||done)return`<div class="saved">${lastSave.cloud?"Saved.":"Saved to this browser."}</div>`;
   return""}
 
+// A reply cut off by the length limit still holds complete objects.
+function salvageObjects(text,key){
+  const out=[];const s=String(text||"");
+  let i=s.indexOf('"'+key+'"');if(i<0)return out;
+  i=s.indexOf("[",i);if(i<0)return out;
+  let depth=0,start=-1,inStr=false,esc2=false;
+  for(let j=i+1;j<s.length;j++){const ch=s[j];
+    if(inStr){if(esc2)esc2=false;else if(ch==="\\")esc2=true;else if(ch==='"')inStr=false;continue}
+    if(ch==='"'){inStr=true;continue}
+    if(ch==="{"){if(depth===0)start=j;depth++;continue}
+    if(ch==="}"){depth--;
+      if(depth===0&&start>=0){try{out.push(JSON.parse(s.slice(start,j+1)))}catch(e){}start=-1}
+      continue}
+    if(ch==="]"&&depth===0)break}
+  return out}
+
 /* ============================================================================
-   RENDERING PIECES
+   RATING GAMES
+
+   The rating call is BLIND. It never sees the profile, the weights, or any
+   preferred value — otherwise a rating would drift toward whatever scores well.
+   Ratings are estimates unless a catalog supplied sources, and are labelled so.
    ========================================================================== */
 
-function confBlock(cover){
-  const pct=Math.round(cover.confidence*100);
-  const lvl=cover.known<MIN_KNOWN?"Thin":cover.confidence>=.7?"Solid":cover.confidence>=.45?"Partial":"Thin";
-  const bars=Math.round(cover.confidence*10);
-  return`<div class="conf">
-    <div class="ln"><span class="lab">Evidence, not agreement</span><span class="v">${lvl}</span></div>
-    <div class="bar">${Array.from({length:10},(_,i)=>`<i class="${i<bars?"on":""}"></i>`).join("")}</div>
-    <div class="ln" style="margin-top:7px"><span class="v">${cover.known} of ${cover.total} features rated</span>
-      <span class="v">mean confidence ${pct}%</span></div>
-    ${cover.unknown.length?`<div class="v" style="margin-top:5px">Unknown: ${cover.unknown.map(k=>(FEATURES.find(f=>f.key===k)||{}).label).join(", ")} — left out of the score, not counted as zero.</div>`:""}
+const FEATURE_SPEC = FEATURES.map(f=>
+  `  ${f.key} (0-10) — ${f.label}: ${f.hint}. 0 = ${f.lo}, 10 = ${f.hi}.`).join("\n");
+
+const RATING_RULES = `RATE THE GAME ITSELF, NOT ITS QUALITY, REPUTATION OR REVIEW SCORE. These describe how
+it plays, and none of them is good or bad on its own.
+
+Genre is not enough. Two roguelikes, two shooters, two RPGs sit at opposite ends of most of
+these. Rate from how the game actually plays minute to minute.
+
+For EVERY feature give three things:
+  value      — 0 to 10, or null if you do not know this game well enough
+  evidence   — the concrete detail behind the number, under 20 words: the run length, the
+               menu, the travel, the tutorial, the mission type
+  confidence — 0 to 1, YOUR OWN certainty for this feature of this game
+
+NEVER fill a gap with a guess dressed as a fact. Unknown means value null and confidence 0.
+Coverage is reported separately and a score is withheld when there is too little.`;
+
+const COMPACT = `KEEP THE REPLY SHORT OR IT WILL BE CUT OFF. Evidence is at most TEN words. No prose
+outside the JSON. "f" is the nine features IN THE ORDER LISTED ABOVE, each as
+[value, confidence, "evidence"]. Use [null,0,""] for one you cannot support.`;
+
+async function rateTitles(titles,onProgress){
+  if(!sample)throw{code:"not_granted",message:"no sampling in this view"};
+  const prompt=`Rate how each of these games plays, feature by feature.
+
+GAMES, in this order: ${titles.map((t,i)=>`${i+1}. "${t}"`).join("  ")}
+
+${RATING_RULES}
+
+THE NINE FEATURES:
+${FEATURE_SPEC}
+
+${COMPACT}
+
+Rate every game on the list, in the order given, keeping its exact title.
+
+Reply with only this JSON:
+{"games":[{"t":"exact title as given","d":"developer, year, what you do in it","th":"setting",
+"e":false,"o":false,"off":true,"fr":["friction"],
+"f":[[0,0.8,"evidence"],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""]]}]}
+e = endless (no ending). o = needs a PREMADE GROUP of people you know, not just matchmaking.
+off = playable fully offline.`;
+  let out=null,salvaged=false;
+  try{out=await sample.json(prompt,{modelTier:"complex",signal:ctl&&ctl.signal,cache:false,
+    onText:({text})=>{if(onProgress)onProgress((text.match(/"t":/g)||[]).length)}})}
+  catch(e){
+    if(e&&e.code==="cancelled")throw e;
+    const part=e&&e.text?salvageObjects(e.text,"games"):[];
+    if(!part.length)throw e;
+    out={games:part};salvaged=true}
+  const rows=(out&&Array.isArray(out.games)?out.games:[]).filter(g=>g&&(g.t||g.title));
+  const used=new Set(),saved=[];
+  rows.forEach((g,idx)=>{
+    const given=String(g.t||g.title);
+    let want=titles.find(t=>!used.has(t)&&norm(t)===norm(given));
+    if(!want)want=titles.find((t,i)=>i===idx&&!used.has(t));
+    if(!want)want=titles.find(t=>!used.has(t));
+    if(!want)return;
+    used.add(want);
+    const features=cleanFeatures(g.f||g.features);
+    saved.push(putGame({id:makeId("est",want),title:want,source:"estimate",at:Date.now(),
+      meta:{ident:String(g.d||g.ident||""),theme:String(g.th||g.theme||""),
+        endless:g.e===true,needsGroup:g.o===true,offline:g.off!==false,
+        frictions:(Array.isArray(g.fr)?g.fr:[]).slice(0,4).map(String)},
+      ratings:{features,sourced:false,refs:[],selfConfidence:selfConfidence(features),at:Date.now()}}))});
+  return {saved,missed:titles.filter(t=>!used.has(t)),salvaged}}
+
+// Candidate titles. This is NOT catalog search and never claims to be. It may use which
+// games he liked by NAME and his stated themes; it is given no feature numbers at all.
+async function proposeTitles(n){
+  if(!sample)throw{code:"not_granted",message:"no sampling in this view"};
+  const {liked,dropped}=buildProfile();
+  const bits=[];
+  if(liked.length)bits.push("Games he enjoyed: "+liked.map(x=>x.title).join("; "));
+  if(dropped.length)bits.push("Games he dropped: "+dropped.map(x=>x.title).join("; "));
+  if(state.themesLike)bits.push("Settings he likes: "+state.themesLike);
+  if(state.themesAvoid)bits.push("Settings to avoid: "+state.themesAvoid);
+  if(platform)bits.push("He plays on: "+platform+". Only suggest things playable there.");
+  if(form==="finite")bits.push("Only games with an actual ending.");
+  if(form==="endless")bits.push("Only games with no ending.");
+  if(company==="alone")bits.push("He plays without a group of friends. Solo games are fine, and so are multiplayer games with matchmaking or a solo queue — but nothing that needs a premade group to work.");
+  if(company==="friends")bits.push("He is playing with friends, so co-op and team games are fine.");
+  if(offlineOnly)bits.push("It must be playable fully offline.");
+  // With "include ones I've rated" on, they must not be excluded here either, or the
+  // client-side filter never gets the chance to let them through.
+  const skip=(includeRated?[]:state.feedback.map(f=>f.title))
+    .concat(state.shown.map(id=>(getGame(id)||{}).title).filter(Boolean));
+  const prompt=`Name ${n} varied games worth considering for this person.
+
+${bits.join("\n")||"No preferences recorded yet — give a broad, varied spread."}
+
+RULES
+1. Spread them widely. Different genres, budgets, eras and shapes. The app scores and ranks
+   them itself, and it can only rank what you name.
+2. Do NOT rank them, score them, or pick a favourite. Ordering is discarded.
+3. Include several he is unlikely to have thought of.
+4. Real, released games only, with their exact common titles.
+5. Do not name any of these: ${skip.slice(-80).join("; ")||"none"}.
+
+Reply with only this JSON: {"titles":["",""]}`;
+  const out=await sample.json(prompt,{modelTier:"complex",signal:ctl&&ctl.signal,cache:false});
+  const list=(out&&Array.isArray(out.titles)?out.titles:[]).map(String).map(t=>t.trim()).filter(Boolean);
+  const seen=new Set();return list.filter(t=>{const k=norm(t);
+    if(!k||seen.has(k))return false;seen.add(k);return true})}
+
+/* ============================================================================
+   5. RESULT CARD
+   ========================================================================== */
+
+function provTags(g,m){
+  const src=SOURCE[g.source]||SOURCE.estimate;
+  const cov=m&&m.ok?Math.round(m.coverage*100):Math.round(knownCount(g.ratings.features)/MATCH_KEYS.length*100);
+  const thin=cov<70;
+  return`<div class="prov">
+    <span class="${src.sourced?"":"est"}">${src.sourced?"sourced ratings":"unverified estimate"}</span>
+    <span class="${thin?"thin":""}">${knownCount(g.ratings.features)}/${MATCH_KEYS.length} features rated · ${cov}% of weight</span>
+    ${src.sourced?"":`<span>model's own certainty ${Math.round((g.ratings.selfConfidence||0)*100)}%</span>`}
   </div>`}
 
-function reasonsBlock(m){
-  const {good,bad}=explain(m);
-  let h="";
-  if(good.length){h+=`<h2 class="sec">Why it matches</h2><div class="reasons">`;
-    for(const g of good){const f=FEATURES.find(x=>x.key===g.key);
-      h+=`<div class="rz pos"><div class="rzh"><div class="rzt">${esc(f.label)} <em>sits where you want it</em></div>
-        <div class="rzv">${g.value.toFixed(1)} vs ${g.pref.toFixed(1)}</div></div>
-        ${g.evidence?`<div class="rze">${esc(g.evidence)}</div>`:""}</div>`}
-    h+=`</div>`}
-  if(bad.length){h+=`<h2 class="sec">Where it'll rub</h2><div class="reasons">`;
-    for(const b of bad){const f=FEATURES.find(x=>x.key===b.key);
-      h+=`<div class="rz neg"><div class="rzh"><div class="rzt">${esc(f.label)} <em>${esc(gapWord(b))}</em></div>
-        <div class="rzv">${b.value.toFixed(1)} vs ${b.pref.toFixed(1)} · ${Math.round(b.share*100)}% of the miss</div></div>
-        ${b.evidence?`<div class="rze">${esc(b.evidence)}</div>`:""}</div>`}
-    h+=`</div>`}
-  if(!good.length&&!bad.length)h+=`<p class="empty">Nothing stood out either way.</p>`;
-  return h}
+function gapWord(part,invert){
+  const f=FEATURES.find(x=>x.key===part.key)||{lo:"low",hi:"high"};
+  const more=invert?part.gap<0:part.gap>0;
+  return more?f.hi.toLowerCase():f.lo.toLowerCase()}
 
-function featureTable(features,pr){
-  let h=`<h2 class="sec">Every feature</h2>
-    <p class="subtle">The dot is the game. The bar is the range you tolerate around your preferred level.</p>`;
-  for(const f of FEATURES){
-    const c=features&&features[f.key]||{};const v=num(c.value);
-    const p=clamp(num(pr.p[f.key])??DEF_P,0,10),t=num(pr.t[f.key])||DEF_T;
-    const l=clamp(p-t,0,10),r=clamp(p+t,0,10);
-    h+=`<div class="feat"><div class="frow">
-      <div class="flab">${esc(f.label)}<span class="fhint">${esc(f.hint)}</span></div>
-      <div class="fval">${v===null?"unknown":v.toFixed(1)+" / you "+p.toFixed(1)}</div></div>
-      <div class="scaleline"><div class="track"></div>
-        <div class="band" style="left:${l*10}%;width:${(r-l)*10}%"></div>
-        <div class="you" style="left:${p*10}%"></div>
-        ${v===null?`<div class="unk">no evidence — left out of the score</div>`:`<div class="it" style="left:${v*10}%"></div>`}
-      </div>
-      ${c.evidence?`<div class="fev">${esc(c.evidence)}${v!==null?` <span class="lab">conf ${Math.round((c.confidence||0)*100)}%</span>`:""}</div>`:""}
-    </div>`}
+function matchLine(part){
+  return`${FLABEL[part.key]} — about the same (${part.candidate.toFixed(1)} vs ${part.reference.toFixed(1)})`}
+
+function frictionLine(m){
+  if(m.frictionTriggers&&m.frictionTriggers.length){const t=m.frictionTriggers[0];
+    return`${FLABEL[t.feature]} is where you dropped something before — that penalty is applied`}
+  if(m.mismatches&&m.mismatches.length){const b=m.mismatches[0];
+    return`${FLABEL[b.key]} is well off your example: ${b.candidate.toFixed(1)} against ${b.reference.toFixed(1)}`}
+  return""}
+
+function resultCard(g,m,opts){
+  opts=opts||{};
+  if(!m.ok)return`<div class="card"><div class="chead">
+    <div><div class="cname">${esc(g.title)}</div>
+      ${g.meta&&g.meta.ident?`<div class="cmeta">${esc(g.meta.ident)}</div>`:""}</div>
+    <div><div class="cscore" style="font-size:20px;color:var(--dim)">No score</div></div></div>
+    <div class="closest">${esc(m.reason)}.</div>
+    ${provTags(g,m)}${opts.extra||""}</div>`;
+  const fr=frictionLine(m);
+  return`<div class="card"><div class="chead">
+    <div><div class="cname">${esc(g.title)}</div>
+      ${g.meta&&g.meta.ident?`<div class="cmeta">${esc(g.meta.ident)}</div>`:""}</div>
+    <div><div class="cscore">${m.score}</div>
+      ${m.provisional?`<div class="cprov">Provisional</div>`:""}</div></div>
+    <div class="closest">Closest to your enjoyment of <b>${esc(m.matchedGame)}</b>.</div>
+    <ul class="bul">
+      ${m.matchingFeatures.slice(0,2).map(p=>`<li>${esc(matchLine(p))}</li>`).join("")
+        ||`<li>Nothing lines up closely — it matched on the overall shape.</li>`}
+      ${fr?`<li class="fr">${esc(fr)}</li>`:""}
+    </ul>
+    ${provTags(g,m)}
+    ${opts.extra||""}
+    <details><summary>Working</summary>${workingBlock(g,m)}</details>
+  </div>`}
+
+function workingBlock(g,m){
+  let h="";
+  if(m.ok){
+    h+=`<p class="subtle">Base similarity to ${esc(m.matchedGame)} was ${m.baseScore.toFixed(1)}; the friction
+      penalty took off ${(m.baseScore-m.score).toFixed(1)}.</p>`;
+    if(m.similarExamples.length>1)h+=`<p class="subtle">Other examples it resembles: ${
+      m.similarExamples.slice(1).map(x=>esc(x.title)+" ("+Math.round(x.similarity*100)+")").join(", ")}.</p>`;
+    if(m.frictionTriggers.length)h+=`<p class="subtle">Reason penalties: ${
+      m.frictionTriggers.map(t=>esc(FLABEL[t.feature])+" "+Math.round(t.severity*100)+"%").join(", ")}.</p>`}
+  h+=`<div class="tw"><table><thead><tr><th>Feature</th><th>This</th><th>Evidence</th></tr></thead><tbody>`;
+  for(const f of FEATURES){const c=g.ratings.features[f.key]||{};const v=featureValue(g.ratings.features,f.key);
+    h+=`<tr><td>${esc(f.label)}</td><td class="num">${v===null?"—":v.toFixed(1)}</td>
+      <td style="color:var(--dim);font-size:12.5px">${v===null?"no evidence; left out of the score":esc(c.evidence)}</td></tr>`}
+  h+=`</tbody></table></div>`;
+  if(g.meta&&g.meta.frictions&&g.meta.frictions.length)
+    h+=`<p class="subtle">Commonly reported friction: ${g.meta.frictions.map(esc).join(" · ")}</p>`;
+  if(g.meta&&g.meta.theme)h+=`<p class="subtle">Setting: ${esc(g.meta.theme)} — kept out of the score.</p>`;
+  if(Array.isArray(g.tactics)&&g.tactics.length)
+    h+=`<p class="subtle">If you play it: ${g.tactics.map(esc).join(" · ")}</p>`;
   return h}
 
 /* ============================================================================
@@ -673,275 +888,240 @@ function readPanel(){
     <input type="text" id="q" placeholder="A game" value="${esc(readTitle)}" autocomplete="off">
     <button class="go" data-act="read" ${readBusy?"disabled":""}>${readBusy?"Checking":"Check it"}</button>
   </div>`;
-  if(readBusy)h+=`<div class="status"><span class="dot"></span>Rating how it plays, then matching it to you.</div>`;
+  if(readBusy)h+=`<div class="status"><span class="dot"></span>
+    <span id="readprog">${esc(readStep||"Thinking")}</span>
+    <button class="ghost" data-act="stop" style="min-height:36px;padding:6px 12px">Stop</button></div>`;
   if(readErr)h+=`<div class="err">${esc(readErr)}</div>`;
-  if(provisional())h+=`<div class="caution">
-    <span class="lab" style="display:block;margin-bottom:3px">Provisional</span>
-    ${state.onboarded?`Only ${state.fitInfo?state.fitInfo.pairs:0} comparisons so far, so the profile is barely fitted.`
-      :`Your profile is the neutral default — it isn't you yet.`}
-    Scores will move as you rate games.
-    <div class="seg"><button class="ghost" data-act="tome">Set up your profile</button></div></div>`;
 
-  const r=reading;
-  if(r){
-    const pr=activePrefs(), m=matchScore(r.features,pr);
-    h+=`<div class="sheet"><div class="verdict"><div class="vtop">
-      <div><div class="vname">${esc(r.name)}</div>
-        ${r.ident?`<div class="vident">${esc(r.ident)}</div>`:""}</div>
-      ${m.ok?`<div><div class="vnum">${Math.round(m.score)}<small>/100</small></div>
-        <div class="vband">${esc(bandWord(m.score))}</div></div>`
-       :`<div><div class="nodata">Insufficient data</div></div>`}
-      </div>`;
-    if(!m.ok&&m.reason!=="insufficient data")
-      h+=`<div class="caution">${esc(m.reason)}. Fix it under Your profile.</div>`;
-    if(!m.ok&&m.reason==="insufficient data")
-      h+=`<div class="caution">Too little to stand behind — ${m.cover?m.cover.known:0} of ${NF} features had any evidence. No score is shown rather than a confident-looking guess.</div>`;
-    h+=`</div>`;
-    if(m.cover)h+=confBlock(m.cover);
-    if(m.ok)h+=reasonsBlock(m);
-    if(Array.isArray(r.frictions)&&r.frictions.length)
-      h+=`<div class="callout"><span class="lab" style="display:block;margin-bottom:3px">Commonly reported friction</span>
-        ${r.frictions.map(x=>esc(x)).join(" · ")}</div>`;
-    if(r.theme)h+=`<div class="callout" style="border-left-color:var(--rule);background:none">
-      <span class="lab" style="display:block;margin-bottom:3px">Setting and theme — kept out of the score</span>${esc(r.theme)}</div>`;
-    h+=featureTable(r.features,pr);
-    const tac=Array.isArray(r.tactics)?r.tactics:[];
-    if(tac.length||r.stopRule)h+=`<div class="plan"><h3>If you play it</h3>
-      ${tac.length?`<ul>${tac.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}
-      ${r.stopRule?`<div class="stoprule"><span class="lab" style="display:block;margin-bottom:3px">How to stop so you come back</span>${esc(r.stopRule)}</div>`:""}</div>`;
-    h+=feedbackBlock(r.name);
+  const prof=buildProfile();
+  if(!prof.liked.length)h+=`<div class="caution">
+    <span class="lab" style="display:block;margin-bottom:3px">Nothing to compare against yet</span>
+    Scores come from games you say you enjoyed, each kept as its own example. Rate one below,
+    or add a few under <b>Your games</b>.</div>`;
+
+  const g=readingId?getGame(readingId):null;
+  if(g&&g.ratings){
+    const m=scoreGame({id:g.id,features:g.ratings.features},prof);
+    const fb=state.feedback.find(f=>f.id===g.id);
+    h+=`<div class="sheet">`;
+    if(fb)h+=`<div class="callout">You've already rated this one. Your own answers are below.</div>`;
+    h+=resultCard(g,m,{extra:feedbackBlock(g)});
     h+=`</div>`}
   if(dbUnavailable)h=`<div class="err" style="margin-top:0;margin-bottom:14px">Cloud storage isn't available here — this browser only.</div>`+h;
   return h}
 
-function bandWord(s){
-  if(s>=80)return"Built for how you play";
-  if(s>=62)return"Should hold you";
-  if(s>=45)return"Could go either way";
-  if(s>=28)return"Expect to drift off";
-  return"It'll be another two-hour game"}
-
-function fbLabelHTML(fb){const lab=labelOf(fb);
-  if(!lab)return"";
-  return`<div class="callout">Counted as <b>${lab==="liked"?"a game that hooked you":lab==="dropped"?"a game you dropped":"mixed — used for neither"}</b>${lab==="mixed"?"":", which feeds the profile fit"}.</div>`}
-
-// Patch the chips in place. Re-rendering the panel would replace a 4,000px sheet under the
-// finger, and a second tap made before the re-render lands on a detached button and is lost.
-function updateFeedbackUI(title){
-  const fb=state.feedback.find(e=>norm(e.title)===norm(title))||{};
-  document.querySelectorAll('[data-act="fb"]').forEach(el=>{
-    el.setAttribute("aria-pressed",String(num(fb[el.dataset.k])===Number(el.dataset.v)))});
-  const un=document.querySelector('[data-act="fbunplayed"]');
-  if(un)un.setAttribute("aria-pressed",String(fb.played===false));
-  const lab=document.getElementById("fblabel");if(lab)lab.innerHTML=fbLabelHTML(fb);
-  const sv=document.getElementById("fbsave");if(sv)sv.innerHTML=saveLine("fb:"+title,!!labelOf(fb))}
-
-function feedbackBlock(title){
-  const fb=state.feedback.find(e=>norm(e.title)===norm(title))||{};
+function feedbackBlock(g){
+  const fb=state.feedback.find(e=>e.id===g.id)||{};
+  const lab=labelOf(fb);
   const q=(key,text)=>`<div class="qrow"><div class="lab">${text}</div><div class="chips">
-    ${FB_SCALE.map(([w,v])=>`<button class="chip" data-act="fb" data-t="${esc(title)}" data-k="${key}" data-v="${v}"
+    ${FB_SCALE.map(([w,v])=>`<button class="chip" data-act="fb" data-id="${esc(g.id)}" data-k="${key}" data-v="${v}"
       aria-pressed="${num(fb[key])===v}">${w}</button>`).join("")}</div></div>`;
-  return`<div class="after">
+  const reasons=Array.isArray(fb.reasons)?fb.reasons:[];
+  const sugg=suggested[g.id]||[];
+  return`<div class="after" id="fbblock">
     <div class="lab">After you've played it</div>
-    <p class="subtle">Three questions, because they come apart: a game can be loved and still dropped. Hours played is not one of them.</p>
+    <p class="subtle">Three questions, because they come apart: a game can be loved and still dropped.
+      Hours played is not one of them.</p>
     ${q("engage","Did it catch you in the first session")}
     ${q("ret","Did you want to go back to it")}
     ${q("enjoy","Did you enjoy it")}
     <div class="chips" style="margin-top:13px">
-      <button class="chip wide" data-act="fbunplayed" data-t="${esc(title)}" aria-pressed="${fb.played===false}">Haven't played it</button>
-    </div>
-    <p class="subtle">Never played is not a dislike — it's left out of the fit entirely.</p>
+      <button class="chip wide" data-act="fbunplayed" data-id="${esc(g.id)}"
+        aria-pressed="${fb.played===false}">Haven't played it</button></div>
+    <p class="subtle">Never played is not a dislike — it is left out of the scoring entirely.</p>
+
+    <div class="lab" style="margin-top:18px">What put you off, if anything</div>
+    <p class="subtle">These are the only things that create a penalty, and each one only affects the
+      feature it names — "slow start" moves nothing but time-to-the-good-part.</p>
+    <div class="rs">${REASON_KEYS.map(k=>`<button data-act="reason" data-id="${esc(g.id)}" data-r="${k}"
+      aria-pressed="${reasons.includes(k)}">${esc(REASON_LABELS[k])} <span class="lab">${esc(FLABEL[REASON_RULES[k].feature])}</span></button>`).join("")}</div>
+    ${lab!=="dropped"&&reasons.length?`<p class="subtle">Kept, but only counted while a game is rated as dropped.</p>`:""}
+
+    <label class="fieldlab lab" for="fbnote">In your own words, optional</label>
+    <input type="text" id="fbnote" data-id="${esc(g.id)}" placeholder="Anything else" value="${esc(fb.note||"")}">
+    ${sugg.length?`<div class="sugg"><b>Did you mean?</b> Tap to apply — nothing from free text counts until you do.
+      <div class="rs">${sugg.map(k=>`<button data-act="reason" data-id="${esc(g.id)}" data-r="${k}"
+        aria-pressed="${reasons.includes(k)}">${esc(REASON_LABELS[k])}</button>`).join("")}</div></div>`:""}
+
     <div id="fblabel">${fbLabelHTML(fb)}</div>
-    <div id="fbsave">${saveLine("fb:"+title,!!labelOf(fb))}</div></div>`}
+    <div id="fbsave">${saveLine("fb:"+g.id,!!lab)}</div></div>`}
+
+function fbLabelHTML(fb){const lab=labelOf(fb);
+  if(!lab)return"";
+  const w={liked:"an example of what works for you",dropped:"an example of what doesn't",
+    mixed:"mixed — used as neither"};
+  return`<div class="callout">Counted as <b>${w[lab]}</b>.</div>`}
+
+// Patched in place: re-rendering a long sheet under the finger loses the next tap.
+function updateFeedbackUI(id){
+  const fb=state.feedback.find(e=>e.id===id)||{};
+  document.querySelectorAll('[data-act="fb"]').forEach(el=>{
+    if(el.dataset.id!==id)return;
+    el.setAttribute("aria-pressed",String(num(fb[el.dataset.k])===Number(el.dataset.v)))});
+  const un=document.querySelector('[data-act="fbunplayed"]');
+  if(un)un.setAttribute("aria-pressed",String(fb.played===false));
+  document.querySelectorAll('[data-act="reason"]').forEach(el=>{
+    if(el.dataset.id!==id)return;
+    el.setAttribute("aria-pressed",String((fb.reasons||[]).includes(el.dataset.r)))});
+  const lab=document.getElementById("fblabel");if(lab)lab.innerHTML=fbLabelHTML(fb);
+  const sv=document.getElementById("fbsave");if(sv)sv.innerHTML=saveLine("fb:"+id,!!labelOf(fb))}
 
 async function doRead(){
-  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account, and allow it when asked.";return render()}
+  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
   const name=(document.getElementById("q").value||"").trim();readTitle=name;
   if(!name){readErr="Type a game first.";return render()}
-  const hit=cacheGet(name);
-  if(hit){reading=Object.assign({name:hit.title||name},hit);readErr="";return render()}
-  readBusy=true;readErr="";render();ctl=new AbortController();
-  const prompt=`Rate how the game "${name}" actually plays, feature by feature.
-
-${RATING_RULES}
-
-THE NINE FEATURES:
-${FEATURE_SPEC}
-
-Also give:
-  ident     — developer, year, and what you physically do in it, one line, so a wrong match is caught
-  theme     — its setting and subject in one line. This is kept OUT of the match score.
-  frictions — up to four things players commonly bounce off: slow onboarding, heavy inventory
-              management, backtracking, an obtuse UI, a difficulty spike. Concrete, named.
-  tactics   — three to five concrete things that make THIS game easier to stay with: a
-              difficulty setting, a mode to start in, something to turn off, a mod, what to skip.
-  stopRule  — one sentence on where to stop a session so that coming back a fortnight later works.
-
-Reply with only this JSON:
-{"ident":"","theme":"","frictions":[""],"tactics":[""],"stopRule":"",
-"features":{${FKEYS.map(k=>`"${k}":{"value":0,"evidence":"","confidence":0}`).join(",")}}}`;
-  try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
-    const rec={title:name,ident:String(out.ident||""),theme:String(out.theme||""),
-      frictions:(Array.isArray(out.frictions)?out.frictions:[]).slice(0,4).map(String),
-      tactics:(Array.isArray(out.tactics)?out.tactics:[]).slice(0,5).map(String),
-      stopRule:String(out.stopRule||""),features:cleanFeatures(out.features)};
-    cachePut(name,rec);
-    reading=Object.assign({name},rec);
-    rebuildProfile();await saveState()}
-  catch(e){if(!(e&&e.code==="cancelled"))readErr=noteError("check",e)}
-  readBusy=false;render()}
+  const have=findGameByTitle(name);
+  if(have&&have.ratings){readingId=have.id;readErr="";saveState();return render()}
+  readBusy=true;readErr="";readStep="Rating how it plays";render();ctl=new AbortController();
+  try{const {saved,missed}=await rateTitles([name]);
+    if(!saved.length)throw{code:"empty_completion",message:"nothing came back for that title"};
+    readingId=saved[0].id;
+    if(missed.length)readErr="";
+    await saveState()}
+  catch(e){if(e&&e.code==="cancelled"){readBusy=false;return render()}
+    readErr=noteError("check",e)}
+  readBusy=false;readStep="";render()}
 
 /* ============================================================================
-   FIND ONE
+   4. FIND — retrieve a pool, then score it here
    ========================================================================== */
 
 function findPanel(){
+  const prof=buildProfile();
   let h=`<div class="fieldlab lab">Looking for</div>
     <div class="seg">${[["either","Either"],["finite","Something with an ending"],["endless","Something endless"]].map(f=>
       `<button data-act="form" data-v="${f[0]}" aria-pressed="${form===f[0]}">${f[1]}</button>`).join("")}</div>
     <div class="fieldlab lab">Playing</div>
     <div class="seg">${[["alone","Alone"],["friends","With friends"],["any","Doesn't matter"]].map(c=>
       `<button data-act="company" data-v="${c[0]}" aria-pressed="${company===c[0]}">${c[1]}</button>`).join("")}</div>
+    <p class="subtle">Alone means without a group you'd have to organise. Matchmaking and solo queue are fine.</p>
+    <div class="seg" style="margin-top:12px">
+      <button data-act="offline" aria-pressed="${offlineOnly}">Offline only</button>
+      <button data-act="incrated" aria-pressed="${includeRated}">Include ones I've rated</button>
+    </div>
     <label class="fieldlab lab" for="plat">What you play on</label>
     <input type="text" id="plat" placeholder="PC, PS5, Switch, Steam Deck…" value="${esc(platform)}">
     <div class="seg" style="margin-top:16px">
       <button class="go" data-act="find" ${findBusy?"disabled":""}>${findBusy?"Looking":"Find something"}</button>
-    </div>
-    <p class="note">Claude proposes the candidates and rates their features. The ranking is done here, by your
-      profile — the order it suggests is thrown away.</p>`;
+      ${state.shown.length?`<button class="ghost" data-act="reshuffle">Reshuffle (${state.shown.length} already shown)</button>`:""}
+    </div>`;
+  if(!prof.liked.length)h+=`<div class="caution">Nothing to score against yet — rate a game you enjoyed
+    under Check one first, or results will come back unscored.</div>`;
+  h+=catalogNotice();
   if(findBusy)h+=`<div class="status"><span class="dot"></span>
-    <span id="findprog">${findSeen?findSeen+" rated so far":"Thinking"}</span> — this takes up to a minute.
-    <button class="ghost" data-act="stopfind" style="min-height:36px;padding:6px 12px">Stop</button></div>`;
+    <span id="findprog">${esc(findStep||"Thinking")}</span>
+    <button class="ghost" data-act="stop" style="min-height:36px;padding:6px 12px">Stop</button></div>`;
   if(findErr)h+=`<div class="err">${esc(findErr)}</div>`;
   if(findNotes.length)h+=`<p class="note">${findNotes.map(esc).join("<br>")}</p>`;
-  if(picks.length){
-    const pr=activePrefs();
-    h+=`<div class="sheet">`;
-    for(const p of picks){
-      const m=p._m,{good,bad}=explain(m);
-      h+=`<div class="pick">
-        <div class="ptop"><div><div class="pname">${esc(p.title)} ${p.year?`<span>${esc(String(p.year))}</span>`:""}</div>
-          ${p.ident?`<div class="pident">${esc(p.ident)}</div>`:""}</div>
-          <div class="pnum">${Math.round(m.score)}</div></div>
-        ${good.length?`<div class="pwhy"><b>Fits:</b> ${good.slice(0,2).map(g=>esc((FEATURES.find(f=>f.key===g.key)||{}).label.toLowerCase())+(g.evidence?" — "+esc(g.evidence):"")).join("; ")}</div>`:""}
-        ${bad.length?`<div class="pwhy"><b>Friction:</b> ${bad.slice(0,2).map(b=>esc((FEATURES.find(f=>f.key===b.key)||{}).label.toLowerCase())+" "+esc(gapWord(b))).join("; ")}</div>`:""}
-        <div class="tags">
-          <span class="tag">${m.cover.known}/${NF} rated</span>
-          <span class="tag${m.cover.confidence<0.45?" warn":""}">confidence ${Math.round(m.cover.confidence*100)}%</span>
-          ${p.theme?`<span class="tag">${esc(String(p.theme).slice(0,28))}</span>`:""}
-        </div>
-        <div class="seg"><button class="ghost" data-act="open" data-t="${esc(p.title)}">Open it</button></div>
-      </div>`}
-    h+=`</div>`}
+
+  // Scored fresh on every render, from the current feedback. Nothing is stored on the pick.
+  if(pickIds.length){
+    const rows=pickIds.map(id=>getGame(id)).filter(g=>g&&g.ratings)
+      .map(g=>({g,m:scoreGame({id:g.id,features:g.ratings.features},prof)}))
+      .sort((a,b)=>(b.m.ok?b.m.score:-1)-(a.m.ok?a.m.score:-1));
+    h+=`<div class="sheet">`+rows.map(r=>resultCard(r.g,r.m,{
+      extra:`<div class="seg"><button class="ghost" data-act="open" data-id="${esc(r.g.id)}">Rate it</button></div>`
+    })).join("")+`</div>`}
   return h}
 
+function catalogNotice(){
+  const st=catalogStatus();
+  if(st.connected)return"";
+  return`<details style="margin-top:14px"><summary>Where these come from</summary>
+    <div class="setup"><h3>No catalog is connected</h3>
+      Titles are proposed by Claude and rated by Claude. That is a generated shortlist, not a
+      search of a game database, and every rating here is an <b>unverified estimate</b> — the
+      percentage shown is the model's own certainty, not verified data.
+      <ol>
+        <li>This page cannot reach an API by itself: an artifact's network is blocked, so
+          <code>fetch</code> to IGDB, RAWG or Steam fails with no error.</li>
+        <li>A real catalog needs either a <b>claude.ai connector</b> exposing a game database,
+          or a <b>small backend</b> holding the credentials, with this page calling it from
+          outside the artifact sandbox.</li>
+        <li>Credentials it would need: IGDB wants a Twitch <code>client_id</code> and
+          <code>client_secret</code>; RAWG wants an API key. Neither belongs in this file.</li>
+        <li>Once one exists, fill in <code>CATALOG.connector</code> or
+          <code>CATALOG.endpoint</code> at the top of the script. Search and id resolution
+          route through it, ratings get real sources, and these labels change by themselves.</li>
+      </ol>
+      Games already rated stay usable either way, under <b>Saved games</b>.</div></details>`}
+
 async function doFind(){
-  if(!sample){findErr="This page can't reach Claude from here. Open it from your Claude account, and allow it when asked.";return render()}
+  if(!sample){findErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
   const pin=document.getElementById("plat");if(pin)platform=(pin.value||"").trim();
-  const bad=prefsValid(activePrefs());
-  if(bad){findErr=bad+". Fix it under Your profile.";return render()}
-  findBusy=true;findErr="";findNotes=[];picks=[];findSeen=0;render();ctl=new AbortController();
-  const formLine=form==="finite"?"Only games with an actual ending he can reach."
-    :form==="endless"?"Only games with no ending — roguelikes, sims, builders, competitive games."
-    :"";
-  const coLine=company==="alone"?"He is playing alone. Nothing that needs other people online to work."
-    :company==="friends"?"He is playing with friends, so multiplayer is fine. Say how many people it really needs.":"";
-  const prompt=`Propose 8 candidate games for this person, then rate each one's gameplay features.
-
-${RATING_RULES}
-
-THE NINE FEATURES:
-${FEATURE_SPEC}
-
-${profileBlock()}
-
-${tasteBlock()}
-
-${platformBlock()}
-${formLine}
-${coLine}
-
-HOW TO CHOOSE CANDIDATES
-1. Spread them out. Do not send eight games from one genre; the app is going to rank them
-   and it can only rank what you send.
-2. Include a few he is unlikely to have thought of, and a few obvious ones. Both are useful.
-3. Do NOT try to rank them or pick a winner — the app computes the match itself and will
-   discard your ordering. Your job is a varied, well-rated shortlist.
-4. Rate honestly. A candidate you rate generously to help it win will be scored against his
-   preferred levels and may be scored WORSE for it.
-5. Skip these, he has already seen them: ${state.seen.slice(-90).join("; ")||"none"}.
-
-KEEP THE REPLY SHORT OR IT WILL BE CUT OFF BEFORE THE LAST CANDIDATE. Evidence strings are
-at most TEN words. No prose outside the JSON.
-
-"f" is the nine features IN THE ORDER LISTED ABOVE, each as [value, confidence, "evidence"].
-Use null for a value you cannot support: [null,0,""].
-
-Reply with only this JSON:
-{"candidates":[{"t":"title","y":2020,"d":"developer, year, what you do in it","th":"setting",
-"e":false,"o":false,"fr":["friction"],
-"f":[[0,0.8,"evidence"],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""]]}]}`;
-  let out=null,salvaged=false;
+  findBusy=true;findErr="";findNotes=[];pickIds=[];findStep="Gathering candidates";render();
+  ctl=new AbortController();
   try{
-    out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false,
-      onText:({text})=>{const n=(text.match(/"t":/g)||[]).length;
-        if(n!==findSeen){findSeen=n;const el=document.getElementById("findprog");
-          if(el)el.textContent=n?`${n} rated so far`:"Thinking"}}});
-  }catch(e){
-    if(e&&e.code==="cancelled"){findBusy=false;return render()}
-    // A truncated reply still holds whole candidates. Use them rather than losing the call.
-    const got=e&&e.text?salvageObjects(e.text,"candidates"):[];
-    if(got.length){out={candidates:got};salvaged=true}
-    else{findErr=noteError("find",e);findBusy=false;return render()}}
-  try{
-    const raw=(out&&Array.isArray(out.candidates)?out.candidates:[])
-      .map(c=>c&&({title:c.t||c.title,year:c.y||c.year,ident:c.d||c.ident,theme:c.th||c.theme,
-        endless:c.e!==undefined?c.e:c.endless,needsOthers:c.o!==undefined?c.o:c.needsOthers,
-        frictions:c.fr||c.frictions,features:c.f||c.features}))
-      .filter(c=>c&&c.title);
-    const pr=activePrefs();
-    const drops={};const seenNow=new Set();const scored=[];
-    for(const c of raw){
-      const n=norm(c.title);
-      const why=(k)=>{drops[k]=(drops[k]||0)+1};
-      if(seenNow.has(n)){why("duplicates");continue}
-      seenNow.add(n);
-      if(state.feedback.some(f=>norm(f.title)===n)){why("already rated by you");continue}
-      if(state.seen.some(t=>norm(t)===n)){why("suggested before");continue}
-      if(form==="finite"&&c.endless===true){why("no ending");continue}
-      if(form==="endless"&&c.endless===false){why("has an ending");continue}
-      if(company==="alone"&&c.needsOthers===true){why("needs other people");continue}
-      const rec={title:String(c.title),year:c.year,ident:String(c.ident||""),theme:String(c.theme||""),
-        frictions:(Array.isArray(c.frictions)?c.frictions:[]).slice(0,4).map(String),
-        tactics:[],stopRule:"",features:cleanFeatures(c.features)};
-      const m=matchScore(rec.features,pr);
-      if(!m.ok){why("too little evidence to score");continue}
-      cachePut(rec.title,rec);
-      scored.push(Object.assign({},rec,{_m:m}))}
-    // The model's ordering is discarded: rank by the computed match.
-    scored.sort((a,b)=>b._m.score-a._m.score);
-    picks=scored.slice(0,6);
-    findNotes=[];
+    let titles=[];
+    if(catalogConnected()){
+      // Routed through the configured provider once one exists.
+      titles=await catalogSearch();
+    } else {
+      titles=await proposeTitles(16);
+    }
+    const drops={};const why=k=>{drops[k]=(drops[k]||0)+1};
+    const ratedIds=new Set(state.feedback.map(f=>f.id));
+    const shown=new Set(state.shown);
+    const pool=[];
+    for(const t of titles){
+      const id=makeId("est",t);
+      if(!includeRated&&ratedIds.has(id)){why("already rated by you");continue}
+      if(shown.has(id)){why("shown before — reshuffle to see them again");continue}
+      pool.push(t)}
+    if(!pool.length){findErr="Every suggestion was one you've seen. Try Reshuffle.";
+      findBusy=false;return render()}
+
+    findStep=`Rating ${pool.length} candidates`;render();
+    const need=pool.filter(t=>{const g=getGame(makeId("est",t));return !(g&&g.ratings)});
+    let salvaged=false,missed=[];
+    if(need.length){const r=await rateTitles(need,n=>{const el=document.getElementById("findprog");
+      if(el)el.textContent=`${n} of ${need.length} rated`});
+      salvaged=r.salvaged;missed=r.missed}
+
+    const prof=buildProfile();
+    const scored=[];
+    for(const t of pool){
+      const g=getGame(makeId("est",t));
+      if(!g||!g.ratings){why("no rating came back");continue}
+      const meta=g.meta||{};
+      if(form==="finite"&&meta.endless===true){why("no ending");continue}
+      if(form==="endless"&&meta.endless===false){why("has an ending");continue}
+      if(company==="alone"&&meta.needsGroup===true){why("needs a premade group");continue}
+      if(offlineOnly&&meta.offline===false){why("not playable offline");continue}
+      const m=scoreGame({id:g.id,features:g.ratings.features},prof);
+      if(!m.ok&&prof.liked.length){why("too little comparable data");continue}
+      scored.push({g,m})}
+    scored.sort((a,b)=>(b.m.ok?b.m.score:-1)-(a.m.ok?a.m.score:-1));
+    const top=scored.slice(0,6);
+    pickIds=top.map(x=>x.g.id);
+    // Shown is a memory of what has been surfaced. It is NOT a dislike and is reversible.
+    state.shown=state.shown.concat(pickIds.filter(id=>!state.shown.includes(id))).slice(-400);
     const dropped=Object.entries(drops).map(([k,v])=>`${v} ${k}`);
-    if(dropped.length)findNotes.push(`Dropped before scoring: ${dropped.join(", ")}.`);
-    findNotes.push(`${raw.length} proposed, ${scored.length} scored, top ${picks.length} shown — ranked here, not by Claude.`);
-    if(salvaged)findNotes.push("The reply was cut short; these are the candidates that came through whole.");
-    if(!picks.length)findErr="Nothing came back with enough evidence to score. Try again.";
-    else{state.seen=state.seen.concat(picks.map(p=>p.title)).slice(-300);await saveState()}}
-  catch(e){findErr=noteError("find/after",e)}
-  findBusy=false;render()}
+    findNotes=[];
+    if(dropped.length)findNotes.push(`Set aside: ${dropped.join(", ")}.`);
+    findNotes.push(`${titles.length} proposed, ${scored.length} scored here against your examples, top ${top.length} shown.`);
+    if(salvaged)findNotes.push("The ratings reply was cut short; these are the ones that came through whole.");
+    if(missed.length)findNotes.push(`No rating came back for: ${missed.join(", ")}.`);
+    if(!top.length)findErr="Nothing came through with enough to score. Try again, or Reshuffle.";
+    await saveState()}
+  catch(e){if(e&&e.code==="cancelled"){findBusy=false;findStep="";return render()}
+    findErr=noteError("find",e)}
+  findBusy=false;findStep="";render()}
+
+async function catalogSearch(){
+  // Deliberately unimplemented: wiring a connector without having observed one real
+  // request and response would be guessing at its shape.
+  throw{code:"upstream_error",message:"catalog provider configured but not implemented yet"}}
 
 /* ============================================================================
-   YOUR PROFILE
+   YOUR GAMES
    ========================================================================== */
 
 function mePanel(){
-  const pr=activePrefs(),w=normW(pr.w),fi=state.fitInfo||{pairs:0,liked:0,dropped:0};
-  const bad=prefsValid(pr);
+  const prof=buildProfile();
   let h="";
   const le=state.lastError;
-  if(le)h+=`<h2 class="sec">Last failure</h2>
-    <p class="subtle">Kept so it can be reported instead of described. Nothing here is sent anywhere on its own.</p>
+  if(le)h+=`<details open><summary>Last failure</summary>
     <div class="tw"><table><tbody>
       <tr><td>Where</td><td>${esc(le.where)}</td></tr>
       <tr><td>Code</td><td>${esc(le.code||"(none — a fault in the page)")}</td></tr>
@@ -949,201 +1129,153 @@ function mePanel(){
       ${le.text?`<tr><td>Reply began</td><td style="font-size:12px">${esc(le.text.slice(0,200))}</td></tr>`:""}
       <tr><td>When</td><td>${esc(new Date(le.at).toLocaleString())}</td></tr>
     </tbody></table></div>
-    <div class="seg"><button data-act="clearerr">Clear it</button></div>`;
+    <div class="seg"><button data-act="clearerr">Clear it</button></div></details>`;
 
-
-  const didOnboard=state.feedback.some(f=>f.src==="onboarding");
-  const openOB=showOnboard||(!didOnboard&&!state.onboardSkipped);
-  if(!openOB){
-    h+=`<h2 class="sec">${didOnboard?"Your starting six":"Set up your profile"}</h2>
-      <p class="subtle">${didOnboard
-        ?"The six games the profile was built from. You can redo it, or just rate games as you play them."
-        :"You skipped this. Three games that hooked you and three you dropped is the fastest way to make the scores mean something."}</p>
-      <div class="seg"><button class="ghost" data-act="openob">${didOnboard?"Redo the setup":"Set it up now"}</button></div>`}
-  if(openOB){
-    h+=`<h2 class="sec">Three that hooked you, three you dropped</h2>
-      <p class="subtle">This is what the profile is built from. Reasons are optional — they are used to pick candidates, never to change a rating.</p>
-      <div class="onb"><div class="lab" style="margin-top:14px">Games that hooked you</div>
-      ${obLike.map((r,i)=>`<div class="r">
-        <input type="text" class="t" data-ob="like" data-i="${i}" data-f="t" placeholder="Game ${i+1}" value="${esc(r.t)}">
-        <input type="text" class="w" data-ob="like" data-i="${i}" data-f="r" placeholder="Why, optional" value="${esc(r.r)}"></div>`).join("")}
-      <div class="lab" style="margin-top:18px">Games you dropped</div>
-      ${obDrop.map((r,i)=>`<div class="r">
-        <input type="text" class="t" data-ob="drop" data-i="${i}" data-f="t" placeholder="Game ${i+1}" value="${esc(r.t)}">
-        <input type="text" class="w" data-ob="drop" data-i="${i}" data-f="r" placeholder="Why, optional" value="${esc(r.r)}"></div>`).join("")}
-      </div>
-      <div class="seg" style="margin-top:16px">
-        <button class="go" data-act="onboard" ${obBusy?"disabled":""}>${obBusy?"Rating them":"Build my profile"}</button>
-        <button class="ghost" data-act="skipob">${didOnboard?"Leave it as it is":"Skip for now"}</button></div>
-      ${obBusy?`<div class="status"><span class="dot"></span>
-        <span id="obprog">${obSeen?obSeen+" rated":"Thinking"}</span> — rating them, then fitting your profile.
-        <button class="ghost" data-act="stopob" style="min-height:36px;padding:6px 12px">Stop</button></div>`:""}
-      <p class="note">Skipping is fine — you'll start on the neutral default and everything will be marked provisional until you've rated a few games. This section stays here either way.</p>`;
-  }
-  // Outside both branches: a partial success collapses the form, and the note about what
-  // did not come back has to survive that.
-  if(obErr)h+=`<div class="err">${esc(obErr)}</div>`;
-
-  h+=`<h2 class="sec">Fit</h2>
+  h+=`<h2 class="sec">Your examples</h2>
+    <p class="subtle">Each game you enjoyed is kept separately. A candidate only has to resemble
+      <em>one</em> of them, so liking two unrelated things doesn't average into a third thing you
+      don't want.</p>
     <div class="readout">
-      <div><div class="n">${fi.liked||0}</div><span class="lab">Hooked you</span></div>
-      <div><div class="n">${fi.dropped||0}</div><span class="lab">Dropped</span></div>
-      <div><div class="n">${fi.pairs||0}</div><span class="lab">Comparisons</span></div>
+      <div><div class="n">${prof.liked.length}</div><span class="lab">Enjoyed</span></div>
+      <div><div class="n">${prof.dropped.length}</div><span class="lab">Dropped</span></div>
+      <div><div class="n">${prof.dropped.reduce((s,x)=>s+x.reasons.length,0)}</div><span class="lab">Reason tags</span></div>
     </div>
-    <p class="note">${fi.pairs?`Preferences and importances are fitted to separate those ${fi.pairs} comparisons, regularised toward where they started so a handful of games can't invent a personality. Tolerances are left alone deliberately — fitting them on this little feedback would just overfit.`:`Nothing to fit yet. Rate a game under Check one, or fill in the six above.`}
-    ${fi.pairs&&fi.baseLoss!==null?`<br>Ranking loss ${Number(fi.baseLoss).toFixed(3)} → ${Number(fi.loss).toFixed(3)} after fitting.`:""}</p>`;
-  if(provisional())h+=`<div class="caution">Results are labelled provisional until the profile has something real behind it.</div>`;
-  if(bad)h+=`<div class="caution">${esc(bad)}.</div>`;
+    ${prof.liked.length<3?`<div class="caution">Under three examples, scores are labelled provisional.</div>`:""}
+    ${prof.unrated.length?`<div class="caution">Rated but never analysed, so not usable as examples yet:
+      ${prof.unrated.map(esc).join(", ")}. Check each one to fix that.</div>`:""}`;
 
-  h+=`<h2 class="sec">Your preferences</h2>
-    <p class="subtle">Every one of these is yours to overrule. Anything you set by hand is pinned and the fit will leave it alone.</p>`;
+  h+=`<h2 class="sec">Add an example</h2>
+    <p class="subtle">Name a game and say how it went. This is the whole setup — there is no
+      separate onboarding to finish.</p>
+    <div class="row" style="margin-top:9px">
+      <input type="text" id="addg" placeholder="A game you've played" autocomplete="off">
+      <button class="go" data-act="addgame">Add it</button></div>`;
+
+  if(state.feedback.length){
+    h+=`<h2 class="sec">Rated</h2>
+      <div class="tw"><table><thead><tr><th>Game</th><th>Caught</th><th>Return</th><th>Counts as</th><th></th></tr></thead><tbody>
+      ${state.feedback.slice().reverse().map(e=>{const l=labelOf(e);const g=getGame(e.id);
+        return`<tr><td><a href="#" data-act="open" data-id="${esc(e.id)}">${esc(e.title)}</a>
+          ${(e.reasons||[]).length?`<div class="subtle">${e.reasons.map(r=>esc(REASON_LABELS[r])).join(", ")}</div>`:""}
+          ${!g||!g.ratings?`<div class="subtle">not analysed</div>`:""}</td>
+        <td class="num">${e.played===false?"—":num(e.engage)??"—"}</td>
+        <td class="num">${e.played===false?"—":num(e.ret)??"—"}</td>
+        <td>${e.played===false?"not played":l||"—"}</td>
+        <td class="num"><button class="del" data-act="delfb" data-id="${esc(e.id)}" aria-label="Remove">&times;</button></td></tr>`}).join("")}
+      </tbody></table></div>`}
+
+  h+=`<h2 class="sec">What matters to you</h2>
+    <p class="subtle">Importance per feature, used when comparing a candidate to your examples.
+      Zero takes a feature out of the comparison entirely. Nothing here is fitted automatically.</p>`;
+  const tw=MATCH_KEYS.reduce((s,k)=>s+Math.max(0,state.weights[k]||0),0);
   for(const f of FEATURES){
-    const pinned=(pr.pinned||[]).includes(f.key);
+    const w=Math.max(0,state.weights[f.key]||0);
     h+=`<div class="pf"><div class="pfh">
-      <div class="pfname">${esc(f.label)}${pinned?` <span class="lab pinned">pinned</span>`:""}</div>
-      <div class="pfv" data-wpct="${f.key}">${(w?w[f.key]*100:0).toFixed(0)}% of the score</div></div>
+      <div class="pfname">${esc(f.label)}</div>
+      <div class="pfv" data-wpct="${f.key}">${tw>0?(w/tw*100).toFixed(0):"0"}% of the comparison</div></div>
       <div class="subtle">${esc(f.hint)}</div>
-      <div class="sl"><label><span>Prefer · ${esc(f.lo)}</span><span data-ro="p:${f.key}">${Number(pr.p[f.key]).toFixed(1)}</span><span>${esc(f.hi)}</span></label>
-        <input type="range" min="0" max="10" step="0.5" value="${pr.p[f.key]}" data-pf="p" data-k="${f.key}"></div>
-      <div class="sl"><label><span>Importance</span><span data-ro="w:${f.key}">${Number(pr.w[f.key]).toFixed(2)}</span><span></span></label>
-        <input type="range" min="0" max="3" step="0.1" value="${pr.w[f.key]}" data-pf="w" data-k="${f.key}"></div>
-      <div class="sl"><label><span>Tolerance ±</span><span data-ro="t:${f.key}">${Number(pr.t[f.key]).toFixed(1)}</span><span></span></label>
-        <input type="range" min="0.5" max="5" step="0.5" value="${pr.t[f.key]}" data-pf="t" data-k="${f.key}"></div>
-      ${pinned?`<div class="seg"><button data-act="unpin" data-k="${f.key}">Unpin — let the fit move it</button></div>`:""}
-    </div>`}
+      <div class="sl"><label><span>Importance</span><span data-ro="w:${f.key}">${w.toFixed(1)}</span><span></span></label>
+        <input type="range" min="0" max="3" step="0.1" value="${w}" data-pf="w" data-k="${f.key}"></div>
+    </div>`;}
+  h+=`<div class="pf"><div class="pfh"><div class="pfname">Tolerance</div>
+      <div class="pfv" data-ro="tol">±${Number(state.tolerance).toFixed(1)}</div></div>
+      <div class="subtle">How far a candidate can sit from one of your examples before the match falls away.</div>
+      <div class="sl"><input type="range" min="1" max="5" step="0.5" value="${state.tolerance}" data-pf="t" data-k="_"></div></div>`;
 
   h+=`<h2 class="sec">Setting and theme</h2>
-    <p class="subtle">Deliberately kept out of the match score — it decides what gets suggested, not how well it fits how you play.</p>
+    <p class="subtle">Deliberately outside the score — it steers which games get suggested, not how
+      well one matches how you play.</p>
     <label class="fieldlab lab" for="thl">Settings you like</label>
     <input type="text" id="thl" placeholder="Heists, sci-fi, grim fantasy…" value="${esc(state.themesLike)}">
     <label class="fieldlab lab" for="tha">Settings to avoid</label>
     <input type="text" id="tha" placeholder="Sports, anime, horror…" value="${esc(state.themesAvoid)}">
     <div class="seg"><button class="ghost" data-act="themes">Save themes</button></div>`;
 
-  h+=`<h2 class="sec">What you've rated</h2>`;
-  if(!state.feedback.length)h+=`<p class="empty">Nothing yet.</p>`;
-  else h+=`<div class="tw"><table><thead><tr><th>Game</th><th>Caught</th><th>Return</th><th>Enjoy</th><th>Counts as</th><th></th></tr></thead><tbody>
-    ${state.feedback.slice().reverse().map(e=>{const l=labelOf(e);
-      return`<tr><td>${esc(e.title)}${e.reason?`<div class="subtle">${esc(e.reason)}</div>`:""}</td>
-      <td class="num">${e.played===false?"—":num(e.engage)??"—"}</td>
-      <td class="num">${e.played===false?"—":num(e.ret)??"—"}</td>
-      <td class="num">${e.played===false?"—":num(e.enjoy)??"—"}</td>
-      <td>${e.played===false?"not played":l||"—"}</td>
-      <td class="num"><button class="del" data-act="delfb" data-t="${esc(e.title)}" aria-label="Remove">&times;</button></td></tr>`}).join("")}
-    </tbody></table></div>`;
+  const saved=Object.values(state.games).filter(g=>g&&g.ratings);
+  h+=`<h2 class="sec">Saved games</h2>
+    <p class="subtle">Gameplay records, kept apart from anything about you. These stay usable as the
+      fallback pool whether or not a catalog is ever connected.</p>
+    <p class="note">${saved.length} saved · ${saved.filter(g=>(SOURCE[g.source]||{}).sourced).length} with sourced ratings ·
+      ${saved.filter(g=>!(SOURCE[g.source]||{}).sourced).length} unverified estimates
+      <span class="seg" style="display:inline-flex"><button data-act="clearunused">Clear unrated ones</button></span></p>`;
 
-  h+=`<h2 class="sec">Cached ratings</h2>
-    <p class="subtle">Feature ratings are cached per game, so checking one again costs nothing and the ranking stays stable between sessions.</p>
-    <p class="note">${Object.keys(state.cache).length} games cached.
-      <span class="seg" style="display:inline-flex"><button data-act="clearcache">Clear the cache</button></span></p>`;
+  h+=`<h2 class="sec">Already shown</h2>
+    <p class="subtle">A memory of what Find has surfaced, so it doesn't repeat itself. This is not a
+      dislike and nothing is excluded permanently.</p>
+    <p class="note">${state.shown.length} remembered
+      <span class="seg" style="display:inline-flex"><button data-act="reshuffle">Clear and reshuffle</button></span></p>`;
 
+  h+=catalogNotice();
   const cloud=db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;
   const local=lastSave.local===true?"working":lastSave.local===false?"blocked":"untested";
-  h+=`<h2 class="sec">Storage</h2><p class="subtle">Claude: <b>${sample?"reachable":"not reachable from this view"}</b><br>Cloud: <b>${cloud}</b><br>This browser: <b>${local}</b></p>
+  h+=`<details><summary>Storage and diagnostics</summary>
+    <p class="subtle">Claude: <b>${sample?"reachable":"not reachable from this view"}</b><br>
+      Catalog: <b>${catalogStatus().connected?catalogStatus().provider:"not connected"}</b><br>
+      Cloud: <b>${cloud}</b><br>This browser: <b>${local}</b></p>
     ${saveLine("prefs",false)}
-    <p class="note">This is a heuristic match score — a distance between how a game plays and what you've told it you want. It is not a probability, and it is not any kind of ADHD assessment.</p>`;
+    <p class="note">The match score is a heuristic distance between how a game plays and how your
+      examples play. It is not a probability and not any kind of ADHD assessment. The engine keeps
+      separate taste patterns; it does not learn clusters or tune its own weights.</p></details>`;
   return h}
 
-async function doOnboard(){
-  if(!sample){obErr="This page can't reach Claude from here. Open it from your Claude account, and allow it when asked.";return render()}
-  const likes=obLike.filter(r=>r.t.trim()),drops=obDrop.filter(r=>r.t.trim());
-  if(likes.length<2||drops.length<2){obErr="Give at least two on each side — the fit works by separating them.";return render()}
-  obBusy=true;obErr="";obSeen=0;render();ctl=new AbortController();
-  const list=likes.map(r=>r.t.trim()).concat(drops.map(r=>r.t.trim()));
-  const prompt=`Rate how each of these games plays, feature by feature.
+/* ---- writes ---- */
 
-GAMES, in this order: ${list.map((t,i)=>`${i+1}. "${t}"`).join("  ")}
-
-${RATING_RULES}
-
-THE NINE FEATURES:
-${FEATURE_SPEC}
-
-Rate every game on the list, in the order given, keeping its exact title.
-
-KEEP THE REPLY SHORT OR IT WILL BE CUT OFF BEFORE THE LAST GAME. Evidence strings are at
-most TEN words. No prose outside the JSON.
-
-"f" is the nine features IN THE ORDER LISTED ABOVE, each as [value, confidence, "evidence"].
-Use [null,0,""] for a feature you cannot support.
-
-Reply with only this JSON:
-{"games":[{"t":"exact title as given","d":"developer, year, what you do in it","th":"setting",
-"f":[[0,0.8,"evidence"],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""]]}]}`;
-  let out=null,salvaged=false;
-  try{
-    out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false,
-      onText:({text})=>{const n=(text.match(/"t":/g)||[]).length;
-        if(n!==obSeen){obSeen=n;const el=document.getElementById("obprog");
-          if(el)el.textContent=n?`${n} of ${list.length} rated`:"Thinking"}}});
-  }catch(e){
-    if(e&&e.code==="cancelled"){obBusy=false;return render()}
-    // A reply cut off by length still holds whole games — keep those rather than lose the lot.
-    const part=e&&e.text?salvageObjects(e.text,"games"):[];
-    if(part.length){out={games:part};salvaged=true}
-    else{obErr=noteError("profile",e);obBusy=false;return render()}}
-  try{
-    const got=(out&&Array.isArray(out.games)?out.games:[])
-      .map(g=>g&&({title:g.t||g.title,ident:g.d||g.ident,theme:g.th||g.theme,
-        features:g.f||g.features}))
-      .filter(g=>g&&g.title);
-    if(!got.length)throw{code:"invalid_json"};
-    // Cache under the title HE typed, not the model's spelling of it, or the lookup that
-    // builds the training pairs will miss ("Crusader Kings 3" against "Crusader Kings III").
-    const used=new Set();
-    got.forEach((g,idx)=>{
-      let want=list.find(t=>!used.has(t)&&norm(t)===norm(g.title));
-      if(!want)want=list.find((t,i)=>i===idx&&!used.has(t));
-      if(!want)want=list.find(t=>!used.has(t));
-      if(!want)return;
-      used.add(want);
-      cachePut(want,{title:want,ident:String(g.ident||""),theme:String(g.theme||""),
-        frictions:[],tactics:[],stopRule:"",features:cleanFeatures(g.features)})});
-    const put=(rows,engage,ret)=>{for(const r of rows){const t=r.t.trim();
-      const i=state.feedback.findIndex(x=>norm(x.title)===norm(t));
-      const row={title:t,engage,ret,enjoy:null,played:true,reason:r.r.trim(),at:Date.now(),src:"onboarding"};
-      if(i>=0)state.feedback[i]=Object.assign(state.feedback[i],row);else state.feedback.push(row)}};
-    put(likes,10,10);put(drops,1,1);
-    state.onboarded=true;state.onboardSkipped=false;showOnboard=false;
-    rebuildProfile();
-    saveStatus.prefs="saving";
-    const ok=await saveState();saveStatus.prefs=ok?"ok":"failed";
-    const {pairs}=trainingPairs();
-    const missed=list.filter(t=>!used.has(t));
-    if(!pairs.length){showOnboard=true;
-      obErr="Those came back, but without enough confident ratings to compare them. Try more widely known titles.";}
-    else if(missed.length)obErr=`Built from ${used.size} of ${list.length} — ${missed.join(", ")} didn't come back. Add ${missed.length===1?"it":"them"} again under Check one if you want ${missed.length===1?"it":"them"} counted.`;
-    else if(salvaged)obErr=`The reply was cut short, but all ${used.size} games came through.`;
-  }
-  catch(e){obErr=noteError("profile/after",e)}
-  obBusy=false;render()}
-
-/* ---- feedback writes ---- */
-
-async function setFeedback(title,key,value){
-  const i=state.feedback.findIndex(e=>norm(e.title)===norm(title));
-  const row=Object.assign({title,at:Date.now()},i>=0?state.feedback[i]:{});
+async function setFeedback(id,key,value){
+  const g=getGame(id);if(!g)return;
+  const i=state.feedback.findIndex(e=>e.id===id);
+  const row=Object.assign({id,title:g.title,reasons:[],at:Date.now()},i>=0?state.feedback[i]:{});
   row[key]=value;row.played=true;row.at=Date.now();
   if(i>=0)state.feedback[i]=row;else state.feedback.push(row);
-  rebuildProfile();
-  saveStatus["fb:"+title]="saving";updateFeedbackUI(title);
-  const ok=await saveState();saveStatus["fb:"+title]=ok?"ok":"failed";updateFeedbackUI(title)}
+  saveStatus["fb:"+id]="saving";updateFeedbackUI(id);
+  const ok=await saveState();saveStatus["fb:"+id]=ok?"ok":"failed";updateFeedbackUI(id);
+  render()}
 
-async function setUnplayed(title){
-  const i=state.feedback.findIndex(e=>norm(e.title)===norm(title));
-  const row={title,played:false,engage:null,ret:null,enjoy:null,at:Date.now(),
-    reason:i>=0?state.feedback[i].reason:""};
+async function setUnplayed(id){
+  const g=getGame(id);if(!g)return;
+  const i=state.feedback.findIndex(e=>e.id===id);
+  const prev=i>=0?state.feedback[i]:{};
+  const row={id,title:g.title,played:false,engage:null,ret:null,enjoy:null,
+    reasons:prev.reasons||[],note:prev.note||"",at:Date.now()};
   if(i>=0)state.feedback[i]=row;else state.feedback.push(row);
-  rebuildProfile();
-  saveStatus["fb:"+title]="saving";updateFeedbackUI(title);
-  const ok=await saveState();saveStatus["fb:"+title]=ok?"ok":"failed";updateFeedbackUI(title)}
+  saveStatus["fb:"+id]="saving";updateFeedbackUI(id);
+  const ok=await saveState();saveStatus["fb:"+id]=ok?"ok":"failed";updateFeedbackUI(id);
+  render()}
+
+async function toggleReason(id,r){
+  if(!REASON_RULES[r])return;
+  const g=getGame(id);if(!g)return;
+  const i=state.feedback.findIndex(e=>e.id===id);
+  const row=Object.assign({id,title:g.title,reasons:[],at:Date.now()},i>=0?state.feedback[i]:{});
+  const set=new Set(row.reasons||[]);
+  if(set.has(r))set.delete(r);else set.add(r);
+  row.reasons=[...set];row.at=Date.now();
+  if(i>=0)state.feedback[i]=row;else state.feedback.push(row);
+  saveStatus["fb:"+id]="saving";updateFeedbackUI(id);
+  const ok=await saveState();saveStatus["fb:"+id]=ok?"ok":"failed";
+  render()}
+
+async function setNote(id,text){
+  const g=getGame(id);if(!g)return;
+  const i=state.feedback.findIndex(e=>e.id===id);
+  const row=Object.assign({id,title:g.title,reasons:[],at:Date.now()},i>=0?state.feedback[i]:{});
+  row.note=String(text||"").slice(0,300);
+  if(i>=0)state.feedback[i]=row;else state.feedback.push(row);
+  // Suggestions only; free text never becomes a penalty until one is tapped.
+  suggested[id]=suggestReasons(row.note).filter(k=>!(row.reasons||[]).includes(k));
+  await saveState();render()}
+
+async function addGame(){
+  if(!sample){return}
+  const el=document.getElementById("addg");const name=(el.value||"").trim();
+  if(!name)return;
+  const have=findGameByTitle(name);
+  if(have&&have.ratings){readingId=have.id;readTitle=have.title;tab="read";return render()}
+  readTitle=name;tab="read";render();doRead()}
 
 async function savePrefs(){saveStatus.prefs="saving";render();
   const ok=await saveState();saveStatus.prefs=ok?"ok":"failed";render()}
 
-/* ============================================================================
-   PLUMBING
-   ========================================================================== */
+/* ---- plumbing ---- */
 
 function render(){
   document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected",String(t.dataset.tab===tab)));
@@ -1153,66 +1285,63 @@ function render(){
 
 document.addEventListener("click",ev=>{
   const t=ev.target.closest("[data-act],.tab");if(!t)return;
+  if(t.tagName==="A")ev.preventDefault();
   if(t.classList.contains("tab")){tab=t.dataset.tab;return render()}
-  const act=t.dataset.act,v=t.dataset.v;
+  const act=t.dataset.act,v=t.dataset.v,id=t.dataset.id;
   if(act==="read")return void doRead();
   if(act==="find")return void doFind();
-  if(act==="stopfind"||act==="stopob"){if(ctl)ctl.abort();return}
-  if(act==="tome"){tab="me";showOnboard=true;return render()}
+  if(act==="addgame")return void addGame();
+  if(act==="stop"){if(ctl)ctl.abort();return}
   if(act==="form"){form=v;return render()}
   if(act==="company"){company=v;return render()}
-  if(act==="onboard")return void doOnboard();
-  if(act==="skipob"){state.onboardSkipped=true;showOnboard=false;void saveState();return render()}
-  if(act==="openob"){showOnboard=true;return render()}
-  if(act==="open"){const rec=cacheGet(t.dataset.t);
-    if(rec){reading=Object.assign({name:rec.title},rec);readTitle=rec.title;tab="read"}
-    return render()}
-  if(act==="fb")return void setFeedback(t.dataset.t,t.dataset.k,Number(v));
-  if(act==="fbunplayed")return void setUnplayed(t.dataset.t);
-  if(act==="delfb"){state.feedback=state.feedback.filter(e=>e.title!==t.dataset.t);
-    rebuildProfile();void saveState();return render()}
-  if(act==="unpin"){state.prefs.pinned=(state.prefs.pinned||[]).filter(k=>k!==t.dataset.k);
-    rebuildProfile();void savePrefs();return}
+  if(act==="offline"){offlineOnly=!offlineOnly;return render()}
+  if(act==="incrated"){includeRated=!includeRated;return render()}
+  if(act==="reshuffle"){state.shown=[];void saveState();
+    if(tab==="find")return void doFind();return render()}
+  if(act==="open"){const g=getGame(id);
+    if(g){readingId=g.id;readTitle=g.title;tab="read"}return render()}
+  if(act==="fb")return void setFeedback(id,t.dataset.k,Number(v));
+  if(act==="fbunplayed")return void setUnplayed(id);
+  if(act==="reason")return void toggleReason(id,t.dataset.r);
+  if(act==="delfb"){state.feedback=state.feedback.filter(e=>e.id!==id);void saveState();return render()}
   if(act==="themes"){state.themesLike=(document.getElementById("thl").value||"").trim();
-    state.themesAvoid=(document.getElementById("tha").value||"").trim();
-    return void savePrefs()}
+    state.themesAvoid=(document.getElementById("tha").value||"").trim();return void savePrefs()}
   if(act==="clearerr"){state.lastError=null;void saveState();return render()}
-  if(act==="clearcache"){state.cache={};rebuildProfile();void saveState();return render()}
+  if(act==="clearunused"){const keep=new Set(state.feedback.map(f=>f.id));
+    for(const k of Object.keys(state.games))if(!keep.has(k))delete state.games[k];
+    pickIds=pickIds.filter(x=>state.games[x]);void saveState();return render()}
 });
 
-// A hand-set preference is pinned: the fit is not allowed to move it back.
-// Note this updates the readouts in place. Re-rendering the panel on every input event
-// would replace the slider mid-drag, which loses the thumb and swallows the change event.
+// Readouts are patched in place; re-rendering would replace the slider mid-drag.
 document.addEventListener("input",ev=>{
   const el=ev.target;if(!el.dataset||!el.dataset.pf)return;
-  const k=el.dataset.k,field=el.dataset.pf,val=Number(el.value);
-  if(field==="t"&&!(val>0))return;
-  state.prefs[field][k]=val;
-  if(!(state.prefs.pinned||[]).includes(k))state.prefs.pinned=(state.prefs.pinned||[]).concat([k]);
-  if(state.fitted){state.fitted[field][k]=val;state.fitted.pinned=state.prefs.pinned.slice()}
-  const ro=document.querySelector(`[data-ro="${field}:${k}"]`);
-  if(ro)ro.textContent=val.toFixed(field==="w"?2:1);
-  const w=normW(state.prefs.w);
+  const field=el.dataset.pf,val=Number(el.value);
+  if(field==="t"){if(!(val>0))return;state.tolerance=val;
+    const ro=document.querySelector('[data-ro="tol"]');if(ro)ro.textContent="±"+val.toFixed(1);return}
+  const k=el.dataset.k;state.weights[k]=Math.max(0,val);
+  const ro=document.querySelector(`[data-ro="w:${k}"]`);if(ro)ro.textContent=val.toFixed(1);
+  const tw=MATCH_KEYS.reduce((s,x)=>s+Math.max(0,state.weights[x]||0),0);
   document.querySelectorAll("[data-wpct]").forEach(n=>{
-    n.textContent=((w?w[n.dataset.wpct]:0)*100).toFixed(0)+"% of the score"})});
+    n.textContent=(tw>0?(Math.max(0,state.weights[n.dataset.wpct]||0)/tw*100).toFixed(0):"0")+"% of the comparison"})});
+
 document.addEventListener("change",ev=>{
   const el=ev.target;
-  if(el.dataset&&el.dataset.pf){rebuildProfile();return void savePrefs()}
+  if(el.dataset&&el.dataset.pf)return void savePrefs();
   if(el.id==="plat"){platform=(el.value||"").trim();return void saveState()}
-  if(el.dataset&&el.dataset.ob){const list=el.dataset.ob==="like"?obLike:obDrop;
-    list[Number(el.dataset.i)][el.dataset.f]=el.value}});
+  if(el.id==="fbnote")return void setNote(el.dataset.id,el.value)});
 
 document.addEventListener("keydown",ev=>{
   if(ev.key==="Enter"&&ev.target.id==="q")doRead();
+  if(ev.key==="Enter"&&ev.target.id==="addg")addGame();
   if(ev.key==="Enter"&&ev.target.id==="plat"){platform=(ev.target.value||"").trim();doFind()}});
 
-// Exposed so the model can be exercised directly rather than only through the page.
-window.rebuildProfile=rebuildProfile;
-window.__engine={FEATURES,matchScore,salvageObjects,fitPreferences,normW,prefsValid,explain,labelOf,
-  blankPrefs,trainingPairs,pairLoss,cleanFeatures,state};
+window.__engine={MATCH_KEYS,FEATURES,REASON_RULES,REASON_LABELS,featureValue,featureSimilarity,
+  reasonPenalty,scoreGame,suggestReasons,buildProfile,labelOf,cleanFeatures,salvageObjects,
+  makeId,catalogStatus,state,render,putGame};
 
-rebuildProfile();render();
+render();
 (async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}
-  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";findErr=readErr;render()}
+  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";
+    findErr=readErr;render()}
   loadState()})();
 </script>
