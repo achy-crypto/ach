@@ -389,8 +389,13 @@ function cachePut(title,rec){
   if(keys.length>160){keys.sort((a,b)=>(state.cache[a].at||0)-(state.cache[b].at||0));
     for(const k of keys.slice(0,keys.length-160))delete state.cache[k]}}
 
+// Accepts either {pace:{value,evidence,confidence}} or the compact [[v,c,"ev"],...] form
+// used where output length is the binding constraint.
 function cleanFeatures(raw){const out={};
-  for(const f of FEATURES){const c=raw&&raw[f.key]||{};
+  let get;
+  if(Array.isArray(raw))get=i=>{const a=raw[i];return Array.isArray(a)?{value:a[0],confidence:a[1],evidence:a[2]}:(a||{})};
+  else get=i=>(raw&&raw[FKEYS[i]])||{};
+  for(let i=0;i<FEATURES.length;i++){const f=FEATURES[i],c=get(i);
     const v=num(c.value);
     const cell={value:v===null?null:clamp(v,0,10),
       confidence:clamp(num(c.confidence)??0,0,1),
@@ -409,7 +414,7 @@ const state={prefs:blankPrefs(),fitted:null,feedback:[],cache:{},seen:[],
   onboarded:false,onboardSkipped:false,themesLike:"",themesAvoid:"",loaded:false};
 let db=null,sample=null,tab="read",ctl=null;
 let readTitle="",readBusy=false,readErr="",reading=null;
-let form="either",company="alone",platform="",findBusy=false,findErr="",picks=[],findNotes=[];
+let form="either",company="alone",platform="",findBusy=false,findErr="",picks=[],findNotes=[],findSeen=0;
 let obLike=[{t:"",r:""},{t:"",r:""},{t:"",r:""}],obDrop=[{t:"",r:""},{t:"",r:""},{t:"",r:""}];
 let obBusy=false,obErr="";
 let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
@@ -549,14 +554,34 @@ function tasteBlock(){
 function platformBlock(){const p=(platform||"").trim();
   return p?`HE PLAYS ON: ${p}. Only suggest things playable there.`:""}
 
+// A reply cut off by the length limit still holds complete objects. Rather than throwing
+// the whole call away, walk the array and keep every candidate that closed.
+function salvageObjects(text,key){
+  const out=[];const s=String(text||"");
+  let i=s.indexOf('"'+key+'"');if(i<0)return out;
+  i=s.indexOf("[",i);if(i<0)return out;
+  let depth=0,start=-1,inStr=false,esc=false;
+  for(let j=i+1;j<s.length;j++){const ch=s[j];
+    if(inStr){if(esc)esc=false;else if(ch==="\\")esc=true;else if(ch==='"')inStr=false;continue}
+    if(ch==='"'){inStr=true;continue}
+    if(ch==="{"){if(depth===0)start=j;depth++;continue}
+    if(ch==="}"){depth--;
+      if(depth===0&&start>=0){try{out.push(JSON.parse(s.slice(start,j+1)))}catch(e){}start=-1}
+      continue}
+    if(ch==="]"&&depth===0)break}
+  return out}
+
 function errCopy(e){const c=e&&e.code;
   if(c==="not_granted"||c==="sampling_disabled"||c==="not_declared"||c==="capability_disabled")
     return"This page can't reach Claude. Open it from your Claude account and allow it.";
   if(c==="rate_limited")return"Too many requests, or you've hit your usage limit. Give it a minute.";
   if(c==="session_expired")return"Session expired. Sign in again, then retry.";
-  if(c==="invalid_json")return"The reply came back malformed. Try again.";
+  if(c==="invalid_json")return"The reply was cut short or came back malformed. Try again.";
+  if(c==="prompt_too_large")return"Too much to send at once — clear some cached ratings under Your profile.";
+  if(c==="empty_completion")return"Nothing came back. Try again.";
+  if(c==="upstream_error")return"The connection dropped part-way. Try again.";
   if(c==="refused")return"Claude declined that one. Try a different title.";
-  return"That didn't go through. Try again."}
+  return`That didn't go through${c?" ("+c+")":""}. Try again.`}
 
 function saveLine(key,done){const s=saveStatus[key];
   if(s==="saving")return`<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;
@@ -749,7 +774,9 @@ function findPanel(){
     </div>
     <p class="note">Claude proposes the candidates and rates their features. The ranking is done here, by your
       profile — the order it suggests is thrown away.</p>`;
-  if(findBusy)h+=`<div class="status"><span class="dot"></span>Rating candidates, then scoring them against you.</div>`;
+  if(findBusy)h+=`<div class="status"><span class="dot"></span>
+    <span id="findprog">${findSeen?findSeen+" rated so far":"Thinking"}</span> — this takes up to a minute.
+    <button class="ghost" data-act="stopfind" style="min-height:36px;padding:6px 12px">Stop</button></div>`;
   if(findErr)h+=`<div class="err">${esc(findErr)}</div>`;
   if(findNotes.length)h+=`<p class="note">${findNotes.map(esc).join("<br>")}</p>`;
   if(picks.length){
@@ -777,13 +804,13 @@ async function doFind(){
   const pin=document.getElementById("plat");if(pin)platform=(pin.value||"").trim();
   const bad=prefsValid(activePrefs());
   if(bad){findErr=bad+". Fix it under Your profile.";return render()}
-  findBusy=true;findErr="";findNotes=[];picks=[];render();ctl=new AbortController();
+  findBusy=true;findErr="";findNotes=[];picks=[];findSeen=0;render();ctl=new AbortController();
   const formLine=form==="finite"?"Only games with an actual ending he can reach."
     :form==="endless"?"Only games with no ending — roguelikes, sims, builders, competitive games."
     :"";
   const coLine=company==="alone"?"He is playing alone. Nothing that needs other people online to work."
     :company==="friends"?"He is playing with friends, so multiplayer is fine. Say how many people it really needs.":"";
-  const prompt=`Propose 12 candidate games for this person, then rate each one's gameplay features.
+  const prompt=`Propose 8 candidate games for this person, then rate each one's gameplay features.
 
 ${RATING_RULES}
 
@@ -799,7 +826,7 @@ ${formLine}
 ${coLine}
 
 HOW TO CHOOSE CANDIDATES
-1. Spread them out. Do not send twelve games from one genre; the app is going to rank them
+1. Spread them out. Do not send eight games from one genre; the app is going to rank them
    and it can only rank what you send.
 2. Include a few he is unlikely to have thought of, and a few obvious ones. Both are useful.
 3. Do NOT try to rank them or pick a winner — the app computes the match itself and will
@@ -808,12 +835,34 @@ HOW TO CHOOSE CANDIDATES
    preferred levels and may be scored WORSE for it.
 5. Skip these, he has already seen them: ${state.seen.slice(-90).join("; ")||"none"}.
 
+KEEP THE REPLY SHORT OR IT WILL BE CUT OFF BEFORE THE LAST CANDIDATE. Evidence strings are
+at most TEN words. No prose outside the JSON.
+
+"f" is the nine features IN THE ORDER LISTED ABOVE, each as [value, confidence, "evidence"].
+Use null for a value you cannot support: [null,0,""].
+
 Reply with only this JSON:
-{"candidates":[{"title":"","year":0,"ident":"","theme":"","endless":false,"needsOthers":false,
-"frictions":[""],
-"features":{${FKEYS.map(k=>`"${k}":{"value":0,"evidence":"","confidence":0}`).join(",")}}}]}`;
-  try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
-    const raw=(out&&Array.isArray(out.candidates)?out.candidates:[]).filter(c=>c&&c.title);
+{"candidates":[{"t":"title","y":2020,"d":"developer, year, what you do in it","th":"setting",
+"e":false,"o":false,"fr":["friction"],
+"f":[[0,0.8,"evidence"],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""]]}]}`;
+  let out=null,salvaged=false;
+  try{
+    out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false,
+      onText:({text})=>{const n=(text.match(/"t":/g)||[]).length;
+        if(n!==findSeen){findSeen=n;const el=document.getElementById("findprog");
+          if(el)el.textContent=n?`${n} rated so far`:"Thinking"}}});
+  }catch(e){
+    if(e&&e.code==="cancelled"){findBusy=false;return render()}
+    // A truncated reply still holds whole candidates. Use them rather than losing the call.
+    const got=e&&e.text?salvageObjects(e.text,"candidates"):[];
+    if(got.length){out={candidates:got};salvaged=true}
+    else{findErr=errCopy(e);findBusy=false;return render()}}
+  try{
+    const raw=(out&&Array.isArray(out.candidates)?out.candidates:[])
+      .map(c=>c&&({title:c.t||c.title,year:c.y||c.year,ident:c.d||c.ident,theme:c.th||c.theme,
+        endless:c.e!==undefined?c.e:c.endless,needsOthers:c.o!==undefined?c.o:c.needsOthers,
+        frictions:c.fr||c.frictions,features:c.f||c.features}))
+      .filter(c=>c&&c.title);
     const pr=activePrefs();
     const drops={};const seenNow=new Set();const scored=[];
     for(const c of raw){
@@ -840,9 +889,10 @@ Reply with only this JSON:
     const dropped=Object.entries(drops).map(([k,v])=>`${v} ${k}`);
     if(dropped.length)findNotes.push(`Dropped before scoring: ${dropped.join(", ")}.`);
     findNotes.push(`${raw.length} proposed, ${scored.length} scored, top ${picks.length} shown — ranked here, not by Claude.`);
+    if(salvaged)findNotes.push("The reply was cut short; these are the candidates that came through whole.");
     if(!picks.length)findErr="Nothing came back with enough evidence to score. Try again.";
     else{state.seen=state.seen.concat(picks.map(p=>p.title)).slice(-300);await saveState()}}
-  catch(e){if(!(e&&e.code==="cancelled"))findErr=errCopy(e)}
+  catch(e){findErr=errCopy(e)}
   findBusy=false;render()}
 
 /* ============================================================================
@@ -1012,6 +1062,7 @@ document.addEventListener("click",ev=>{
   const act=t.dataset.act,v=t.dataset.v;
   if(act==="read")return void doRead();
   if(act==="find")return void doFind();
+  if(act==="stopfind"){if(ctl)ctl.abort();return}
   if(act==="tome"){tab="me";return render()}
   if(act==="form"){form=v;return render()}
   if(act==="company"){company=v;return render()}
@@ -1061,7 +1112,7 @@ document.addEventListener("keydown",ev=>{
 
 // Exposed so the model can be exercised directly rather than only through the page.
 window.rebuildProfile=rebuildProfile;
-window.__engine={FEATURES,matchScore,fitPreferences,normW,prefsValid,explain,labelOf,
+window.__engine={FEATURES,matchScore,salvageObjects,fitPreferences,normW,prefsValid,explain,labelOf,
   blankPrefs,trainingPairs,pairLoss,cleanFeatures,state};
 
 rebuildProfile();render();
