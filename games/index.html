@@ -416,7 +416,7 @@ let db=null,sample=null,tab="read",ctl=null;
 let readTitle="",readBusy=false,readErr="",reading=null;
 let form="either",company="alone",platform="",findBusy=false,findErr="",picks=[],findNotes=[],findSeen=0;
 let obLike=[{t:"",r:""},{t:"",r:""},{t:"",r:""}],obDrop=[{t:"",r:""},{t:"",r:""},{t:"",r:""}];
-let obBusy=false,obErr="";
+let obBusy=false,obErr="",showOnboard=false;
 let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
 const saveStatus={};
 const DOC="games/profile", LS="games:v2";
@@ -506,7 +506,8 @@ function rebuildProfile(){
   return fitted}
 
 function activePrefs(){return state.fitted||state.prefs}
-function provisional(){return !state.onboarded||(state.fitInfo&&state.fitInfo.pairs<3)}
+function provisional(){return !state.feedback.some(f=>f.src==="onboarding")
+  ||!state.fitInfo||state.fitInfo.pairs<3}
 
 /* ---- prompt fragments ---- */
 
@@ -701,9 +702,23 @@ function bandWord(s){
   if(s>=28)return"Expect to drift off";
   return"It'll be another two-hour game"}
 
+function fbLabelHTML(fb){const lab=labelOf(fb);
+  if(!lab)return"";
+  return`<div class="callout">Counted as <b>${lab==="liked"?"a game that hooked you":lab==="dropped"?"a game you dropped":"mixed — used for neither"}</b>${lab==="mixed"?"":", which feeds the profile fit"}.</div>`}
+
+// Patch the chips in place. Re-rendering the panel would replace a 4,000px sheet under the
+// finger, and a second tap made before the re-render lands on a detached button and is lost.
+function updateFeedbackUI(title){
+  const fb=state.feedback.find(e=>norm(e.title)===norm(title))||{};
+  document.querySelectorAll('[data-act="fb"]').forEach(el=>{
+    el.setAttribute("aria-pressed",String(num(fb[el.dataset.k])===Number(el.dataset.v)))});
+  const un=document.querySelector('[data-act="fbunplayed"]');
+  if(un)un.setAttribute("aria-pressed",String(fb.played===false));
+  const lab=document.getElementById("fblabel");if(lab)lab.innerHTML=fbLabelHTML(fb);
+  const sv=document.getElementById("fbsave");if(sv)sv.innerHTML=saveLine("fb:"+title,!!labelOf(fb))}
+
 function feedbackBlock(title){
   const fb=state.feedback.find(e=>norm(e.title)===norm(title))||{};
-  const lab=labelOf(fb);
   const q=(key,text)=>`<div class="qrow"><div class="lab">${text}</div><div class="chips">
     ${FB_SCALE.map(([w,v])=>`<button class="chip" data-act="fb" data-t="${esc(title)}" data-k="${key}" data-v="${v}"
       aria-pressed="${num(fb[key])===v}">${w}</button>`).join("")}</div></div>`;
@@ -717,8 +732,8 @@ function feedbackBlock(title){
       <button class="chip wide" data-act="fbunplayed" data-t="${esc(title)}" aria-pressed="${fb.played===false}">Haven't played it</button>
     </div>
     <p class="subtle">Never played is not a dislike — it's left out of the fit entirely.</p>
-    ${lab?`<div class="callout">Counted as <b>${lab==="liked"?"a game that hooked you":lab==="dropped"?"a game you dropped":"mixed — used for neither"}</b>${lab==="mixed"?"":", which feeds the profile fit"}.</div>`:""}
-    ${saveLine("fb:"+title,!!lab)}</div>`}
+    <div id="fblabel">${fbLabelHTML(fb)}</div>
+    <div id="fbsave">${saveLine("fb:"+title,!!labelOf(fb))}</div></div>`}
 
 async function doRead(){
   const name=(document.getElementById("q").value||"").trim();readTitle=name;
@@ -904,7 +919,15 @@ function mePanel(){
   const bad=prefsValid(pr);
   let h="";
 
-  if(!state.onboarded){
+  const didOnboard=state.feedback.some(f=>f.src==="onboarding");
+  const openOB=showOnboard||(!didOnboard&&!state.onboardSkipped);
+  if(!openOB){
+    h+=`<h2 class="sec">${didOnboard?"Your starting six":"Set up your profile"}</h2>
+      <p class="subtle">${didOnboard
+        ?"The six games the profile was built from. You can redo it, or just rate games as you play them."
+        :"You skipped this. Three games that hooked you and three you dropped is the fastest way to make the scores mean something."}</p>
+      <div class="seg"><button class="ghost" data-act="openob">${didOnboard?"Redo the setup":"Set it up now"}</button></div>`}
+  if(openOB){
     h+=`<h2 class="sec">Three that hooked you, three you dropped</h2>
       <p class="subtle">This is what the profile is built from. Reasons are optional — they are used to pick candidates, never to change a rating.</p>
       <div class="onb"><div class="lab" style="margin-top:14px">Games that hooked you</div>
@@ -918,10 +941,10 @@ function mePanel(){
       </div>
       <div class="seg" style="margin-top:16px">
         <button class="go" data-act="onboard" ${obBusy?"disabled":""}>${obBusy?"Rating them":"Build my profile"}</button>
-        <button class="ghost" data-act="skipob">Skip for now</button></div>
+        <button class="ghost" data-act="skipob">${didOnboard?"Leave it as it is":"Skip for now"}</button></div>
       ${obBusy?`<div class="status"><span class="dot"></span>Rating those six games, then fitting your profile to them.</div>`:""}
       ${obErr?`<div class="err">${esc(obErr)}</div>`:""}
-      <p class="note">Skipping is fine — you'll start on the neutral default and everything will be marked provisional until you've rated a few games.</p>`;
+      <p class="note">Skipping is fine — you'll start on the neutral default and everything will be marked provisional until you've rated a few games. This section stays here either way.</p>`;
   }
 
   h+=`<h2 class="sec">Fit</h2>
@@ -1013,7 +1036,7 @@ Reply with only this JSON:
       const row={title:t,engage,ret,enjoy:null,played:true,reason:r.r.trim(),at:Date.now(),src:"onboarding"};
       if(i>=0)state.feedback[i]=Object.assign(state.feedback[i],row);else state.feedback.push(row)}};
     put(likes,10,10);put(drops,1,1);
-    state.onboarded=true;state.onboardSkipped=false;
+    state.onboarded=true;state.onboardSkipped=false;showOnboard=false;
     rebuildProfile();
     saveStatus.prefs="saving";
     const ok=await saveState();saveStatus.prefs=ok?"ok":"failed";
@@ -1031,8 +1054,8 @@ async function setFeedback(title,key,value){
   row[key]=value;row.played=true;row.at=Date.now();
   if(i>=0)state.feedback[i]=row;else state.feedback.push(row);
   rebuildProfile();
-  saveStatus["fb:"+title]="saving";render();
-  const ok=await saveState();saveStatus["fb:"+title]=ok?"ok":"failed";render()}
+  saveStatus["fb:"+title]="saving";updateFeedbackUI(title);
+  const ok=await saveState();saveStatus["fb:"+title]=ok?"ok":"failed";updateFeedbackUI(title)}
 
 async function setUnplayed(title){
   const i=state.feedback.findIndex(e=>norm(e.title)===norm(title));
@@ -1040,8 +1063,8 @@ async function setUnplayed(title){
     reason:i>=0?state.feedback[i].reason:""};
   if(i>=0)state.feedback[i]=row;else state.feedback.push(row);
   rebuildProfile();
-  saveStatus["fb:"+title]="saving";render();
-  const ok=await saveState();saveStatus["fb:"+title]=ok?"ok":"failed";render()}
+  saveStatus["fb:"+title]="saving";updateFeedbackUI(title);
+  const ok=await saveState();saveStatus["fb:"+title]=ok?"ok":"failed";updateFeedbackUI(title)}
 
 async function savePrefs(){saveStatus.prefs="saving";render();
   const ok=await saveState();saveStatus.prefs=ok?"ok":"failed";render()}
@@ -1063,12 +1086,12 @@ document.addEventListener("click",ev=>{
   if(act==="read")return void doRead();
   if(act==="find")return void doFind();
   if(act==="stopfind"){if(ctl)ctl.abort();return}
-  if(act==="tome"){tab="me";return render()}
+  if(act==="tome"){tab="me";showOnboard=true;return render()}
   if(act==="form"){form=v;return render()}
   if(act==="company"){company=v;return render()}
   if(act==="onboard")return void doOnboard();
-  if(act==="skipob"){state.onboardSkipped=true;state.onboarded=true;rebuildProfile();
-    void saveState();return render()}
+  if(act==="skipob"){state.onboardSkipped=true;showOnboard=false;void saveState();return render()}
+  if(act==="openob"){showOnboard=true;return render()}
   if(act==="open"){const rec=cacheGet(t.dataset.t);
     if(rec){reading=Object.assign({name:rec.title},rec);readTitle=rec.title;tab="read"}
     return render()}
