@@ -416,7 +416,7 @@ let db=null,sample=null,tab="read",ctl=null;
 let readTitle="",readBusy=false,readErr="",reading=null;
 let form="either",company="alone",platform="",findBusy=false,findErr="",picks=[],findNotes=[],findSeen=0;
 let obLike=[{t:"",r:""},{t:"",r:""},{t:"",r:""}],obDrop=[{t:"",r:""},{t:"",r:""},{t:"",r:""}];
-let obBusy=false,obErr="",showOnboard=false;
+let obBusy=false,obErr="",obSeen=0,showOnboard=false;
 let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
 const saveStatus={};
 const DOC="games/profile", LS="games:v2";
@@ -942,10 +942,14 @@ function mePanel(){
       <div class="seg" style="margin-top:16px">
         <button class="go" data-act="onboard" ${obBusy?"disabled":""}>${obBusy?"Rating them":"Build my profile"}</button>
         <button class="ghost" data-act="skipob">${didOnboard?"Leave it as it is":"Skip for now"}</button></div>
-      ${obBusy?`<div class="status"><span class="dot"></span>Rating those six games, then fitting your profile to them.</div>`:""}
-      ${obErr?`<div class="err">${esc(obErr)}</div>`:""}
+      ${obBusy?`<div class="status"><span class="dot"></span>
+        <span id="obprog">${obSeen?obSeen+" rated":"Thinking"}</span> — rating them, then fitting your profile.
+        <button class="ghost" data-act="stopob" style="min-height:36px;padding:6px 12px">Stop</button></div>`:""}
       <p class="note">Skipping is fine — you'll start on the neutral default and everything will be marked provisional until you've rated a few games. This section stays here either way.</p>`;
   }
+  // Outside both branches: a partial success collapses the form, and the note about what
+  // did not come back has to survive that.
+  if(obErr)h+=`<div class="err">${esc(obErr)}</div>`;
 
   h+=`<h2 class="sec">Fit</h2>
     <div class="readout">
@@ -1010,27 +1014,57 @@ function mePanel(){
 async function doOnboard(){
   const likes=obLike.filter(r=>r.t.trim()),drops=obDrop.filter(r=>r.t.trim());
   if(likes.length<2||drops.length<2){obErr="Give at least two on each side — the fit works by separating them.";return render()}
-  obBusy=true;obErr="";render();ctl=new AbortController();
+  obBusy=true;obErr="";obSeen=0;render();ctl=new AbortController();
   const list=likes.map(r=>r.t.trim()).concat(drops.map(r=>r.t.trim()));
   const prompt=`Rate how each of these games plays, feature by feature.
 
-GAMES: ${list.map(t=>`"${t}"`).join(", ")}
+GAMES, in this order: ${list.map((t,i)=>`${i+1}. "${t}"`).join("  ")}
 
 ${RATING_RULES}
 
 THE NINE FEATURES:
 ${FEATURE_SPEC}
 
-Rate every game on the list, in order, using its exact title as given.
+Rate every game on the list, in the order given, keeping its exact title.
+
+KEEP THE REPLY SHORT OR IT WILL BE CUT OFF BEFORE THE LAST GAME. Evidence strings are at
+most TEN words. No prose outside the JSON.
+
+"f" is the nine features IN THE ORDER LISTED ABOVE, each as [value, confidence, "evidence"].
+Use [null,0,""] for a feature you cannot support.
 
 Reply with only this JSON:
-{"games":[{"title":"","ident":"","theme":"",
-"features":{${FKEYS.map(k=>`"${k}":{"value":0,"evidence":"","confidence":0}`).join(",")}}}]}`;
-  try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
-    const got=(out&&Array.isArray(out.games)?out.games:[]).filter(g=>g&&g.title);
+{"games":[{"t":"exact title as given","d":"developer, year, what you do in it","th":"setting",
+"f":[[0,0.8,"evidence"],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""],[0,0.8,""]]}]}`;
+  let out=null,salvaged=false;
+  try{
+    out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false,
+      onText:({text})=>{const n=(text.match(/"t":/g)||[]).length;
+        if(n!==obSeen){obSeen=n;const el=document.getElementById("obprog");
+          if(el)el.textContent=n?`${n} of ${list.length} rated`:"Thinking"}}});
+  }catch(e){
+    if(e&&e.code==="cancelled"){obBusy=false;return render()}
+    // A reply cut off by length still holds whole games — keep those rather than lose the lot.
+    const part=e&&e.text?salvageObjects(e.text,"games"):[];
+    if(part.length){out={games:part};salvaged=true}
+    else{obErr=errCopy(e);obBusy=false;return render()}}
+  try{
+    const got=(out&&Array.isArray(out.games)?out.games:[])
+      .map(g=>g&&({title:g.t||g.title,ident:g.d||g.ident,theme:g.th||g.theme,
+        features:g.f||g.features}))
+      .filter(g=>g&&g.title);
     if(!got.length)throw{code:"invalid_json"};
-    for(const g of got)cachePut(g.title,{title:String(g.title),ident:String(g.ident||""),
-      theme:String(g.theme||""),frictions:[],tactics:[],stopRule:"",features:cleanFeatures(g.features)});
+    // Cache under the title HE typed, not the model's spelling of it, or the lookup that
+    // builds the training pairs will miss ("Crusader Kings 3" against "Crusader Kings III").
+    const used=new Set();
+    got.forEach((g,idx)=>{
+      let want=list.find(t=>!used.has(t)&&norm(t)===norm(g.title));
+      if(!want)want=list.find((t,i)=>i===idx&&!used.has(t));
+      if(!want)want=list.find(t=>!used.has(t));
+      if(!want)return;
+      used.add(want);
+      cachePut(want,{title:want,ident:String(g.ident||""),theme:String(g.theme||""),
+        frictions:[],tactics:[],stopRule:"",features:cleanFeatures(g.features)})});
     const put=(rows,engage,ret)=>{for(const r of rows){const t=r.t.trim();
       const i=state.feedback.findIndex(x=>norm(x.title)===norm(t));
       const row={title:t,engage,ret,enjoy:null,played:true,reason:r.r.trim(),at:Date.now(),src:"onboarding"};
@@ -1041,9 +1075,13 @@ Reply with only this JSON:
     saveStatus.prefs="saving";
     const ok=await saveState();saveStatus.prefs=ok?"ok":"failed";
     const {pairs}=trainingPairs();
-    if(!pairs.length)obErr="Those were rated, but not confidently enough to build pairs from. Try more widely known titles, or rate games under Check one.";
+    const missed=list.filter(t=>!used.has(t));
+    if(!pairs.length){showOnboard=true;
+      obErr="Those came back, but without enough confident ratings to compare them. Try more widely known titles.";}
+    else if(missed.length)obErr=`Built from ${used.size} of ${list.length} — ${missed.join(", ")} didn't come back. Add ${missed.length===1?"it":"them"} again under Check one if you want ${missed.length===1?"it":"them"} counted.`;
+    else if(salvaged)obErr=`The reply was cut short, but all ${used.size} games came through.`;
   }
-  catch(e){if(!(e&&e.code==="cancelled"))obErr=errCopy(e)}
+  catch(e){obErr=errCopy(e)}
   obBusy=false;render()}
 
 /* ---- feedback writes ---- */
@@ -1085,7 +1123,7 @@ document.addEventListener("click",ev=>{
   const act=t.dataset.act,v=t.dataset.v;
   if(act==="read")return void doRead();
   if(act==="find")return void doFind();
-  if(act==="stopfind"){if(ctl)ctl.abort();return}
+  if(act==="stopfind"||act==="stopob"){if(ctl)ctl.abort();return}
   if(act==="tome"){tab="me";showOnboard=true;return render()}
   if(act==="form"){form=v;return render()}
   if(act==="company"){company=v;return render()}
