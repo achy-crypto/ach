@@ -19,7 +19,7 @@
 </style>
 </head>
 <body>
-<script>window.__BUILD__='12997905fa';</script>
+<script>window.__BUILD__='24b7944e1d';</script>
 <title>Afterimage</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -297,6 +297,9 @@ body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
   text-transform:uppercase;color:#5d6673;margin-bottom:12px}
 .hazcard + .hazcard{border-top:0}
 .boss{border-color:#7d2420;background:#160a09}
+.chamber{border-color:#2f5f6d;background:#08131a}
+.chamber .n{color:#5fb6c9}
+.chamber .two{color:#3f7583}
 .boss .n{color:#e0655a;font-size:clamp(30px,8.4vw,42px)}
 .boss .two{color:#8a4a45}
 
@@ -396,8 +399,23 @@ body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
 
   <details class="sec" id="prac">
     <summary style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);padding:2px 0">Practice specific skills</summary>
-    <p class="sub" style="margin:12px 0 14px">The run is built out of these. On its own each one is calmer, and it is where you drill whatever the run keeps taking from you.</p>
+    <p class="sub" style="margin:12px 0 10px">The run is built out of these. On its own each one is calmer, and it is where you drill whatever the run keeps taking from you. There are three different things being trained here and it is worth knowing which is which.</p>
+    <div class="note" style="margin-bottom:14px">
+      <b>Image hold</b> &mdash; take a whole scene in and inspect it after it has gone.<br>
+      <b>Single-point focus</b> &mdash; keep one object steady, and come back every time you slip.<br>
+      <b>Embodied scene</b> &mdash; stand inside a short scene and make it real enough to answer from.
+    </div>
     <div class="stack">
+    <button class="big" data-mode="point">
+      <span class="k">single-point focus</span>
+      <span class="t">Single-Point Hold</span>
+      <span class="d">One object, ten seconds, then nothing. Attention slides off it and you bring it back &mdash; the returning is the rep, and it is counted as work rather than as a mistake.</span>
+    </button>
+    <button class="big" data-mode="sleep">
+      <span class="k">embodied scene &middot; calm</span>
+      <span class="t">Sleep Scene</span>
+      <span class="d">Nothing scored. A short scene of something you actually want to do, entered first person, given one thing to touch and one to hear, run five times slowly. Good when there is nothing left in the tank.</span>
+    </button>
     <button class="big" data-mode="scene">
       <span class="k">the basic one</span>
       <span class="t">Look, then hold</span>
@@ -549,9 +567,13 @@ const LS_KEY = "afterimage:state:v1";
 
 const state = {
   loaded: false,
-  level: { scene: 4, blueprint: 3, fire: 3, turn: 3, stack: 1 },
+  level: { scene: 4, blueprint: 3, fire: 3, turn: 3, stack: 1, point: 3 },
   recent: {},            /* mode -> array of 0/1, most recent last */
   rounds: [],            /* {mode, at, level, right, asked} */
+  drifts: 0,             /* noticed and returned — the rep, not a failure */
+  anchorBest: 0,         /* longest hold, in seconds, with the anchor still there */
+  anchorKinds: {},       /* which objects are easiest to keep hold of */
+  states: {},            /* which states get chosen in the chamber */
   bestDepth: 0,          /* deepest floor reached in a run */
   runs: [],              /* {at, depth, by, hold} */
   facets: {},            /* which part of the image holds: facet -> {a,r} */
@@ -573,6 +595,8 @@ function payload() {
   return {
     level: state.level, recent: state.recent, rounds: state.rounds.slice(-400),
     bestDepth: state.bestDepth, runs: state.runs.slice(-80),
+    drifts: state.drifts, anchorBest: state.anchorBest,
+    anchorKinds: state.anchorKinds, states: state.states,
     facets: state.facets, facetsInt: state.facetsInt, killers: state.killers,
     holdSec: state.holdSec, floorsCleared: state.floorsCleared,
     walkStops: state.walkStops, walkBest: state.walkBest, walkRuns: state.walkRuns.slice(-60),
@@ -584,6 +608,10 @@ function adopt(o) {
   if (o.level && typeof o.level === "object") Object.assign(state.level, o.level);
   if (o.recent && typeof o.recent === "object") state.recent = o.recent;
   if (Array.isArray(o.rounds)) state.rounds = o.rounds;
+  if (typeof o.drifts === "number") state.drifts = o.drifts;
+  if (typeof o.anchorBest === "number") state.anchorBest = o.anchorBest;
+  if (o.anchorKinds && typeof o.anchorKinds === "object") state.anchorKinds = o.anchorKinds;
+  if (o.states && typeof o.states === "object") state.states = o.states;
   if (typeof o.bestDepth === "number") state.bestDepth = o.bestDepth;
   if (Array.isArray(o.runs)) state.runs = o.runs;
   if (o.facets && typeof o.facets === "object") state.facets = o.facets;
@@ -918,6 +946,42 @@ const OBJECTS = [
   },
 ];
 
+/* What each object would sound and feel like, kept distinct enough that
+   a multiple-choice question about them is fair. These carry the
+   embodied side: a scene you can hear and touch survives a hold far
+   better than a flat picture of one, and it is the difference between
+   being in a place and looking at a photograph of it. */
+const SENSE = {
+  cup:       ["a dull tap on the table", "cool and smooth"],
+  key:       ["a thin metal jingle", "cold, with notches"],
+  book:      ["a soft thud of pages", "dry paper edges"],
+  candle:    ["almost nothing \u2014 a faint hiss", "waxy, slightly soft"],
+  bottle:    ["liquid sloshing", "cool glass, a little wet"],
+  arrow:     ["a quick whistle", "flat and light"],
+  ball:      ["a rubber bounce", "grippy, and it gives"],
+  box:       ["cardboard scraping", "dry card, sharp corners"],
+  plant:     ["leaves rustling", "waxy leaves, damp soil"],
+  umbrella:  ["a snap of fabric", "taut nylon on a hard spine"],
+  fish:      ["a wet flap", "slick and cold"],
+  lamp:      ["a switch clicking", "warm shade, cool metal stem"],
+  envelope:  ["paper sliding", "thin, with a gummed edge"],
+  clock:     ["a steady tick", "smooth glass over a face"],
+  flag:      ["cloth snapping in wind", "coarse cloth, a smooth pole"],
+  eye:       ["nothing at all", "warm, and you would flinch"],
+  spoon:     ["a metallic clink", "cold and thin"],
+  door:      ["a heavy click", "solid and cool"],
+  hat:       ["no sound, just felt", "soft felt, firm brim"],
+  scissors:  ["a sharp snip", "cold steel rings"],
+};
+OBJECTS.forEach((o) => { const x = SENSE[o.id]; if (x) { o.sound = x[0]; o.touch = x[1]; } });
+
+/* Standing in the scene rather than looking at it: the bottom row is
+   nearest you, the top row is across the room, columns are your sides. */
+const NEAR = ["across the room", "an arm's length away", "right in front of you"];
+const SIDE = ["on your left", "straight ahead", "on your right"];
+const place1p = (cell) => SIDE[cell.col] + ", " + NEAR[cell.row];
+const nearness = (cell) => cell.row * 3 + (cell.col === 1 ? 1 : 0);
+
 const CELLS = [
   { i: 0, col: 0, row: 0, name: "top left" },
   { i: 1, col: 1, row: 0, name: "top middle" },
@@ -1149,6 +1213,96 @@ function probesFor(scene, count, flavour) {
   return made;
 }
 
+/* ============ standing in it ============
+   The flat version asks what was in the picture. This asks what was
+   near you, what your hand would have reached, what it would have
+   sounded like. Those cannot be answered off a remembered list of
+   words, only off a place you were actually inside.
+   ======================================== */
+
+FACET_NAME.embodied = "Being inside it";
+FACET_NAME.anchor = "Holding one thing";
+FACET.embodied = "embodied";
+
+function describe1p(scene) {
+  const sorted = scene.items.slice().sort((a, b) => nearness(b.cell) - nearness(a.cell));
+  return sorted.map((it) =>
+    "The <b>" + it.colour.name + " " + it.kind.name + "</b> is " + place1p(it.cell) + ".");
+}
+
+function embodiedProbes(scene, count) {
+  const it = scene.items, out = [], used = {};
+  const byNear = it.slice().sort((a, b) => nearness(b.cell) - nearness(a.cell));
+  const names = it.map((x) => x.kind.name);
+  const builders = [];
+
+  const closest = byNear[0], furthest = byNear[byNear.length - 1];
+  builders.push(() => mkProbe("You are standing in it. What is <b>closest to you</b>?",
+    closest.kind.name, optionsAround(closest.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", closest));
+  builders.push(() => mkProbe("What is <b>furthest away</b>?",
+    furthest.kind.name, optionsAround(furthest.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", furthest));
+  builders.push(() => {
+    const left = it.filter((x) => x.cell.col === 0);
+    if (!left.length) return null;
+    const t = pick(left);
+    return mkProbe("What is <b>on your left</b>?", t.kind.name,
+      optionsAround(t.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", t);
+  });
+  builders.push(() => {
+    const right = it.filter((x) => x.cell.col === 2);
+    if (!right.length) return null;
+    const t = pick(right);
+    return mkProbe("What is <b>on your right</b>?", t.kind.name,
+      optionsAround(t.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", t);
+  });
+  builders.push(() => mkProbe("You reach out without looking. What does your hand find <b>first</b>?",
+    closest.kind.name, optionsAround(closest.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", closest));
+  builders.push(() => {
+    const t = pick(it.filter((x) => x.kind.sound));
+    if (!t) return null;
+    return mkProbe("You knock the " + t.kind.name + " over. What do you <b>hear</b>?", t.kind.sound,
+      optionsAround(t.kind.sound, OBJECTS.filter((o) => o.sound).map((o) => o.sound)), "embodied", t);
+  });
+  builders.push(() => {
+    const t = pick(it.filter((x) => x.kind.touch));
+    if (!t) return null;
+    return mkProbe("You put your hand on the " + t.kind.name + ". What does it <b>feel</b> like?", t.kind.touch,
+      optionsAround(t.kind.touch, OBJECTS.filter((o) => o.touch).map((o) => o.touch)), "embodied", t);
+  });
+
+  let guard_ = 0;
+  while (out.length < count && guard_++ < 60) {
+    const p = pick(builders)();
+    if (!p || p.answer < 0 || used[p.q]) continue;
+    used[p.q] = 1;
+    out.push(p);
+  }
+  return out;
+}
+
+/* A question aimed squarely at whatever is being held as the anchor. */
+function anchorProbe(scene, item) {
+  const others = scene.items.filter((x) => x !== item);
+  const forms = [
+    () => mkProbe("The anchor. What <b>colour</b> was it?", item.colour.name,
+      optionsAround(item.colour.name, PALETTE.map((x) => x.name)), "colour", item),
+    () => mkProbe("The anchor. " + item.kind.ask, stateLabel(item),
+      shuffle(item.kind.states.map((x) => x[1])), "state", item),
+    () => mkProbe("The anchor. <b>Where</b> was it sitting?", item.cell.name,
+      optionsAround(item.cell.name, CELLS.map((c) => c.name)), "place", item),
+    () => others.length
+      ? mkProbe("What was <b>nearest</b> the anchor?",
+          others.sort((a, b) => (Math.abs(a.cell.col - item.cell.col) + Math.abs(a.cell.row - item.cell.row)) -
+            (Math.abs(b.cell.col - item.cell.col) + Math.abs(b.cell.row - item.cell.row)))[0].kind.name,
+          optionsAround(others[0].kind.name, others.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "relation", others[0])
+      : null,
+  ];
+  const p = pick(forms)();
+  if (!p) return null;
+  p.isAnchor = true;
+  return p;
+}
+
 /* ================== rounds ==================
    Study, then hold, then questions you could not have planned for.
    The hold is the part that matters, so it is never skipped and the
@@ -1162,6 +1316,8 @@ const MODES = {
   turn:      { name: "Turn it around", screen: "play" },
   stack:     { name: "One more thing", screen: "play" },
   walk:      { name: "Put it somewhere you know", screen: "walk" },
+  point:     { name: "Single-Point Hold", screen: "play" },
+  sleep:     { name: "Sleep Scene", screen: "play" },
 };
 
 const PRIMER = {
@@ -1192,6 +1348,17 @@ const PRIMER = {
   },
 };
 
+PRIMER.point = {
+  h: "Single-Point Hold",
+  p: "One object, looked at properly, then held on its own with nothing else on the screen. Attention will slide off it &mdash; that is not the failure, it is the thing being trained. When you notice you have gone, tap <b>I drifted</b> and come back. The noticing and the returning is the rep; the app counts them as work done, not as mistakes.",
+  t: "Do not grip it. Let it sit there and keep looking. If it dims, take the outline first, then the colour, then where it sits.",
+};
+PRIMER.sleep = {
+  h: "Sleep Scene",
+  p: "The calm one. You build a short scene of something you actually want to do, step inside it, give it one thing to touch and one thing to hear, and run it a few times slowly. Nothing is scored and nothing can go wrong here.",
+  t: "Rehearsing an action in first person makes starting it easier &mdash; that is the whole claim, and it is a real one. It does not make anything happen by itself. Keep it short, keep it specific, and stop before you start analysing it.",
+};
+
 function paramsFor(mode, level) {
   const L = clamp(level, 1, 20);
   return {
@@ -1211,9 +1378,16 @@ function startMode(mode) {
   if (mode === "walk") { go("walk"); startWalk(); return; }
   go("play");
   if (!state.seen[mode]) { primer(mode); return; }
+  if (mode === "point") return startPoint();
+  if (mode === "sleep") return startSleep();
   newRound(mode);
 }
-ACTS.primerGo = (mode) => { state.seen[mode] = 1; save(); newRound(mode); };
+ACTS.primerGo = (mode) => {
+  state.seen[mode] = 1; save();
+  if (mode === "point") return startPoint();
+  if (mode === "sleep") return startSleep();
+  newRound(mode);
+};
 ACTS.again = () => { if (round) newRound(round.mode); };
 
 function primer(mode) {
@@ -1522,6 +1696,234 @@ function stackEnd(maxed) {
     '<button class="btn" data-go="home">That’s enough</button></div>';
 }
 
+/* ============ single-point hold ============
+   One object and nothing else. The point is not the questions at the
+   end; it is the twenty seconds in the middle where attention slides
+   off and you bring it back. Drifting is counted as work, because it is.
+   =========================================== */
+
+let point = null;
+
+function startPoint() {
+  const kind = pick(OBJECTS), colour = pick(PALETTE), cell = pick(CELLS);
+  const item = { kind: kind, colour: colour, state: pick(kind.states), cell: cell };
+  const lvl = clamp(state.level.point || 3, 1, 20);
+  point = { item: item, drifts: 0, at: 0, right: 0, answered: [], hold: 6000 + lvl * 1200, level: lvl };
+  point.probes = [
+    mkProbe("What <b>colour</b> was it?", colour.name, optionsAround(colour.name, PALETTE.map((x) => x.name)), "colour", item),
+    mkProbe(kind.ask, stateLabel(item), shuffle(kind.states.map((x) => x[1])), "state", item),
+    mkProbe("<b>Where</b> on the screen was it?", cell.name, optionsAround(cell.name, CELLS.map((c) => c.name)), "place", item),
+    kind.sound ? mkProbe("Knock it over. What would you <b>hear</b>?", kind.sound,
+      optionsAround(kind.sound, OBJECTS.filter((o) => o.sound).map((o) => o.sound)), "embodied", item) : null,
+    kind.touch ? mkProbe("Put your hand on it. What does it <b>feel</b> like?", kind.touch,
+      optionsAround(kind.touch, OBJECTS.filter((o) => o.touch).map((o) => o.touch)), "embodied", item) : null,
+  ].filter(Boolean);
+  stopRound = () => { clearTimers(); keepAwake(false); };
+  keepAwake(true);
+  pointLook();
+}
+
+function pointLook() {
+  clearTimers();
+  $("play-body").innerHTML =
+    '<span class="lab">ten seconds · just look</span>' +
+    '<div class="stage" style="margin-top:6px">' + drawScene({ items: [point.item], id: "p" }) + "</div>" +
+    '<div class="bar"><i id="pt-bar"></i></div>' +
+    '<p class="sub" style="margin-top:12px">Outline, then colour, then where it sits. Do not rush it — there is only one thing here.</p>';
+  countdown("pt-bar", 10000, pointHold);
+}
+
+const POINT_CUES = [
+  ["Keep it.", "nothing else on the screen, nothing else in your head"],
+  ["See its outline.", "edges only"],
+  ["See its colour.", "fill it in"],
+  ["See where it sits.", "hold the place as well as the thing"],
+  ["It dimmed. Bring it back.", "outline first"],
+  ["Stay with it.", "not rebuilding anything · just this"],
+  ["If a thought pulls, return.", "no commentary · just go back"],
+  ["The return is the rep.", "you are not failing when it goes"],
+];
+
+function pointHold() {
+  clearTimers();
+  const ms = point.hold, slots = Math.max(3, Math.round(ms / 3400)), every = ms / slots;
+  let i = 0;
+  const paint = () => {
+    if (!point) return;
+    const c = POINT_CUES[i % POINT_CUES.length];
+    $("play-body").innerHTML =
+      '<p class="lab" style="margin:0 0 6px">holding · the ' + esc(point.item.colour.name) + " " + esc(point.item.kind.name) + "</p>" +
+      '<div class="void"><p class="cue">' + c[0] + '</p><p class="cuesub">' + c[1] + "</p>" +
+      '<div class="tick">' + Array.from({ length: slots }, (_, k) =>
+        '<i class="' + (k <= i ? "on" : "") + '"></i>').join("") + "</div></div>" +
+      '<div class="row" style="margin-top:12px"><button class="btn" data-act="pointDrift">I drifted</button></div>' +
+      '<div class="bar go" style="margin-top:12px"><i id="ph-bar"></i></div>';
+    i++;
+    if (i < slots) later(paint, every);
+  };
+  paint();
+  countdown("ph-bar", ms, () => { blip(660, 110); keepAwake(false); pointAsk(); });
+}
+ACTS.pointDrift = () => {
+  if (!point) return;
+  point.drifts++;
+  state.drifts = (state.drifts || 0) + 1;
+  const c = document.querySelector(".cue"), sub = document.querySelector(".cuesub");
+  if (c) { c.textContent = "Back to the " + point.item.kind.name + "."; c.className = "cue warm"; }
+  if (sub) sub.textContent = "noticed and returned · " + point.drifts + " so far";
+  blip(430, 90);
+};
+
+function pointAsk() {
+  const p = point.probes[point.at];
+  if (!p) return pointDone();
+  $("play-body").innerHTML =
+    '<span class="lab">it’s gone · ' + (point.at + 1) + " of " + point.probes.length + "</span>" +
+    '<p class="qn">' + p.q + "</p>" +
+    '<div class="opts" id="opts">' +
+    p.opts.map((o, i) => '<button data-act="pointAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>";
+}
+ACTS.pointAns = (ixStr) => {
+  const ix = +ixStr, p = point.probes[point.at];
+  if (!p || point.locked) return;
+  point.locked = true;
+  const good = ix === p.answer;
+  if (good) point.right++;
+  point.answered.push({ q: p.q, ok: good, want: p.opts[p.answer], gave: p.opts[ix], facet: p.facet });
+  state.facets[p.facet] = state.facets[p.facet] || { a: 0, r: 0 };
+  state.facets[p.facet].a++;
+  if (good) state.facets[p.facet].r++;
+  document.querySelectorAll("#opts button").forEach((b, i) => {
+    b.disabled = true;
+    if (i === p.answer) b.className = "right";
+    else if (i === ix) b.className = "wrong";
+  });
+  blip(good ? 880 : 200, good ? 90 : 180);
+  later(() => { point.locked = false; point.at++; pointAsk(); }, good ? 500 : 1100);
+};
+
+function pointDone() {
+  const n = point.probes.length, ratio = point.right / n;
+  state.level.point = clamp((state.level.point || 3) + (ratio >= 0.8 ? 1 : ratio <= 0.4 ? -1 : 0), 1, 20);
+  state.rounds.push({ mode: "point", at: now(), level: point.level, right: point.right, asked: n });
+  if (Math.round(point.hold / 1000) > (state.anchorBest || 0) && ratio >= 0.6)
+    state.anchorBest = Math.round(point.hold / 1000);
+  save();
+  const miss = point.answered.filter((a) => !a.ok);
+  $("play-body").innerHTML =
+    '<span class="lab">single-point hold</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">' + point.right + " of " + n + ", held for " +
+    Math.round(point.hold / 1000) + " seconds.</h2>" +
+    (point.drifts
+      ? "<p>You went " + point.drifts + " time" + (point.drifts === 1 ? "" : "s") + " and came back " +
+        point.drifts + ". That is the exercise — not the part that went wrong.</p>"
+      : "<p>No drifts reported. Either it was genuinely steady, or it went without you noticing — the second one is worth watching for.</p>") +
+    '<div class="stage">' + drawScene({ items: [point.item], id: "pd" }) + "</div>" +
+    miss.map((a) => '<div class="verdict miss"><span class="h">' + FACET_NAME[a.facet] + "</span>" +
+      a.q.replace(/<[^>]+>/g, "") + "<br>You said <b>" + esc(a.gave) + "</b>. It was <b>" + esc(a.want) + "</b>.</div>").join("") +
+    '<div class="tip" style="margin-top:14px"><span class="h">next time</span>' +
+    (miss.some((a) => a.facet === "embodied")
+      ? "The sound and the feel of a thing tend to hold longer than its colour. Give it both while you are looking."
+      : "Longer holds are where this pays. If that one felt easy, the next is longer.") + "</div>" +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="againPoint">Again</button>' +
+    '<button class="btn" data-go="home">That’s enough</button></div>';
+}
+ACTS.againPoint = () => startPoint();
+
+/* ============ sleep scene ============
+   Calm, unscored. Rehearsing an action in first person makes starting
+   it easier; that is the entire claim, it is a real one, and it is not
+   a claim that imagining a thing brings it about.
+   ===================================== */
+
+const SLEEP_SCENES = [
+  "I open the app and start without deciding to.",
+  "I pick up my keys and go.",
+  "I see the floor of my room clear.",
+  "I hold the image steadily and it does not wobble.",
+  "I start the thing I have been putting off.",
+  "I walk into work already steady.",
+];
+const TOUCHES = ["something cool under my hand", "the weight of it in my fingers", "rough fabric", "a smooth flat surface", "warm air on my face"];
+const SOUNDS = ["a door clicking shut", "my own footsteps", "traffic a long way off", "something set down on a table", "the room being quiet"];
+
+let sleepS = null;
+
+function startSleep() {
+  sleepS = { line: "", touch: "", sound: "", loop: 0 };
+  $("play-body").innerHTML =
+    '<span class="lab">sleep scene · nothing is scored</span>' +
+    '<h2 class="ask" style="margin:6px 0 8px">What are you running?</h2>' +
+    '<p class="sub">Short and specific. One action, in your own life, that you would like to be easy.</p>' +
+    '<div class="stack" style="margin-top:14px">' +
+    sample(SLEEP_SCENES, 4).map((x) =>
+      '<button class="big" data-act="sleepLine" data-arg="' + esc(x) + '"><span class="t" style="font-size:16px">' + esc(x) + "</span></button>").join("") +
+    "</div>" +
+    '<div class="row" style="margin-top:14px"><input class="field" id="own-scene" placeholder="or type your own" autocomplete="off">' +
+    '<button class="btn" data-act="sleepOwn">Use it</button></div>';
+}
+ACTS.sleepLine = (x) => { sleepS.line = x; sleepEnter(); };
+ACTS.sleepOwn = () => {
+  const v = ($("own-scene") ? $("own-scene").value : "").trim();
+  if (!v) return;
+  sleepS.line = v; sleepEnter();
+};
+
+function sleepEnter() {
+  $("play-body").innerHTML =
+    '<div class="void"><p class="cue">' + esc(sleepS.line) + "</p>" +
+    '<p class="cuesub">from your own eyes · not watching yourself do it</p></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="sleepTouch">I am in it</button></div>';
+}
+ACTS.sleepTouch = () => {
+  $("play-body").innerHTML =
+    '<span class="lab">one thing to feel</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">What does your hand find?</h2>' +
+    '<div class="opts">' + sample(TOUCHES, 4).map((x) =>
+      '<button data-act="setTouch" data-arg="' + esc(x) + '">' + esc(x) + "</button>").join("") + "</div>";
+};
+ACTS.setTouch = (x) => {
+  sleepS.touch = x;
+  $("play-body").innerHTML =
+    '<span class="lab">one thing to hear</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">What can you hear?</h2>' +
+    '<div class="opts">' + sample(SOUNDS, 4).map((y) =>
+      '<button data-act="setSound" data-arg="' + esc(y) + '">' + esc(y) + "</button>").join("") + "</div>";
+};
+ACTS.setSound = (y) => { sleepS.sound = y; sleepS.loop = 0; sleepLoop(); };
+
+function sleepLoop() {
+  if (sleepS.loop >= 5) return sleepDone();
+  sleepS.loop++;
+  keepAwake(true);
+  $("play-body").innerHTML =
+    '<span class="lab">pass ' + sleepS.loop + " of 5 · slowly</span>" +
+    '<div class="void"><p class="cue">' + esc(sleepS.line) + "</p>" +
+    '<p class="cuesub">' + esc(sleepS.touch) + " · " + esc(sleepS.sound) + "</p>" +
+    '<div class="tick">' + Array.from({ length: 5 }, (_, i) =>
+      '<i class="' + (i < sleepS.loop ? "on" : "") + '"></i>').join("") + "</div></div>" +
+    '<div class="bar go"><i id="sl-bar"></i></div>' +
+    '<p class="sub" style="margin-top:12px">Run it through once. Do not add anything. Do not check whether it is working.</p>';
+  countdown("sl-bar", 7000, sleepLoop);
+}
+
+function sleepDone() {
+  keepAwake(false);
+  state.sleeps = (state.sleeps || 0) + 1;
+  state.rounds.push({ mode: "sleep", at: now(), level: 1, right: 1, asked: 1 });
+  save();
+  $("play-body").innerHTML =
+    '<span class="lab">done</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">Stop there.</h2>' +
+    "<p>Do not go over it and do not check whether it took. The useful part has already happened: you have run the thing through in first person, which is what makes starting it easier than it was an hour ago.</p>" +
+    '<p class="sub">That is the whole claim here, and it is a real one. It is not a claim that picturing a thing brings it about.</p>' +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="againSleep">Another</button>' +
+    '<button class="btn" data-go="home">Leave it</button></div>';
+}
+ACTS.againSleep = () => startSleep();
+
 /* ================== the walk ==================
    The memory palace, which is the one technique here with a serious
    evidence base behind it. Route first, then things go on the route.
@@ -1780,8 +2182,26 @@ const BOSSES = [
 ];
 
 const BOONS = [
-  { id: "anchor", t: "Anchor", k: "lock one down",
-    d: "One object is ringed while you study it, and questions about that one come with a shorter list." },
+  { id: "anchor", t: "Anchor", k: "you choose it",
+    d: "You pick the anchor yourself after the scene instead of being handed one, and questions about it come with a shorter list." },
+  { id: "flame", t: "One-Point Flame", k: "one thing, all the way down",
+    d: "Next floor nothing else is asked about. Every question is the anchor, and they go deep." },
+  { id: "return", t: "Return", k: "the cue when it breaks",
+    d: "When something interrupts the hold, the screen gives you one instruction: return to the anchor." },
+  { id: "gaze", t: "Steady Gaze", k: "look longer at one",
+    d: "After the scene goes, the anchor alone comes back for three seconds. Nothing else on the screen." },
+  { id: "first", t: "First Person", k: "from your own eyes",
+    d: "Scenes arrive as a place you are standing in, and the questions are about what was near you rather than what was where." },
+  { id: "touch", t: "Touch Hook", k: "add a hand",
+    d: "One object arrives with what it would feel like. Touch carries detail that sight alone drops." },
+  { id: "sound", t: "Sound Hook", k: "add an ear",
+    d: "One object arrives with the sound it would make. Sound tends to outlast colour in a hold." },
+  { id: "already", t: "Already There", k: "before the strain",
+    d: "One line before each hold, written as though it has already gone well. It takes the panic out of the fade." },
+  { id: "loop", t: "Loop Scene", k: "three passes",
+    d: "The picture comes three times, briefly, instead of once. Repetition is what stops an image wobbling." },
+  { id: "embody", t: "Embodied Anchor", k: "hold it with your hand",
+    d: "The anchor comes with what it feels like, and the hold keeps sending you back to touching it." },
   { id: "colourbind", t: "Colour-bind", k: "one word, not two",
     d: "The hold makes you fuse colour to object — “redcup”, said once. Colour and binding questions come easier." },
   { id: "outline", t: "Trace Outline", k: "shape before colour",
@@ -1796,6 +2216,20 @@ const BOONS = [
     d: "One small detail is named while you look — a handle, a lid, a flame. Detail questions come easier." },
   { id: "refresh", t: "Refresh", k: "one flash, on demand",
     d: "A charge you spend during a hold to see the picture again for one second. Stacks." },
+];
+
+/* The State Chamber. Not a mood exercise: you rehearse being the way
+   you want to be for thirty seconds, then immediately do the thing.
+   Rehearsing an action makes starting it measurably easier, which is
+   the whole and only claim being made here. */
+const STATES = [
+  { id: "steady",   name: "Steady",     line: "You are already steady. The picture is already there. Nothing about this needs forcing." },
+  { id: "sharp",    name: "Sharp",      line: "You are sharp. Detail arrives without being dragged. You look, and it is there." },
+  { id: "calm",     name: "Calm",       line: "You are calm. Nothing here is urgent. The image sits where you put it." },
+  { id: "locked",   name: "Locked in",  line: "You are locked in. The room is gone. There is the picture and nothing else in the way." },
+  { id: "vivid",    name: "Vivid",      line: "You see it in colour. It has weight and edges. You could walk round it." },
+  { id: "unbothered", name: "Unbothered", line: "Something interrupts and it does not matter. You look back and the picture is still there." },
+  { id: "focused",  name: "Focused",    line: "One thing at a time. You are not chasing anything. You are just here, looking." },
 ];
 
 const CORNERS = [
@@ -1853,7 +2287,8 @@ ACTS.runStart = () => {
   run = {
     floor: 0, holds: 3, maxHolds: 3, prev: null, scene: null, hz: [], boss: null,
     kit: {}, charges: 0, corner: null, skipNext: false, pushed: false,
-    anchorId: null, hookLine: null, palaceStop: null, palaceItem: null,
+    anchor: null, anchorId: null, hookLine: null, palaceStop: null, palaceItem: null,
+    flameNext: false, drifts: 0, anchorHeld: 0, stateLine: null,
     probes: [], at: 0, locked: false, floorFacets: {},
     killedBy: null, lastMiss: null, holdMs: 0, startedAt: now(),
   };
@@ -1893,13 +2328,48 @@ function nextFloor() {
   run.hz = pickHazards(run.floor, !!run.boss);
   run.scene = makeScene(run.spec.n, { mimic: run.hz.some((h) => h.id === "mimic") });
   run.at = 0; run.locked = false; run.floorFacets = {};
-  run.anchorId = run.kit.anchor ? pick(run.scene.items).kind.id : null;
+  run.flameThis = run.flameNext; run.flameNext = false;
+  /* Every floor has an anchor: one object to keep when the rest goes.
+     It is handed to you unless you took the boon that lets you pick. */
+  run.anchor = pick(run.scene.items);
+  run.anchorId = run.anchor.kind.id;
   run.hookLine = null; run.palaceStop = null; run.palaceItem = null;
+  run.stateLine = null;
+  run.embodied = !!run.kit.first;
   keepAwake(true);
   hud();
 
-  if (!run.hz.length && !run.boss) return floorStudy();
+  /* A room every sixth floor where you rehearse the state first and then
+     immediately do the thing in it. */
+  if (!run.boss && run.floor >= 4 && run.floor % 6 === 4) return stateChamber();
+  announceFloor();
+}
 
+function stateChamber() {
+  $("run-body").innerHTML =
+    '<div class="hazcard chamber"><span class="two">floor ' + run.floor + "</span>" +
+    '<span class="n">STATE CHAMBER</span>' +
+    '<span class="l">Pick how you are going to be, then go straight down and be it.</span></div>' +
+    '<div class="opts" style="margin-top:14px">' +
+    sample(STATES, 4).map((x) => '<button data-act="pickState" data-arg="' + x.id + '">' + x.name + "</button>").join("") +
+    "</div>";
+}
+ACTS.pickState = (id) => {
+  const st = STATES.find((x) => x.id === id) || STATES[0];
+  run.stateLine = st.line;
+  run.embodied = true;
+  state.states = state.states || {};
+  state.states[st.name] = (state.states[st.name] || 0) + 1;
+  $("run-body").innerHTML =
+    '<div class="void"><p class="cue warm">' + st.line + '</p>' +
+    '<p class="cuesub">see it from your own eyes · do not force it</p></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="chamberGo">I am. Go down</button></div>';
+  later(() => { const b = $("run-body"); if (run && b && b.querySelector(".void")) announceFloor(); }, 6000);
+};
+ACTS.chamberGo = () => { clearTimers(); announceFloor(); };
+
+function announceFloor() {
+  if (!run.hz.length && !run.boss) return floorStudy();
   $("run-body").innerHTML =
     (run.boss
       ? '<div class="hazcard boss"><span class="two">floor ' + run.floor + " · it is waiting</span>" +
@@ -1937,8 +2407,19 @@ function floorStudy() {
     run.palaceStop = pick(stops);
     run.palaceItem = pick(run.scene.items);
   }
+  const a = run.anchor;
+  const touchLine = run.kit.touch || run.kit.embody
+    ? '<p class="read"><b>Touch.</b> The ' + esc(a.kind.name) + " is " + esc(a.kind.touch || "cool and solid") + ". Put your hand on it.</p>"
+    : "";
+  const soundLine = run.kit.sound
+    ? '<p class="read"><b>Sound.</b> Knock the ' + esc(a.kind.name) + " and you hear " + esc(a.kind.sound || "a dull knock") + ".</p>"
+    : "";
+  const firstLine = run.embodied
+    ? '<p class="read"><b>You are standing in it.</b> ' + describe1p(run.scene).join(" ") + "</p>"
+    : "";
   const under =
     (run.hookLine ? '<p class="read"><b>Hook.</b> ' + esc(run.hookLine) + "</p>" : "") +
+    touchLine + soundLine + firstLine +
     (run.palaceStop ? '<p class="read"><b>Leave it there.</b> The ' + esc(run.palaceItem.colour.name) + " " +
       esc(run.palaceItem.kind.name) + " goes at <b>" + esc(run.palaceStop) + "</b>. Watch it land.</p>" : "");
 
@@ -1963,14 +2444,78 @@ function floorStudy() {
   /* Trace Outline: silhouettes first, colour only once shape is in. */
   if (run.kit.outline)
     later(() => { const st = $("stg"); if (st) st.innerHTML = drawScene(run.scene, opts); }, Math.round(ms * 0.45));
+  /* Loop Scene: three passes rather than one long look. */
+  if (run.kit.loop) {
+    const blink = (n) => {
+      if (n > 2 || !run) return;
+      later(() => {
+        const st = $("stg");
+        if (!st) return;
+        st.style.opacity = "0.02";
+        later(() => { if ($("stg")) $("stg").style.opacity = "1"; blink(n + 1); }, 260);
+      }, Math.round(ms / 3.4));
+    };
+    blink(0);
+  }
   /* The Fade takes it away in front of you rather than cutting. */
   if (ids.indexOf("fade") > -1) {
     const st = $("stg");
     if (st) { st.style.transition = "opacity " + ms + "ms linear"; later(() => { st.style.opacity = "0.04"; }, 60); }
   }
-  countdown("study-bar", ms, floorHold);
+  countdown("study-bar", ms, afterStudy);
 }
-ACTS.floorGot = () => { clearTimers(); floorHold(); };
+ACTS.floorGot = () => { clearTimers(); afterStudy(); };
+
+/* Between looking and holding: pick the anchor if that is yours to do,
+   then a last long look at it alone, then the line that takes the panic
+   out of the fade. */
+function afterStudy() {
+  if (!enter("between")) return;
+  if (run.kit.anchor && !run.anchorPicked) return pickAnchor();
+  if (run.kit.gaze && !run.gazed) return steadyGaze();
+  if (run.kit.already && !run.saidAlready) return alreadyThere();
+  run.anchorPicked = false; run.gazed = false; run.saidAlready = false;
+  run.phase = null;
+  floorHold();
+}
+
+function pickAnchor() {
+  $("run-body").innerHTML =
+    '<span class="lab">choose your anchor</span>' +
+    '<h2 class="ask" style="margin:6px 0 4px">Which one are you keeping?</h2>' +
+    '<p class="sub">When the rest goes, this is the one you hold. Everything else can be rebuilt from it.</p>' +
+    '<div class="opts" style="margin-top:14px">' +
+    shuffle(run.scene.items).map((x) =>
+      '<button data-act="setAnchor" data-arg="' + x.kind.id + '">' + x.colour.name + " " + x.kind.name + "</button>").join("") +
+    "</div>";
+}
+ACTS.setAnchor = (kindId) => {
+  const found = run.scene.items.find((x) => x.kind.id === kindId);
+  if (found) { run.anchor = found; run.anchorId = kindId; }
+  run.anchorPicked = true;
+  run.phase = null;
+  afterStudy();
+};
+
+function steadyGaze() {
+  run.gazed = true;
+  $("run-body").innerHTML =
+    '<span class="lab">steady gaze · the anchor alone</span>' +
+    '<div class="stage" style="margin-top:6px">' + drawScene({ items: [run.anchor], id: "g" }) + "</div>" +
+    '<p class="sub" style="margin-top:10px">Nothing else. Just this one, until it stops moving.</p>' +
+    '<div class="bar"><i id="gaze-bar"></i></div>';
+  countdown("gaze-bar", 3000, () => { run.phase = null; afterStudy(); });
+}
+
+function alreadyThere() {
+  run.saidAlready = true;
+  const line = run.stateLine || pick(STATES).line;
+  $("run-body").innerHTML =
+    '<div class="void"><p class="cue warm">' + line + '</p>' +
+    '<p class="cuesub">already there · nothing to force</p></div>' +
+    '<div class="bar"><i id="alr-bar"></i></div>';
+  countdown("alr-bar", 3400, () => { run.phase = null; afterStudy(); });
+}
 
 function floorDrip(total, under) {
   const items = run.scene.items, each = Math.max(560, Math.round(total / items.length));
@@ -1994,28 +2539,59 @@ function floorDrip(total, under) {
    remembered sentence; holding an outline, walking a corner of it and
    rebuilding what fades cannot. */
 function holdCues(scene) {
-  const occupied = scene.items.map((x) => x.cell);
-  const cues = [
-    { t: "Hold the outline.", s: "shape only · no colour yet" },
-    { t: "Now the colours. One at a time.", s: "let them arrive" },
-    { t: "Inspect the " + pick(occupied).name + ".", s: "go and look, don’t recall" },
-    { t: "Keep seeing it.", s: "don’t answer anything yet" },
-    { t: "Something is fading. Bring it back.", s: "rebuild from what held" },
-    { t: "Count what you can see.", s: "in the picture, not on your fingers" },
-    { t: "Walk the edges of it.", s: "corner to corner" },
-    { t: "Say each one as one word.", s: "colour and thing, fused" },
-    { t: "It slipped. Rebuild from the " + pick(occupied).name + ".", s: "anchor, then spread out" },
-    { t: "Hold all of it at once.", s: "not one at a time now" },
+  const a = run.anchor, name = a.kind.name, full = a.colour.name + " " + name;
+  /* Single-point first: one stable thing beats trying to hold all of it,
+     and the returning is the exercise rather than a failure to avoid. */
+  const anchorCues = [
+    { t: "Keep the " + full + ".", s: "one thing · let the rest go for now" },
+    { t: "See its outline.", s: "edges only" },
+    { t: "See its colour.", s: "fill it in" },
+    { t: "See where it sits.", s: "the " + a.cell.name },
+    { t: "If the rest fades, keep the " + name + ".", s: "the anchor is the last thing to go" },
+    { t: "Return to the " + name + ".", s: "no commentary · just go back" },
   ];
-  let out = shuffle(cues);
-  out.unshift({ t: "Hold the outline.", s: "shape only · no colour yet" });
+  if (run.kit.embody)
+    anchorCues.splice(2, 0, { t: "Keep your hand on it.", s: a.kind.touch || "feel the weight of it" });
+  if (run.kit.sound)
+    anchorCues.push({ t: "Hear it.", s: a.kind.sound || "one sound, close" });
+
+  const sceneCues = run.embodied
+    ? [
+      { t: "Look left, then right.", s: "from your own eyes, not from above" },
+      { t: "What is nearest your hand?", s: "reach without looking" },
+      { t: "Step forward once.", s: "let the near things get bigger" },
+      { t: "Now hold all of it, from where you stand.", s: "you are in it, not looking at it" },
+    ]
+    : [
+      { t: "Now build outward from it.", s: "nearest neighbour first" },
+      { t: "Hold all of it at once.", s: "not one at a time now" },
+      { t: "Count what you can see.", s: "in the picture, not on your fingers" },
+      { t: "Walk the edges of it.", s: "corner to corner" },
+      { t: "Something is fading. Bring it back.", s: "rebuild from the anchor" },
+    ];
   if (run.kit.colourbind)
-    out.splice(1, 0, { t: "Fuse them. “redcup”, one word.", s: "colour to object, said once" });
+    sceneCues.unshift({ t: "Fuse them. “" + a.colour.name + name + "”, one word.", s: "colour to object, said once" });
   if (run.kit.corner && run.corner)
-    out.splice(2, 0, { t: "Back to the " + run.corner.name + ".", s: "your corner · deeper this time" });
+    sceneCues.unshift({ t: "Back to the " + run.corner.name + ".", s: "your corner · deeper this time" });
+
+  let out = anchorCues.concat(shuffle(sceneCues));
+  if (run.flameThis)
+    out = anchorCues.concat([{ t: "Nothing but the " + name + ".", s: "the rest does not matter this floor" }]);
+  if (run.kit.return && run.hz.some((h) => h.id === "static"))
+    out.unshift({ t: "Return to the anchor.", s: "every time it breaks · that is the drill" });
   const seen = {};
   return out.filter((c) => (seen[c.t] ? false : (seen[c.t] = 1)));
 }
+
+ACTS.drift = () => {
+  if (!run || !run.anchor) return;
+  run.drifts++;
+  state.drifts = (state.drifts || 0) + 1;
+  const c = document.querySelector(".cue"), sub = document.querySelector(".cuesub");
+  if (c) { c.textContent = "Return to the " + run.anchor.kind.name + "."; c.className = "cue warm"; }
+  if (sub) sub.textContent = "noticing it is the rep · " + run.drifts + " so far";
+  blip(430, 90);
+};
 
 function floorHold() {
   if (!enter("hold")) return;
@@ -2029,10 +2605,11 @@ function floorHold() {
   const every = ms / slots;
   let ci = 0;
 
-  const refreshBtn = run.charges
-    ? '<div class="row" style="margin-top:12px"><button class="btn" data-act="useRefresh">' +
-      "Spend a Refresh · " + run.charges + " left</button></div>"
-    : "";
+  const buttons =
+    '<div class="row" style="margin-top:12px">' +
+    '<button class="btn" data-act="drift">I drifted</button>' +
+    (run.charges ? '<button class="btn" data-act="useRefresh">Refresh · ' + run.charges + "</button>" : "") +
+    "</div>";
 
   const paint = () => {
     if (!run) return;
@@ -2040,18 +2617,19 @@ function floorHold() {
     const dots = Array.from({ length: slots }, (_, i) => '<i class="' + (i <= ci ? "on" : "") + '"></i>').join("");
     if (statical) {
       $("run-body").innerHTML =
-        '<span class="lab">hold it · and this</span>' +
+        '<p class="lab" style="margin:0 0 4px">anchor · the ' + esc(run.anchor.colour.name) + " " + esc(run.anchor.kind.name) + "</p>" +
         '<p class="cue warm" style="margin:12px 0 2px;font-size:19px">' + c.t + "</p>" +
         '<p class="firelab" id="fire-sym" style="font-size:42px;margin:10px 0 0">&nbsp;</p>' +
         '<div class="fire">' + FIRE_SYM.map((x) =>
           '<button data-act="runFire" data-arg="' + x[0] + '">' + x[1] + "</button>").join("") + "</div>" +
-        refreshBtn + '<div class="bar go" style="margin-top:14px"><i id="hold-bar"></i></div>';
+        buttons + '<div class="bar go" style="margin-top:14px"><i id="hold-bar"></i></div>';
       if (run.fire) run.fire.next();
     } else {
       $("run-body").innerHTML =
+        '<p class="lab" style="margin:0 0 6px">anchor · the ' + esc(run.anchor.colour.name) + " " + esc(run.anchor.kind.name) + "</p>" +
         '<div class="void"><p class="cue">' + c.t + '</p><p class="cuesub">' + c.s + "</p>" +
         '<div class="tick">' + dots + "</div></div>" +
-        refreshBtn + '<div class="bar go"><i id="hold-bar"></i></div>';
+        buttons + '<div class="bar go"><i id="hold-bar"></i></div>';
     }
     ci++;
     if (ci < slots) later(paint, every);
@@ -2186,7 +2764,26 @@ function floorAsk() {
       .concat(probesFor(run.scene, run.spec.probes, "plain")).slice(0, run.spec.probes);
   else list = probesFor(run.scene, run.spec.probes, ids.indexOf("turn") > -1 ? "turn" : "plain");
 
-  if (run.palaceStop && Math.random() < 0.8) list[list.length - 1] = palaceProbe();
+  /* One-Point Flame: this floor is nothing but the anchor, in depth. */
+  if (run.flameThis) {
+    list = [];
+    for (let i = 0; i < 3 && list.length < 3; i++) {
+      const ap = anchorProbe(run.scene, run.anchor);
+      if (ap && !list.some((x) => x.q === ap.q)) list.push(ap);
+    }
+  } else if (run.embodied) {
+    const emb = embodiedProbes(run.scene, Math.max(1, run.spec.probes - 1));
+    if (emb.length) list = emb.concat(list).slice(0, run.spec.probes);
+  }
+
+  /* Every floor tests the anchor, without making the floor longer. */
+  if (!run.flameThis && run.anchor && list.length) {
+    const ap = anchorProbe(run.scene, run.anchor);
+    const hazardOwned = ids.some((x) => ["thief", "shift", "liar", "echo"].indexOf(x) > -1);
+    if (ap && (list.length >= 2 || !hazardOwned)) list[list.length - 1] = ap;
+  }
+
+  if (run.palaceStop && Math.random() < 0.8 && list.length > 1) list[0] = palaceProbe();
 
   run.probes = list.filter(Boolean).map((p) => {
     const settled = p.answerText != null
@@ -2217,6 +2814,10 @@ function askOne() {
 function missLine(p) {
   const f = run.floorFacets, other = Object.keys(f).filter((k) => k !== p.facet && f[k].r > 0);
   const underFire = run.hz.some((h) => h.id === "static");
+  if (p.isAnchor && underFire) return "The anchor went under the Static. That is the thing to drill.";
+  if (p.isAnchor) return "The anchor went. That is the one thing that was supposed to stay.";
+  if (!p.isAnchor && run.anchorHeld) return "The anchor held — the rest came apart round it. Build outward from it next floor.";
+  if (p.facet === "embodied") return "You held it like a picture, not a place you were standing in.";
   if (underFire) return "You lost it under the Static, not on your own.";
   if (p.facet === "intrusion") return "Something that was never there got in.";
   if (other.length) return FACET_NAME[other[0]] + " held. " + FACET_NAME[p.facet].toLowerCase() + " did not.";
@@ -2236,6 +2837,18 @@ ACTS.runAns = (ixStr) => {
   run.locked = true;
   const good = ix === p.answer;
   tally(p.facet, good);
+  if (p.isAnchor) {
+    tally("anchor", good);
+    const k = run.anchor.kind.id;
+    state.anchorKinds[k] = state.anchorKinds[k] || { a: 0, r: 0 };
+    state.anchorKinds[k].a++;
+    if (good) {
+      state.anchorKinds[k].r++;
+      run.anchorHeld++;
+      const secs = Math.round(run.spec.hold / 1000);
+      if (secs > (state.anchorBest || 0)) state.anchorBest = secs;
+    }
+  }
   document.querySelectorAll("#opts button").forEach((b, i) => {
     b.disabled = true;
     if (i === p.answer) b.className = "right";
@@ -2308,6 +2921,7 @@ ACTS.takeBoon = (id) => {
     return nextFloor();
   }
   if (id === "refresh") { run.charges++; blip(740, 90); return nextFloor(); }
+  if (id === "flame") { run.flameNext = true; blip(740, 90); return nextFloor(); }
   if (id === "corner") {
     run.kit.corner = true;
     $("run-body").innerHTML =
@@ -2351,6 +2965,29 @@ function diagnose(map) {
     "% against " + Math.round(worst.acc * 100) + "%.";
 }
 
+/* Does holding one thing actually hold up better than holding all of it,
+   and does it carry the rest? Both are answerable from what is tracked. */
+function anchorLine() {
+  const f = state.facets, A = f.anchor;
+  if (!A || A.a < 5) return null;
+  const rest = Object.keys(f).filter((k) => k !== "anchor")
+    .reduce((o, k) => ({ a: o.a + f[k].a, r: o.r + f[k].r }), { a: 0, r: 0 });
+  if (rest.a < 8) return null;
+  const an = A.r / A.a, other = rest.r / rest.a;
+  const kinds = Object.keys(state.anchorKinds || {}).filter((k) => state.anchorKinds[k].a >= 3)
+    .sort((a, b) => (state.anchorKinds[b].r / state.anchorKinds[b].a) - (state.anchorKinds[a].r / state.anchorKinds[a].a));
+  const easiest = kinds.length ? " Easiest thing for you to keep hold of: the " +
+    ((OBJECTS.find((o) => o.id === kinds[0]) || {}).name || kinds[0]) + "." : "";
+  if (an - other >= 0.12)
+    return "You hold the anchor at " + Math.round(an * 100) + "% against " + Math.round(other * 100) +
+      "% for everything else. One point is clearly steadier for you than the whole scene — so build outward from it." + easiest;
+  if (other - an >= 0.12)
+    return "Odd one: the scene as a whole holds better than the single object you were told to keep, " +
+      Math.round(other * 100) + "% against " + Math.round(an * 100) + "%. You may be a whole-picture holder." + easiest;
+  return "Anchor and scene hold about the same, " + Math.round(an * 100) + "% against " +
+    Math.round(other * 100) + "%." + easiest;
+}
+
 function interferenceLine() {
   const all = state.facets, fire = state.facetsInt;
   const sum = (m) => Object.keys(m).reduce((o, k) => ({ a: o.a + m[k].a, r: o.r + m[k].r }), { a: 0, r: 0 });
@@ -2391,6 +3028,12 @@ function runOver() {
       ? '<div class="hit" style="margin-top:14px"><b>' + FACET_NAME[m.facet] + "</b> — you said " +
         esc(m.gave) + ", it was " + esc(m.want) + ".</div>"
       : "") +
+    (run.drifts
+      ? '<div class="read"><b>Drift.</b> You noticed it going ' + run.drifts + " time" + (run.drifts === 1 ? "" : "s") +
+        " and went back " + run.drifts + " time" + (run.drifts === 1 ? "" : "s") + ". That is the rep. It is not the failure." +
+        "</div>"
+      : "") +
+    (anchorLine() ? '<div class="read"><b>The anchor.</b> ' + anchorLine() + "</div>" : "") +
     (d ? '<div class="read"><b>What this run says.</b> ' + d + "</div>" : "") +
     (inter ? '<div class="read"><b>Under fire.</b> ' + inter + "</div>" : "") +
     (m && m.teach ? '<div class="read">' + m.teach + "</div>" : "") +
@@ -2580,7 +3223,7 @@ function renderYou() {
   const kills = Object.keys(state.killers || {}).sort((a, b) => state.killers[b] - state.killers[a]);
   const d = diagnose(f), inter = interferenceLine();
 
-  const order = ["object", "position", "colour", "binding", "detail", "rotation", "intrusion"];
+  const order = ["anchor", "embodied", "object", "position", "colour", "binding", "detail", "rotation", "intrusion"];
   const bars = order.filter((k) => f[k] && f[k].a).map((k) => {
     const acc = f[k].r / f[k].a, on = Math.round(acc * 12);
     const weak = acc < 0.6;
@@ -2604,12 +3247,37 @@ function renderYou() {
     '</span><span class="d">all runs, all time</span></div>' +
     "</div>" +
 
+    '<div class="grid2" style="margin-top:10px">' +
+    '<div class="stat"><span class="k">longest single-point hold</span><span class="v">' + (state.anchorBest || 0) +
+    's</span><span class="d">with the anchor still there at the end</span></div>' +
+    '<div class="stat"><span class="k">noticed and returned</span><span class="v">' + (state.drifts || 0) +
+    '</span><span class="d">times you caught the drift and went back — this is the rep, not the error</span></div>' +
+    "</div>" +
     (d ? '<div class="note" style="margin-top:16px"><b>What holds and what goes.</b> ' + d + "</div>" : "") +
+    (anchorLine() ? '<div class="note"><b>One thing, or all of it.</b> ' + anchorLine() + "</div>" : "") +
     (inter ? '<div class="note"><b>Under interference.</b> ' + inter + "</div>" : "") +
+    (f.embodied && f.embodied.a >= 6 && f.position && f.position.a >= 6
+      ? '<div class="note"><b>Flat or standing in it.</b> ' +
+        (f.embodied.r / f.embodied.a < f.position.r / f.position.a - 0.12
+          ? "You hold the layout better than the place. You are looking at a picture rather than standing in one — the Sleep Scene and First Person are the way at that."
+          : "You answer from inside the scene about as well as you answer about it from outside, which is the harder half of the two.") + "</div>"
+      : "") +
 
     (bars ? '<div class="sec"><h3><span>Part by part</span></h3>' +
       '<p class="sub" style="margin:-4px 0 8px">Share of questions you get right on each, and how many it is based on. Red is under sixty.</p>' +
       bars + "</div>" : "") +
+
+    (Object.keys(state.anchorKinds || {}).filter((k) => state.anchorKinds[k].a >= 3).length
+      ? '<div class="sec"><h3><span>Easiest things to keep hold of</span></h3>' +
+        '<p class="sub" style="margin:-4px 0 8px">Which objects survive a hold as your anchor. Shape seems to matter more than colour.</p>' +
+        '<div class="tw"><table><tbody>' +
+        Object.keys(state.anchorKinds).filter((k) => state.anchorKinds[k].a >= 3)
+          .sort((a, c) => (state.anchorKinds[c].r / state.anchorKinds[c].a) - (state.anchorKinds[a].r / state.anchorKinds[a].a))
+          .slice(0, 6).map((k) =>
+            "<tr><td>" + esc((OBJECTS.find((o) => o.id === k) || {}).name || k) + '</td><td class="n" style="text-align:right">' +
+            Math.round((state.anchorKinds[k].r / state.anchorKinds[k].a) * 100) + "%</td></tr>").join("") +
+        "</tbody></table></div></div>"
+      : "") +
 
     (kills.length
       ? '<div class="sec"><h3><span>What ends your runs</span></h3><div class="tw"><table><tbody>' +
