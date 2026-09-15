@@ -181,6 +181,56 @@ button{font:inherit;color:inherit}
 .firelab{text-align:center;font-size:15px;margin:14px 0 0;line-height:1.4}
 .firelab b{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:21px;font-weight:700}
 
+/* ---- the run ---- */
+.run-card{display:block;width:100%;text-align:left;cursor:pointer;border-radius:0;
+  border:1px solid var(--ink);background:var(--panel);padding:17px 18px;margin-bottom:8px}
+.run-card:hover{background:var(--panel-2)}
+.run-card .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--signal);margin-bottom:5px}
+.run-card .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(27px,7vw,36px);font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.run-card .d{display:block;color:var(--dim);font-size:13.5px;line-height:1.45;margin-top:7px}
+.run-card .best{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--signal);margin-top:11px}
+
+.hud{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--rule);
+  padding-bottom:9px;margin-bottom:14px;flex-wrap:wrap}
+.hud .fl{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.hud .fl b{color:var(--signal)}
+.holds{display:flex;gap:5px;margin-left:auto}
+.holds i{width:11px;height:11px;border:1.5px solid var(--go);background:var(--go);display:block}
+.holds i.gone{background:none;border-color:var(--rule)}
+.hud .hz{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--signal)}
+
+.hazcard{border:1px solid var(--signal);background:var(--signal-w);padding:20px 18px;text-align:center}
+.hazcard .n{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(28px,7.5vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1.05;color:var(--signal)}
+.hazcard .l{display:block;font-size:15.5px;margin-top:8px;line-height:1.4}
+.hazcard .two{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+.hit{border-left:3px solid var(--warn);background:var(--warn-w);border:1px solid var(--warn);
+  padding:13px 15px;margin-top:14px;font-size:15px;line-height:1.45}
+.hit b{font-weight:700}
+.clear{border:1px solid var(--go);background:var(--go-w);border-left:3px solid var(--go);
+  padding:13px 15px;margin-top:14px;font-size:15px}
+
+.boon{display:grid;gap:9px;margin-top:14px}
+.boon button{text-align:left;background:var(--panel);border:1px solid var(--rule);padding:14px 15px;
+  cursor:pointer;border-radius:0}
+.boon button:hover{border-color:var(--ink)}
+.boon .t{display:block;font-weight:700;font-size:16px}
+.boon .d{display:block;color:var(--dim);font-size:13px;margin-top:3px;line-height:1.4}
+.boon .risk{color:var(--signal)}
+
+.depth{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(56px,17vw,86px);font-weight:700;letter-spacing:-.05em;line-height:.9;color:var(--signal)}
+.tf{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.tf button{padding:20px 12px;font-size:17px;font-weight:600;background:var(--panel);
+  border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
+.tf button:hover{border-color:var(--ink)}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -197,8 +247,19 @@ button{font:inherit;color:inherit}
 
 <!-- ============ HOME ============ -->
 <section id="s-home">
-  <h2 class="ask">What do you want to hold?</h2>
-  <p class="sub" style="margin-bottom:18px">Each one is a couple of minutes. You can stop mid-round and nothing is lost &mdash; there's no streak here and nothing that breaks if you skip a week.</p>
+  <h2 class="ask">How deep can you get?</h2>
+
+  <button class="run-card" data-act="runStart">
+    <span class="k">the game</span>
+    <span class="t">The Run</span>
+    <span class="d">Floors of pictures to hold, each one harder than the last, and things that come for them &mdash; the Stranger slips something in that was never yours, the Shift moves one while you’re not looking, the Echo asks about the floor before. Three holds. Lose them and the run is over.</span>
+    <span class="best" id="run-best"></span>
+  </button>
+
+  <div class="sec">
+    <h3><span>Practice, on its own</span></h3>
+    <p class="sub" style="margin:-4px 0 14px">The run is built out of these. Doing one on its own is calmer, and it is where you work out what your head actually does.</p>
+  </div>
 
   <div class="stack">
     <button class="big" data-mode="scene">
@@ -251,6 +312,13 @@ button{font:inherit;color:inherit}
       </button>
     </div>
   </div>
+</section>
+
+<!-- ============ THE RUN ============ -->
+<section id="s-run" hidden>
+  <button class="back" data-act="runQuit">&larr; end the run</button>
+  <div id="run-hud"></div>
+  <div id="run-body"></div>
 </section>
 
 <!-- ============ PLAY ============ -->
@@ -352,6 +420,8 @@ const state = {
   level: { scene: 4, blueprint: 3, fire: 3, turn: 3, stack: 1 },
   recent: {},            /* mode -> array of 0/1, most recent last */
   rounds: [],            /* {mode, at, level, right, asked} */
+  bestDepth: 0,          /* deepest floor reached in a run */
+  runs: [],              /* {at, depth, by} */
   walkStops: null,       /* the route, once they've set one */
   walkBest: 0,
   walkRuns: [],
@@ -365,6 +435,7 @@ let savedLocal = false;
 function payload() {
   return {
     level: state.level, recent: state.recent, rounds: state.rounds.slice(-400),
+    bestDepth: state.bestDepth, runs: state.runs.slice(-80),
     walkStops: state.walkStops, walkBest: state.walkBest, walkRuns: state.walkRuns.slice(-60),
     sees: state.sees, seen: state.seen, sound: state.sound,
   };
@@ -374,6 +445,8 @@ function adopt(o) {
   if (o.level && typeof o.level === "object") Object.assign(state.level, o.level);
   if (o.recent && typeof o.recent === "object") state.recent = o.recent;
   if (Array.isArray(o.rounds)) state.rounds = o.rounds;
+  if (typeof o.bestDepth === "number") state.bestDepth = o.bestDepth;
+  if (Array.isArray(o.runs)) state.runs = o.runs;
   if (Array.isArray(o.walkStops)) state.walkStops = o.walkStops;
   if (typeof o.walkBest === "number") state.walkBest = o.walkBest;
   if (Array.isArray(o.walkRuns)) state.walkRuns = o.walkRuns;
@@ -441,7 +514,7 @@ async function keepAwake(on) {
 }
 
 /* ---------- router ---------- */
-const SCREENS = ["home", "play", "walk", "learn", "about", "you"];
+const SCREENS = ["home", "run", "play", "walk", "learn", "about", "you"];
 let screen = "home";
 let stopRound = null;   /* set by whatever round is running, so leaving cleans up */
 
@@ -452,7 +525,7 @@ function go(name) {
   screen = name;
   SCREENS.forEach((s) => { const el = $("s-" + s); if (el) el.hidden = s !== name; });
   scrollTo(0, 0);
-  if (name === "home") { renderHomeYou(); }
+  if (name === "home") { renderHomeYou(); paintBest(); }
   if (name === "learn") renderLearn();
   if (name === "about") renderAbout();
   if (name === "you") renderYou();
@@ -781,9 +854,14 @@ const TEACH = {
   turn: "Turning the picture only works if there is a picture. If you had to reason it out from a list of words, that's the signal — and it's fixable.",
 };
 
+/* Pools are often concatenated (the scene's own objects plus the whole
+   vocabulary), so they repeat. Two buttons reading the same word, with
+   only one of them counting as right, is not a memory test. */
 function optionsAround(correct, pool, n) {
-  const others = shuffle(pool.filter((x) => x !== correct)).slice(0, (n || 4) - 1);
-  return shuffle([correct].concat(others));
+  const others = [];
+  for (const x of shuffle(pool))
+    if (x !== correct && others.indexOf(x) < 0) others.push(x);
+  return shuffle([correct].concat(others.slice(0, (n || 4) - 1)));
 }
 function mkProbe(q, correct, opts, kind) {
   const list = opts.slice();
@@ -1489,6 +1567,394 @@ function walkDone() {
 }
 ACTS.walkAgain = () => walkChoose();
 
+/* ================== THE RUN ==================
+   The drills are practice. This is the game they are practice for.
+
+   Floors get harder, and from the third one something comes for the
+   picture: the Thief takes an object out of it, the Shift moves one,
+   the Echo asks about the floor before this one. Three holds; a wrong
+   answer costs one. There is no currency and nothing to keep up — the
+   only number is how deep you got, and a personal best does not punish
+   you for a fortnight away the way a streak does.
+   ============================================= */
+
+const HAZARDS = [
+  { id: "rush",  slot: "study",    from: 3,  name: "The Rush",  line: "Half the time to look at it." },
+  { id: "drip",  slot: "study",    from: 3,  name: "The Drip",  line: "They arrive one at a time, then all go at once." },
+  { id: "blind", slot: "study",    from: 5,  name: "The Blind", line: "No picture. You get words and have to build it." },
+  { id: "pull",  slot: "hold",     from: 4,  name: "The Pull",  line: "Something else to do while you're holding it." },
+  { id: "turn",  slot: "question", from: 6,  name: "The Turn",  line: "You'll be asked about it rotated." },
+  { id: "thief", slot: "question", from: 4,  name: "The Stranger", line: "It comes back with something in it that was never yours." },
+  { id: "shift", slot: "question", from: 7,  name: "The Shift", line: "It comes back with something moved." },
+  { id: "liar",  slot: "question", from: 5,  name: "The Liar",  line: "A claim about it. True or false." },
+  { id: "echo",  slot: "question", from: 8,  name: "The Echo",  line: "The question is about the floor before this one." },
+];
+
+const BOONS = [
+  { id: "heal",  t: "Take a hold back",           d: "One of the ones you lost.",                       ok: () => run.holds < run.maxHolds },
+  { id: "skip",  t: "One clean floor",            d: "Nothing comes for the next one.",                 ok: () => true },
+  { id: "look",  t: "Three more seconds to look", d: "On the next floor only.",                         ok: () => true },
+  { id: "short", t: "A shorter hold next floor",  d: "Less waiting before the questions.",              ok: () => true },
+  { id: "risk",  t: "Push it",                    d: "Two things come for the next floor. Clear it and you get a hold back, and one more on top.", risk: true, ok: () => true },
+];
+
+let run = null;
+
+function floorSpec(f) {
+  return {
+    n: clamp(3 + Math.floor((f - 1) / 2), 3, 8),
+    study: Math.max(1500, 5600 - f * 250),
+    hold: Math.min(24000, 1600 + f * 850),
+    probes: clamp(1 + Math.floor(f / 5), 1, 3),
+  };
+}
+
+function pickHazards(f) {
+  if (f < 3 || run.boon.skip) { run.boon.skip = false; return []; }
+  const pool = HAZARDS.filter((h) => f >= h.from && (h.id !== "echo" || run.prev));
+  if (!pool.length) return [];
+  const want = run.boon.risk ? 2 : (f >= 10 && f % 3 === 0 ? 2 : 1);
+  const out = [];
+  for (const sl of shuffle(["question", "study", "hold"])) {
+    if (out.length >= want) break;
+    const c = pool.filter((h) => h.slot === sl);
+    if (c.length) out.push(pick(c));
+  }
+  /* Words-only and a picture that comes back cannot both be true. */
+  return out.some((h) => h.id === "blind")
+    ? out.filter((h) => h.id !== "thief" && h.id !== "shift")
+    : out;
+}
+
+ACTS.runStart = () => {
+  go("run");
+  run = {
+    floor: 0, holds: 3, maxHolds: 3, prev: null, scene: null,
+    hz: [], boon: {}, probes: [], at: 0, locked: false,
+    killedBy: null, lastMiss: null, startedAt: now(),
+  };
+  stopRound = () => { clearTimers(); keepAwake(false); };
+  nextFloor();
+};
+ACTS.runQuit = () => { clearTimers(); keepAwake(false); run = null; go("home"); };
+
+function hud() {
+  const el = $("run-hud");
+  if (!el || !run) return;
+  const marks = [];
+  for (let i = 0; i < run.maxHolds; i++) marks.push('<i class="' + (i < run.holds ? "" : "gone") + '"></i>');
+  el.innerHTML =
+    '<div class="hud"><span class="fl">Floor <b>' + run.floor + "</b></span>" +
+    (run.hz.length ? '<span class="hz">' + run.hz.map((h) => h.name).join(" &middot; ") + "</span>" : "") +
+    '<span class="holds">' + marks.join("") + "</span></div>";
+}
+
+function nextFloor() {
+  clearTimers();
+  run.prev = run.scene;
+  run.floor++;
+  run.spec = floorSpec(run.floor);
+  run.hz = pickHazards(run.floor);
+  run.scene = makeScene(run.spec.n);
+  run.at = 0; run.locked = false;
+  keepAwake(true);
+  hud();
+  if (!run.hz.length) return floorStudy();
+
+  $("run-body").innerHTML =
+    '<div class="hazcard">' +
+    (run.hz.length > 1 ? '<span class="two">two of them</span>' : "") +
+    run.hz.map((h) => '<span class="n">' + h.name + '</span><span class="l">' + h.line + "</span>").join("") +
+    "</div>" +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="hazGo">Ready</button></div>';
+  blip(330, 130);
+  later(() => { if (run && $("run-body") && $("run-body").querySelector(".hazcard")) floorStudy(); }, 2600);
+}
+ACTS.hazGo = () => { clearTimers(); floorStudy(); };
+
+/* ---- study ---- */
+function floorStudy() {
+  clearTimers();
+  const ids = run.hz.map((h) => h.id);
+  let ms = run.spec.study;
+  if (ids.indexOf("rush") > -1) ms = Math.round(ms * 0.5);
+  if (run.boon.look) { ms += 3000; run.boon.look = false; }
+  hud();
+
+  if (ids.indexOf("blind") > -1) {
+    $("run-body").innerHTML =
+      '<span class="lab">no picture &middot; build it</span>' +
+      '<div class="desc" style="margin-top:8px"><ul>' +
+      describeScene(run.scene).map((d) => "<li>" + d + "</li>").join("") + "</ul></div>" +
+      '<div class="bar"><i id="study-bar"></i></div>' +
+      '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">I’ve got it &rarr;</button></div>';
+    countdown("study-bar", Math.max(5000, run.spec.n * 2600), floorHold);
+    return;
+  }
+
+  if (ids.indexOf("drip") > -1) return floorDrip(ms);
+
+  $("run-body").innerHTML =
+    '<div class="stage">' + drawScene(run.scene) + "</div>" +
+    '<div class="bar"><i id="study-bar"></i></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">I’ve got it &rarr;</button></div>';
+  countdown("study-bar", ms, floorHold);
+}
+ACTS.floorGot = () => { clearTimers(); floorHold(); };
+
+/* One at a time, then all of it gone — you never see the whole picture,
+   so it has to be assembled rather than photographed. */
+function floorDrip(total) {
+  const items = run.scene.items, each = Math.max(520, Math.round(total / items.length));
+  let i = 0;
+  const show = () => {
+    if (!run) return;
+    if (i >= items.length) return floorHold();
+    $("run-body").innerHTML =
+      '<span class="lab">one at a time &middot; ' + (i + 1) + " of " + items.length + "</span>" +
+      '<div class="stage" style="margin-top:6px">' + drawScene({ items: [items[i]], id: "d" }) + "</div>" +
+      '<p class="sub" style="margin-top:12px">Add it to the ones already in there.</p>';
+    i++;
+    later(show, each);
+  };
+  show();
+}
+
+/* ---- hold ---- */
+function floorHold() {
+  clearTimers();
+  let ms = run.spec.hold;
+  if (run.boon.short) { ms = Math.round(ms * 0.45); run.boon.short = false; }
+  hud();
+
+  if (run.hz.some((h) => h.id === "pull")) {
+    run.fire = { asked: 0, right: 0, cur: null };
+    $("run-body").innerHTML =
+      '<span class="lab">hold it &middot; and do this</span>' +
+      '<p class="firelab" id="fire-sym" style="font-size:44px;margin:14px 0 0">&nbsp;</p>' +
+      '<p class="sub" style="text-align:center;margin:6px 0 0">Tap the side it points to.</p>' +
+      '<div class="fire">' +
+      FIRE_SYM.map((x) => '<button data-act="runFire" data-arg="' + x[0] + '">' + x[1] + "</button>").join("") +
+      "</div><div class=\"bar go\" style=\"margin-top:14px\"><i id=\"hold-bar\"></i></div>";
+    const nextSym = () => {
+      const x = pick(FIRE_SYM);
+      run.fire.cur = x[0];
+      const el = $("fire-sym");
+      if (el) el.innerHTML = x[1];
+    };
+    nextSym(); run.fire.next = nextSym;
+    countdown("hold-bar", ms, () => { blip(660, 110); floorAsk(); });
+    return;
+  }
+
+  $("run-body").innerHTML =
+    '<span class="lab">hold it</span>' +
+    '<div class="stage" style="margin-top:6px"><div class="hold">' +
+    '<span class="holdbig">Keep it there.</span>Look around it, don’t recite it</div></div>' +
+    '<div class="bar go"><i id="hold-bar"></i></div>';
+  countdown("hold-bar", ms, () => { blip(660, 110); floorAsk(); });
+}
+ACTS.runFire = (dir) => {
+  if (!run || !run.fire || !run.fire.cur) return;
+  run.fire.asked++;
+  if (dir === run.fire.cur) run.fire.right++;
+  run.fire.next();
+};
+
+/* ---- the hazards that own the question ---- */
+/* Every option is visible in the picture that comes back, so looking
+   cannot answer it — only knowing what you put there can. An earlier
+   version asked what had been removed, with options that were all
+   absent; that made the returned picture decorative. */
+function thiefProbe() {
+  const victim = pick(run.scene.items);
+  const others = run.scene.items.filter((x) => x !== victim);
+  const used = run.scene.items.map((x) => x.kind.id);
+  const kind = pick(OBJECTS.filter((o) => used.indexOf(o.id) < 0));
+  const intruder = { kind: kind, cell: victim.cell, colour: victim.colour, state: pick(kind.states) };
+  return {
+    q: "Something in here was never yours. Which?",
+    stage: drawScene({ items: others.concat([intruder]), id: "t" }),
+    opts: shuffle([kind.name].concat(sample(others.map((x) => x.kind.name), 3))),
+    answerText: kind.name, kind: "absent",
+    teach: "Everything you were offered was on the screen in front of you, so the only way through is knowing what you put in there. If it felt like a guess, the scene never became a picture — three anchors, properly, next time.",
+  };
+}
+function shiftProbe() {
+  const moved = pick(run.scene.items);
+  const taken = run.scene.items.map((x) => x.cell.i);
+  const free = CELLS.filter((c) => taken.indexOf(c.i) < 0);
+  if (!free.length) return thiefProbe();
+  const items = run.scene.items.map((x) => (x === moved ? Object.assign({}, x, { cell: pick(free) }) : x));
+  return {
+    q: "One thing has moved. Which?",
+    stage: drawScene({ items: items, id: "s" }),
+    opts: optionsAround(moved.kind.name, run.scene.items.map((x) => x.kind.name)),
+    answerText: moved.kind.name, kind: "place", teach: TEACH.place,
+  };
+}
+function liarProbe() {
+  const it = run.scene.items, t = pick(it), truth = Math.random() < 0.5;
+  const forms = [
+    () => {
+      const c = truth ? t.colour : pick(PALETTE.filter((p) => p.id !== t.colour.id));
+      return "The " + t.kind.name + " was " + c.name + ".";
+    },
+    () => {
+      const c = truth ? t.cell : pick(CELLS.filter((x) => x.i !== t.cell.i));
+      return "The " + t.kind.name + " was in the " + c.name + ".";
+    },
+    () => {
+      const real = it.filter((x) => x.colour.id === t.colour.id).length;
+      const n = truth ? real : Math.max(0, real + pick([-1, 1, 2]));
+      return "There " + (n === 1 ? "was" : "were") + " " + n + " " + t.colour.name + " thing" + (n === 1 ? "" : "s") + ".";
+    },
+  ];
+  return {
+    q: "<b>" + pick(forms)() + "</b><br><span style=\"font-weight:400;font-size:15px;color:var(--dim)\">True or false?</span>",
+    opts: ["True", "False"], answerText: truth ? "True" : "False",
+    kind: "binding", teach: TEACH.binding, tf: true,
+  };
+}
+
+function floorAsk() {
+  clearTimers();
+  keepAwake(false);
+  const ids = run.hz.map((h) => h.id);
+  let list;
+  if (ids.indexOf("echo") > -1 && run.prev) {
+    list = probesFor(run.prev, 1, "plain").map((p) =>
+      Object.assign({}, p, { q: "<span style=\"color:var(--signal)\">From the floor before &mdash;</span> " + p.q }));
+  } else if (ids.indexOf("thief") > -1) list = [thiefProbe()];
+  else if (ids.indexOf("shift") > -1) list = [shiftProbe()];
+  else if (ids.indexOf("liar") > -1) list = [liarProbe()].concat(probesFor(run.scene, run.spec.probes - 1, "plain"));
+  else list = probesFor(run.scene, run.spec.probes, ids.indexOf("turn") > -1 ? "turn" : "plain");
+
+  /* The hazard probes carry their answer as text, the generated ones as
+     an index; settle it here so the handler only deals with one shape. */
+  run.probes = list.filter(Boolean).map((p) =>
+    p.answerText != null ? Object.assign({}, p, { answer: p.opts.indexOf(p.answerText) }) : p);
+  run.at = 0;
+  askOne();
+}
+
+function askOne() {
+  const p = run.probes[run.at];
+  if (!p) return floorCleared();
+  hud();
+  $("run-body").innerHTML =
+    (p.stage ? '<div class="stage">' + p.stage + "</div>" : "") +
+    '<span class="lab">' + (run.probes.length > 1 ? "question " + (run.at + 1) + " of " + run.probes.length : "answer it") + "</span>" +
+    '<p class="qn">' + p.q + "</p>" +
+    (p.tf
+      ? '<div class="tf" id="opts">' + p.opts.map((o, i) => '<button data-act="runAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>"
+      : '<div class="opts" id="opts">' + p.opts.map((o, i) => '<button data-act="runAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>");
+}
+
+ACTS.runAns = (ixStr) => {
+  const ix = +ixStr, p = run.probes[run.at];
+  if (!p || run.locked) return;
+  run.locked = true;
+  const good = ix === p.answer;
+  $$("#opts button").forEach((b, i) => {
+    b.disabled = true;
+    if (i === p.answer) b.className = "right";
+    else if (i === ix) b.className = "wrong";
+  });
+
+  if (good) {
+    blip(880, 80);
+    later(() => { run.locked = false; run.at++; askOne(); }, 420);
+    return;
+  }
+
+  run.holds--;
+  run.lastMiss = { q: p.q, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach };
+  run.killedBy = run.hz.length ? run.hz[0].name : null;
+  blip(170, 260);
+  hud();
+  $("run-body").insertAdjacentHTML("beforeend",
+    '<div class="hit"><b>' + esc(p.opts[p.answer]) + "</b> &mdash; that's a hold. " +
+    (run.holds > 0 ? run.holds + " left." : "And that's the run.") + "</div>");
+  later(() => {
+    run.locked = false;
+    if (run.holds <= 0) return runOver();
+    run.at++;
+    askOne();
+  }, 1500);
+};
+
+function floorCleared() {
+  if (run.boon.risk) {
+    run.boon.risk = false;
+    run.maxHolds++;
+    run.holds = Math.min(run.maxHolds, run.holds + 1);
+  }
+  hud();
+  /* A breather and a choice every third floor; otherwise keep moving,
+     because stopping to read a report card is what killed the pace. */
+  if (run.floor % 3 === 0) return offerBoon();
+  blip(740, 90);
+  nextFloor();
+}
+
+function offerBoon() {
+  const usable = BOONS.filter((b) => b.ok());
+  const two = sample(usable, Math.min(2, usable.length));
+  $("run-body").innerHTML =
+    '<span class="lab">floor ' + run.floor + " clear</span>" +
+    '<h2 class="ask" style="margin:6px 0 4px">Still standing.</h2>' +
+    '<p class="sub">Take one before you go down.</p>' +
+    '<div class="boon">' +
+    two.map((b) => '<button data-act="takeBoon" data-arg="' + b.id + '">' +
+      '<span class="t' + (b.risk ? " risk" : "") + '">' + b.t + "</span>" +
+      '<span class="d">' + b.d + "</span></button>").join("") +
+    "</div>" +
+    '<div class="row" style="margin-top:14px"><button class="btn" data-act="takeBoon" data-arg="none">Neither, keep going</button></div>';
+}
+ACTS.takeBoon = (id) => {
+  if (id === "heal") run.holds = Math.min(run.maxHolds, run.holds + 1);
+  if (id === "skip") run.boon.skip = true;
+  if (id === "look") run.boon.look = true;
+  if (id === "short") run.boon.short = true;
+  if (id === "risk") run.boon.risk = true;
+  blip(740, 90);
+  nextFloor();
+};
+
+function runOver() {
+  clearTimers();
+  keepAwake(false);
+  const depth = run.floor;
+  const best = Math.max(state.bestDepth || 0, depth);
+  const isBest = depth > (state.bestDepth || 0);
+  state.bestDepth = best;
+  state.runs.push({ at: now(), depth: depth, by: run.killedBy || "" });
+  state.rounds.push({ mode: "run", at: now(), level: depth, right: depth, asked: depth });
+  save();
+
+  const m = run.lastMiss;
+  $("run-hud").innerHTML = "";
+  $("run-body").innerHTML =
+    '<span class="lab">the run is over</span>' +
+    '<p style="margin:4px 0 0">You got to</p>' +
+    '<div class="depth">' + depth + "</div>" +
+    '<p style="margin:8px 0 0;font-size:17px">' +
+    (isBest && depth > 3 ? "Deeper than you’ve been." : "Your best is " + best + ".") +
+    (run.killedBy ? " " + run.killedBy + " had you." : "") + "</p>" +
+    '<div class="stage" style="margin-top:16px">' + drawScene(run.scene) + "</div>" +
+    '<p class="sub" style="margin-top:9px">The floor you went out on.</p>' +
+    (m
+      ? '<div class="verdict miss"><span class="h">the one that did it</span>' +
+        m.q.replace(/<[^>]+>/g, "") + "<br>You said <b>" + esc(m.gave) + "</b>. The answer was <b>" + esc(m.want) + "</b>.</div>" +
+        '<div class="tip"><span class="h">for next time</span>' + m.teach + "</div>"
+      : "") +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="runStart">Go again</button>' +
+    '<button class="btn" data-go="home">Stop here</button></div>';
+  blip(150, 420);
+}
+
 /* ================== the reading ================== */
 
 const TECHNIQUES = [
@@ -1573,6 +2039,14 @@ function accuracy(mode, n) {
   return a ? Math.round((g / a) * 100) : null;
 }
 
+function paintBest() {
+  const el = $("run-best");
+  if (!el) return;
+  el.innerHTML = state.bestDepth
+    ? "deepest so far &middot; floor " + state.bestDepth
+    : "three holds &middot; no streak &middot; nothing to keep up";
+}
+
 function renderHomeYou() {
   const el = $("home-you");
   if (!el) return;
@@ -1603,12 +2077,27 @@ function renderYou() {
     return;
   }
   const modes = ["scene", "blueprint", "fire", "turn"];
+  const runs = state.runs.slice(-12);
   const last = state.rounds.slice(-30);
   const maxA = Math.max.apply(null, last.map((r) => r.asked || 1));
 
   b.innerHTML =
     '<p class="sub" style="margin-bottom:18px">This is a description of where you are, not a target and not a score. A bad day means you slept badly or the room was loud. A gap of three weeks costs you nothing here.</p>' +
 
+    (runs.length
+      ? '<div class="sec"><h3><span>The run</span></h3>' +
+        '<div class="grid2"><div class="stat"><span class="k">deepest</span><span class="v">floor ' +
+        state.bestDepth + '</span><span class="d">over ' + state.runs.length + " run" +
+        (state.runs.length === 1 ? "" : "s") + "</span></div>" +
+        '<div class="stat"><span class="k">lately</span><span class="v">' +
+        Math.round(runs.reduce((a, r) => a + r.depth, 0) / runs.length) +
+        '</span><span class="d">average floor over your last few</span></div></div>' +
+        (runs.filter((r) => r.by).length
+          ? '<p class="sub" style="margin-top:10px">What keeps ending them: ' +
+            Object.keys(runs.filter((r) => r.by).reduce((m, r) => { m[r.by] = (m[r.by] || 0) + 1; return m; }, {}))
+              .slice(0, 3).join(", ") + ".</p>"
+          : "") + "</div>"
+      : "") +
     '<div class="sec"><h3><span>What each round is giving you now</span></h3>' +
     modes.map((m) =>
       '<div class="stat" style="margin-bottom:8px"><span class="k">' + MODES[m].name + "</span>" +
