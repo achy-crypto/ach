@@ -21,7 +21,7 @@
 </style>
 </head>
 <body>
-<script>window.__BUILD__='bf7c3fa5a7';</script>
+<script>window.__BUILD__='12997905fa';</script>
 <title>Afterimage</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -255,6 +255,117 @@ button{font:inherit;color:inherit}
   border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
 .tf button:hover{border-color:var(--ink)}
 
+/* ---- in the run, the room changes ----
+   Chrome dims, the subtitle and the footer go, and the ground goes dark
+   whatever the theme is. Entering the run should feel like entering
+   somewhere, not like opening another tab of the same app. */
+body.inrun{background:#0a0d12;color:#dde1e7}
+body.inrun .mast{border-bottom-color:#20262f;padding-bottom:9px;margin-bottom:16px}
+body.inrun .mast h1{font-size:19px;color:#6d7886;font-weight:600;letter-spacing:.02em}
+body.inrun .mast .dot{background:#8a4a12;width:7px;height:7px}
+body.inrun .mast p,body.inrun .foot{display:none}
+body.inrun .back{color:#4d5663}
+body.inrun .btn{background:#151a22;border-color:#2a323d;color:#dde1e7}
+body.inrun .btn:hover{border-color:#5a6675}
+body.inrun .btn.prime{background:#c2703c;border-color:#c2703c;color:#0a0d12}
+body.inrun .opts button,body.inrun .tf button{background:#141920;border-color:#262e39;color:#dde1e7}
+body.inrun .opts button.right,body.inrun .tf button.right{border-color:#46c26b;background:#46c26b1a;box-shadow:inset 3px 0 0 #46c26b}
+body.inrun .opts button.wrong,body.inrun .tf button.wrong{border-color:#e5484d;background:#e5484d1a;box-shadow:inset 3px 0 0 #e5484d}
+body.inrun .qn{color:#eef1f4}
+body.inrun .lab,body.inrun .sub{color:#67707d}
+body.inrun .bar{background:#1b212a}
+body.inrun .stage{border-color:#1e242d}
+body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
+
+/* the hold: nothing on the screen but the instruction */
+.void{position:relative;width:100%;aspect-ratio:4/3;background:#07090d;border:1px solid #1a1f27;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 22px;text-align:center;gap:10px}
+.cue{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(21px,5.6vw,29px);font-weight:700;line-height:1.14;letter-spacing:-.02em;
+  color:#c7ced8;text-wrap:balance;margin:0}
+.cue.warm{color:#d98a4f}
+.cuesub{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:#3f4854;margin:0}
+.void .tick{position:absolute;bottom:10px;left:0;right:0;display:flex;gap:4px;justify-content:center}
+.void .tick i{width:5px;height:5px;background:#222932;display:block}
+.void .tick i.on{background:#c2703c}
+
+/* the hazard announcement */
+.hazcard{border:1px solid #6f3a12;background:#160f09;padding:22px 18px;text-align:center}
+.hazcard .n{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(27px,7.4vw,37px);font-weight:700;letter-spacing:-.03em;line-height:1.04;color:#e0913f}
+.hazcard .l{display:block;font-size:15.5px;margin-top:7px;line-height:1.4;color:#a9b2bd;text-wrap:balance}
+.hazcard .two{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:#5d6673;margin-bottom:12px}
+.hazcard + .hazcard{border-top:0}
+.boss{border-color:#7d2420;background:#160a09}
+.boss .n{color:#e0655a;font-size:clamp(30px,8.4vw,42px)}
+.boss .two{color:#8a4a45}
+
+/* hud */
+.hud{display:flex;align-items:center;gap:11px;border-bottom:1px solid #1e242d;
+  padding-bottom:9px;margin-bottom:14px;flex-wrap:wrap}
+.hud .fl{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:18px;font-weight:700;
+  letter-spacing:-.02em;color:#aab3bf}
+.hud .fl b{color:#e0913f}
+.holds{display:flex;gap:5px;margin-left:auto}
+.holds i{width:11px;height:11px;border:1.5px solid #46c26b;background:#46c26b;display:block}
+.holds i.gone{background:none;border-color:#2d343e}
+.hud .hz{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:#d98a4f}
+.kit{display:flex;gap:5px;flex-wrap:wrap;margin:-6px 0 14px}
+.kit span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+  border:1px solid #2a323d;color:#7b8593;padding:3px 7px}
+
+.hit{border:1px solid #7d2c26;border-left:3px solid #e5484d;background:#170c0b;
+  padding:13px 15px;margin-top:14px;font-size:15px;line-height:1.45;color:#dbc2bf}
+.hit b{color:#f0a8a2}
+.read{border:1px solid #2a323d;border-left:3px solid #c2703c;background:#11151c;
+  padding:12px 14px;margin-top:12px;font-size:14px;line-height:1.5;color:#9aa4b1}
+.read b{color:#d98a4f;font-weight:600}
+
+/* boons */
+.boon{display:grid;gap:9px;margin-top:14px}
+.boon button{text-align:left;background:#12171f;border:1px solid #2a323d;padding:14px 15px;
+  cursor:pointer;border-radius:0;color:#dde1e7}
+.boon button:hover{border-color:#c2703c}
+.boon .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:17px;font-weight:700;
+  letter-spacing:-.02em;color:#e0913f}
+.boon .d{display:block;color:#8b95a3;font-size:13px;margin-top:4px;line-height:1.4}
+.boon .k{display:block;font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:#5d6673;margin-bottom:5px}
+
+.depth{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 86;
+  font-size:clamp(62px,19vw,96px);font-weight:700;letter-spacing:-.05em;line-height:.88;color:#e0913f}
+.tf{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.tf button{padding:20px 12px;font-size:17px;font-weight:600;background:var(--panel);
+  border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
+
+/* the front door */
+.enter{display:block;width:100%;text-align:left;cursor:pointer;border-radius:0;
+  border:1px solid #c2703c;background:linear-gradient(160deg,#1a1109,#0e1218);padding:20px 19px;color:#e7ebf0}
+.enter:hover{border-color:#e0913f}
+.enter .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.16em;
+  text-transform:uppercase;color:#c2703c;margin-bottom:6px}
+.enter .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(31px,8.5vw,44px);font-weight:700;letter-spacing:-.035em;line-height:1}
+.enter .d{display:block;color:#98a2b0;font-size:13.5px;line-height:1.45;margin-top:8px}
+.enter .best{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:#c2703c;margin-top:12px}
+
+/* facet read-out */
+.facet{padding:11px 0;border-bottom:1px solid var(--hair)}
+.facetrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.facetname{font-size:14.5px;font-weight:600}
+.facetval{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--dim);flex:none}
+.fbar{display:flex;gap:2px;margin-top:7px}
+.fbar i{flex:1;height:6px;background:var(--rule)}
+.fbar i.on{background:var(--go)}
+.fbar i.weak{background:var(--warn)}
+.suggest{border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--signal-w);
+  padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.45}
+.suggest button{margin-top:9px}
+
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -271,21 +382,24 @@ button{font:inherit;color:inherit}
 
 <!-- ============ HOME ============ -->
 <section id="s-home">
-  <h2 class="ask">How deep can you get?</h2>
-
-  <button class="run-card" data-act="runStart">
-    <span class="k">the game</span>
-    <span class="t">The Run</span>
+  <button class="enter" data-act="runStart">
+    <span class="k">how far down can you hold it</span>
+    <span class="t">Start The Run</span>
     <span class="d">Floors of pictures to hold, each one harder than the last, and things that come for them &mdash; the Stranger slips something in that was never yours, the Shift moves one while you’re not looking, the Echo asks about the floor before. Three holds. Lose them and the run is over.</span>
     <span class="best" id="run-best"></span>
   </button>
 
+  <div id="home-suggest"></div>
+
   <div class="sec">
-    <h3><span>Practice, on its own</span></h3>
-    <p class="sub" style="margin:-4px 0 14px">The run is built out of these. Doing one on its own is calmer, and it is where you work out what your head actually does.</p>
+    <h3><span>Where you're at</span></h3>
+    <div id="home-you"></div>
   </div>
 
-  <div class="stack">
+  <details class="sec" id="prac">
+    <summary style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);padding:2px 0">Practice specific skills</summary>
+    <p class="sub" style="margin:12px 0 14px">The run is built out of these. On its own each one is calmer, and it is where you drill whatever the run keeps taking from you.</p>
+    <div class="stack">
     <button class="big" data-mode="scene">
       <span class="k">the basic one</span>
       <span class="t">Look, then hold</span>
@@ -316,12 +430,8 @@ button{font:inherit;color:inherit}
       <span class="t">Put it somewhere you know</span>
       <span class="d">The memory palace, taught properly, on a route through somewhere real. Works on a shopping list, a set of steps, anything you actually need to carry.</span>
     </button>
-  </div>
-
-  <div class="sec">
-    <h3><span>Where you're at</span></h3>
-    <div id="home-you"></div>
-  </div>
+    </div>
+  </details>
 
   <div class="sec">
     <h3><span>Worth reading once</span></h3>
@@ -445,7 +555,12 @@ const state = {
   recent: {},            /* mode -> array of 0/1, most recent last */
   rounds: [],            /* {mode, at, level, right, asked} */
   bestDepth: 0,          /* deepest floor reached in a run */
-  runs: [],              /* {at, depth, by} */
+  runs: [],              /* {at, depth, by, hold} */
+  facets: {},            /* which part of the image holds: facet -> {a,r} */
+  facetsInt: {},         /* the same, but only while something interfered */
+  killers: {},           /* what ends runs: hazard name -> count */
+  holdSec: 0,            /* seconds spent holding, all runs */
+  floorsCleared: 0,
   walkStops: null,       /* the route, once they've set one */
   walkBest: 0,
   walkRuns: [],
@@ -460,6 +575,8 @@ function payload() {
   return {
     level: state.level, recent: state.recent, rounds: state.rounds.slice(-400),
     bestDepth: state.bestDepth, runs: state.runs.slice(-80),
+    facets: state.facets, facetsInt: state.facetsInt, killers: state.killers,
+    holdSec: state.holdSec, floorsCleared: state.floorsCleared,
     walkStops: state.walkStops, walkBest: state.walkBest, walkRuns: state.walkRuns.slice(-60),
     sees: state.sees, seen: state.seen, sound: state.sound,
   };
@@ -471,6 +588,11 @@ function adopt(o) {
   if (Array.isArray(o.rounds)) state.rounds = o.rounds;
   if (typeof o.bestDepth === "number") state.bestDepth = o.bestDepth;
   if (Array.isArray(o.runs)) state.runs = o.runs;
+  if (o.facets && typeof o.facets === "object") state.facets = o.facets;
+  if (o.facetsInt && typeof o.facetsInt === "object") state.facetsInt = o.facetsInt;
+  if (o.killers && typeof o.killers === "object") state.killers = o.killers;
+  if (typeof o.holdSec === "number") state.holdSec = o.holdSec;
+  if (typeof o.floorsCleared === "number") state.floorsCleared = o.floorsCleared;
   if (Array.isArray(o.walkStops)) state.walkStops = o.walkStops;
   if (typeof o.walkBest === "number") state.walkBest = o.walkBest;
   if (Array.isArray(o.walkRuns)) state.walkRuns = o.walkRuns;
@@ -549,7 +671,7 @@ function go(name) {
   screen = name;
   SCREENS.forEach((s) => { const el = $("s-" + s); if (el) el.hidden = s !== name; });
   scrollTo(0, 0);
-  if (name === "home") { renderHomeYou(); paintBest(); }
+  if (name === "home") { renderHomeYou(); paintBest(); renderSuggest(); }
   if (name === "learn") renderLearn();
   if (name === "about") renderAbout();
   if (name === "you") renderYou();
@@ -812,15 +934,24 @@ const CELLS = [
 const cellAt = (col, row) => CELLS.find((c) => c.col === col && c.row === row);
 
 /* ---------- building a scene ---------- */
-function makeScene(n) {
+function makeScene(n, opts) {
   n = clamp(n, 2, 9);
+  const o = opts || {};
   const kinds = sample(OBJECTS, n);
   const cells = sample(CELLS, n);
 
-  /* A palette for this scene with no two colours anyone would confuse. */
+  /* Normally no two colours anyone could confuse share a scene, so that a
+     miss means something. The Mimic is the deliberate exception: it seeds
+     the palette with a clashing pair, because telling two near-identical
+     things apart is a different skill and wants testing on purpose. */
   const ok = [];
+  if (o.mimic) {
+    const pair = pick(CLASH);
+    ok.push(PALETTE.find((x) => x.id === pair[0]), PALETTE.find((x) => x.id === pair[1]));
+  }
   for (const p of shuffle(PALETTE)) {
-    if (ok.every((q) => !clashes(p.id, q.id))) ok.push(p);
+    if (o.mimic && ok.length >= 4) break;
+    if (ok.indexOf(p) < 0 && ok.every((q) => o.mimic || !clashes(p.id, q.id))) ok.push(p);
     if (ok.length >= Math.max(3, Math.min(6, n))) break;
   }
   const counts = {};
@@ -834,7 +965,7 @@ function makeScene(n) {
   const items = kinds.map((k, ix) => ({
     kind: k, colour: colourFor(), state: pick(k.states), cell: cells[ix],
   }));
-  return { items, id: uid() };
+  return { items, id: uid(), mimic: !!o.mimic };
 }
 
 function stateLabel(item) { return item.state[1]; }
@@ -845,8 +976,14 @@ function drawScene(scene, opts) {
   for (const it of scene.items) {
     const cx = 66.7 + it.cell.col * 133.3, cy = 50 + it.cell.row * 100;
     const sc = 0.86;
+    /* Trace Outline shows the scene in one flat colour first, so shape has
+       to be taken in before colour is available to lean on. */
+    const paint = o.outline ? "#8d96a3" : it.colour.hex;
+    if (o.anchor && o.anchor === it.kind.id)
+      parts.push('<rect x="' + (cx - 52) + '" y="' + (cy - 49) + '" width="104" height="98" ' +
+        'fill="none" stroke="#f0a057" stroke-width="2.5" stroke-dasharray="7 5"/>');
     parts.push('<g transform="translate(' + (cx - 50 * sc) + " " + (cy - 50 * sc) + ") scale(" + sc + ')">' +
-      it.kind.draw(it.colour.hex, it.state[0]) + "</g>");
+      it.kind.draw(paint, it.state[0]) + "</g>");
   }
   return '<svg viewBox="0 0 400 300" role="img" aria-label="' +
     (o.alt || "a picture to remember") + '">' +
@@ -887,9 +1024,26 @@ function optionsAround(correct, pool, n) {
     if (x !== correct && others.indexOf(x) < 0) others.push(x);
   return shuffle([correct].concat(others.slice(0, (n || 4) - 1)));
 }
-function mkProbe(q, correct, opts, kind) {
+/* Which part of the mental image a question actually leans on. The run
+   scores these separately, because "you got it wrong" is useless and
+   "colour held, position went" is something you can act on. */
+const FACET = {
+  colour: "colour", count: "colour", binding: "binding", state: "detail",
+  place: "position", relation: "position", absent: "object", turn: "rotation",
+  intrusion: "intrusion",
+};
+const FACET_NAME = {
+  colour: "Colour", binding: "Colour-to-object binding", detail: "Small details",
+  position: "Position", object: "What was there", rotation: "Turning it",
+  intrusion: "Rejecting what was never there",
+};
+
+function mkProbe(q, correct, opts, kind, target) {
   const list = opts.slice();
-  return { q, opts: list, answer: list.indexOf(correct), kind, teach: TEACH[kind] };
+  return { q, opts: list, answer: list.indexOf(correct), kind,
+           facet: FACET[kind] || "object", teach: TEACH[kind],
+           about: target ? target.kind.id : null,
+           aboutCell: target ? target.cell.i : null };
 }
 
 function probesFor(scene, count, flavour) {
@@ -899,23 +1053,23 @@ function probesFor(scene, count, flavour) {
   builders.push(() => {
     const t = pick(it);
     return mkProbe("What colour was the " + t.kind.name + "?", t.colour.name,
-      optionsAround(t.colour.name, PALETTE.map((p) => p.name)), "colour");
+      optionsAround(t.colour.name, PALETTE.map((p) => p.name)), "colour", t);
   });
   builders.push(() => {
     const t = pick(it);
     const labels = t.kind.states.map((s) => s[1]);
     return mkProbe(t.kind.ask, stateLabel(t),
-      labels.length > 3 ? shuffle(labels) : shuffle(labels), "state");
+      shuffle(labels), "state", t);
   });
   builders.push(() => {
     const t = pick(it);
     return mkProbe("What was in the " + t.cell.name + "?", t.kind.name,
-      optionsAround(t.kind.name, OBJECTS.map((o) => o.name)), "place");
+      optionsAround(t.kind.name, OBJECTS.map((o) => o.name)), "place", t);
   });
   builders.push(() => {
     const t = pick(it);
     return mkProbe("Where was the " + t.kind.name + "?", t.cell.name,
-      optionsAround(t.cell.name, CELLS.map((c) => c.name)), "place");
+      optionsAround(t.cell.name, CELLS.map((c) => c.name)), "place", t);
   });
   builders.push(() => {
     /* White and yellow turn up as page edges, flames and highlights
@@ -940,7 +1094,7 @@ function probesFor(scene, count, flavour) {
     if (!solo.length) return null;
     const t = pick(solo);
     return mkProbe("One thing was " + t.colour.name + ". What was it?", t.kind.name,
-      optionsAround(t.kind.name, OBJECTS.map((o) => o.name)), "binding");
+      optionsAround(t.kind.name, OBJECTS.map((o) => o.name)), "binding", t);
   });
   builders.push(() => {
     const dirs = [
@@ -955,7 +1109,7 @@ function probesFor(scene, count, flavour) {
         const other = it.find((x) => x.cell.i === c.i);
         if (!other) continue;
         return mkProbe("What was " + d[0] + " the " + t.kind.name + "?", other.kind.name,
-          optionsAround(other.kind.name, it.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "relation");
+          optionsAround(other.kind.name, it.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "relation", other);
       }
     }
     return null;
@@ -980,7 +1134,7 @@ function probesFor(scene, count, flavour) {
     const t = pick(turners), item = pick(it), dest = t.map(item.cell);
     if (!dest) return null;
     return mkProbe("Now picture the whole thing <b>" + t.label + "</b>. What ends up in the " + dest.name + "?",
-      item.kind.name, optionsAround(item.kind.name, it.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "turn");
+      item.kind.name, optionsAround(item.kind.name, it.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "turn", item);
   }
 
   let guard_ = 0;
@@ -1592,190 +1746,329 @@ function walkDone() {
 ACTS.walkAgain = () => walkChoose();
 
 /* ================== THE RUN ==================
-   The drills are practice. This is the game they are practice for.
+   The game. Floors go down, holds are what you have to lose, hazards are
+   things that come for the picture, and boons are real techniques rather
+   than power-ups with made-up names.
 
-   Floors get harder, and from the third one something comes for the
-   picture: the Thief takes an object out of it, the Shift moves one,
-   the Echo asks about the floor before this one. Three holds; a wrong
-   answer costs one. There is no currency and nothing to keep up — the
-   only number is how deep you got, and a personal best does not punish
-   you for a fortnight away the way a streak does.
+   The part that matters most is the hold. Recall is easy to test and
+   easy to fake from a remembered sentence; what this is actually for is
+   the image itself, so the blank screen gives instructions — hold the
+   outline, inspect that corner, bring back what is fading — and only
+   then asks anything.
    ============================================= */
 
 const HAZARDS = [
-  { id: "rush",  slot: "study",    from: 3,  name: "The Rush",  line: "Half the time to look at it." },
-  { id: "drip",  slot: "study",    from: 3,  name: "The Drip",  line: "They arrive one at a time, then all go at once." },
-  { id: "blind", slot: "study",    from: 5,  name: "The Blind", line: "No picture. You get words and have to build it." },
-  { id: "pull",  slot: "hold",     from: 4,  name: "The Pull",  line: "Something else to do while you're holding it." },
-  { id: "turn",  slot: "question", from: 6,  name: "The Turn",  line: "You'll be asked about it rotated." },
-  { id: "thief", slot: "question", from: 4,  name: "The Stranger", line: "It comes back with something in it that was never yours." },
-  { id: "shift", slot: "question", from: 7,  name: "The Shift", line: "It comes back with something moved." },
-  { id: "liar",  slot: "question", from: 5,  name: "The Liar",  line: "A claim about it. True or false." },
-  { id: "echo",  slot: "question", from: 8,  name: "The Echo",  line: "The question is about the floor before this one." },
+  { id: "rush",   slot: "study",    from: 3,  name: "The Rush",     line: "Half the time to look at it." },
+  { id: "drip",   slot: "study",    from: 3,  name: "The Drip",     line: "They arrive one at a time, then all go at once." },
+  { id: "fade",   slot: "study",    from: 4,  name: "The Fade",     line: "It dies while you watch. Take anchors, not everything." },
+  { id: "blind",  slot: "study",    from: 7,  name: "The Blind",    line: "No picture. Words only. You build it." },
+  { id: "static", slot: "hold",     from: 4,  name: "The Static",   line: "Something else to do, while you hold it." },
+  { id: "mimic",  slot: "scene",    from: 5,  name: "The Mimic",    line: "Two things wear almost the same colour." },
+  { id: "thief",  slot: "question", from: 4,  name: "The Stranger", line: "It returns with something in it that was never yours." },
+  { id: "shift",  slot: "question", from: 5,  name: "The Shift",    line: "Something moves while you are not looking." },
+  { id: "liar",   slot: "question", from: 5,  name: "The Liar",     line: "A claim about it. One of you is wrong." },
+  { id: "turn",   slot: "question", from: 6,  name: "The Turn",     line: "You will be asked about it turned." },
+  { id: "echo",   slot: "question", from: 8,  name: "The Echo",     line: "The question is about the floor before this one." },
+];
+const HAZ = (id) => HAZARDS.find((h) => h.id === id);
+
+/* Every fifth floor. Two or three of them at once, and one more question. */
+const BOSSES = [
+  { name: "THE HOLLOW",   line: "Nothing down here is where you left it." },
+  { name: "THE COPY",     line: "You will be shown something almost right." },
+  { name: "THE LONG DARK",line: "It holds you longer than you can hold it." },
+  { name: "THE UNDERTOW", line: "It takes the picture while you look away." },
+  { name: "THE CHORUS",   line: "Everything answers at once." },
 ];
 
 const BOONS = [
-  { id: "heal",  t: "Take a hold back",           d: "One of the ones you lost.",                       ok: () => run.holds < run.maxHolds },
-  { id: "skip",  t: "One clean floor",            d: "Nothing comes for the next one.",                 ok: () => true },
-  { id: "look",  t: "Three more seconds to look", d: "On the next floor only.",                         ok: () => true },
-  { id: "short", t: "A shorter hold next floor",  d: "Less waiting before the questions.",              ok: () => true },
-  { id: "risk",  t: "Push it",                    d: "Two things come for the next floor. Clear it and you get a hold back, and one more on top.", risk: true, ok: () => true },
+  { id: "anchor", t: "Anchor", k: "lock one down",
+    d: "One object is ringed while you study it, and questions about that one come with a shorter list." },
+  { id: "colourbind", t: "Colour-bind", k: "one word, not two",
+    d: "The hold makes you fuse colour to object — “redcup”, said once. Colour and binding questions come easier." },
+  { id: "outline", t: "Trace Outline", k: "shape before colour",
+    d: "The picture arrives as flat silhouettes first, so shape has to go in before colour is there to lean on." },
+  { id: "palace", t: "Palace Door", k: "somewhere real",
+    d: "One object gets left at a stop on a route you know, and you get asked for it by the place." },
+  { id: "freeze", t: "Freeze-frame", k: "longer look",
+    d: "Three and a half more seconds of the picture, every floor from here." },
+  { id: "corner", t: "Corner Lock", k: "one quarter, deeply",
+    d: "Pick a corner. The hold sends you back to it, and questions about what lives there come easier." },
+  { id: "detail", t: "Detail Hook", k: "the thing nobody encodes",
+    d: "One small detail is named while you look — a handle, a lid, a flame. Detail questions come easier." },
+  { id: "refresh", t: "Refresh", k: "one flash, on demand",
+    d: "A charge you spend during a hold to see the picture again for one second. Stacks." },
+];
+
+const CORNERS = [
+  { id: "tl", name: "top left",     cells: [0, 1, 3, 4] },
+  { id: "tr", name: "top right",    cells: [1, 2, 4, 5] },
+  { id: "bl", name: "bottom left",  cells: [3, 4, 6, 7] },
+  { id: "br", name: "bottom right", cells: [4, 5, 7, 8] },
 ];
 
 let run = null;
 
-function floorSpec(f) {
+/* A floor moves study -> hold -> ask, and each of those can be reached
+   two ways: the timer running out, or you tapping past it. Tap at the
+   same moment the bar fills and both arrive, giving the floor two
+   countdowns racing each other and two sets of questions. This makes
+   entering a phase idempotent: the second arrival is dropped. */
+function enter(name) {
+  if (!run || run.phase === name) return false;
+  run.phase = name;
+  clearTimers();
+  return true;
+}
+
+function floorSpec(f, boss) {
   return {
-    n: clamp(3 + Math.floor((f - 1) / 2), 3, 8),
+    n: clamp(3 + Math.floor((f - 1) / 2) + (boss ? 1 : 0), 3, 8),
     study: Math.max(1500, 5600 - f * 250),
-    hold: Math.min(24000, 1600 + f * 850),
-    probes: clamp(1 + Math.floor(f / 5), 1, 3),
+    hold: Math.min(30000, 3200 + f * 1100),
+    probes: clamp(1 + Math.floor(f / 5) + (boss ? 1 : 0), 1, 4),
   };
 }
 
-function pickHazards(f) {
-  if (f < 3 || run.boon.skip) { run.boon.skip = false; return []; }
+function pickHazards(f, boss) {
+  if (f < 3 || run.skipNext) { run.skipNext = false; return []; }
   const pool = HAZARDS.filter((h) => f >= h.from && (h.id !== "echo" || run.prev));
   if (!pool.length) return [];
-  const want = run.boon.risk ? 2 : (f >= 10 && f % 3 === 0 ? 2 : 1);
+  const want = boss ? (f >= 15 ? 3 : 2) : (run.pushed ? 2 : (f >= 10 && f % 3 === 0 ? 2 : 1));
   const out = [];
-  for (const sl of shuffle(["question", "study", "hold"])) {
+  for (const sl of shuffle(["question", "study", "hold", "scene"])) {
     if (out.length >= want) break;
     const c = pool.filter((h) => h.slot === sl);
     if (c.length) out.push(pick(c));
   }
-  /* Words-only and a picture that comes back cannot both be true. */
+  run.pushed = false;
+  /* Words-only and a picture that returns cannot both be true, and the
+     Mimic needs a picture to be confusable in. */
   return out.some((h) => h.id === "blind")
-    ? out.filter((h) => h.id !== "thief" && h.id !== "shift")
+    ? out.filter((h) => ["thief", "shift", "mimic"].indexOf(h.id) < 0)
     : out;
 }
 
 ACTS.runStart = () => {
+  document.body.classList.add("inrun");
   go("run");
   run = {
-    floor: 0, holds: 3, maxHolds: 3, prev: null, scene: null,
-    hz: [], boon: {}, probes: [], at: 0, locked: false,
-    killedBy: null, lastMiss: null, startedAt: now(),
+    floor: 0, holds: 3, maxHolds: 3, prev: null, scene: null, hz: [], boss: null,
+    kit: {}, charges: 0, corner: null, skipNext: false, pushed: false,
+    anchorId: null, hookLine: null, palaceStop: null, palaceItem: null,
+    probes: [], at: 0, locked: false, floorFacets: {},
+    killedBy: null, lastMiss: null, holdMs: 0, startedAt: now(),
   };
-  stopRound = () => { clearTimers(); keepAwake(false); };
+  stopRound = () => { clearTimers(); keepAwake(false); document.body.classList.remove("inrun"); };
   nextFloor();
 };
-ACTS.runQuit = () => { clearTimers(); keepAwake(false); run = null; go("home"); };
+ACTS.runQuit = () => {
+  clearTimers(); keepAwake(false);
+  document.body.classList.remove("inrun");
+  run = null; go("home");
+};
 
 function hud() {
   const el = $("run-hud");
   if (!el || !run) return;
   const marks = [];
   for (let i = 0; i < run.maxHolds; i++) marks.push('<i class="' + (i < run.holds ? "" : "gone") + '"></i>');
+  const kit = Object.keys(run.kit).map((k) => {
+    const b = BOONS.find((x) => x.id === k);
+    return b ? "<span>" + b.t + (k === "corner" && run.corner ? " · " + run.corner.name : "") + "</span>" : "";
+  });
+  if (run.charges) kit.push("<span>Refresh ×" + run.charges + "</span>");
   el.innerHTML =
-    '<div class="hud"><span class="fl">Floor <b>' + run.floor + "</b></span>" +
-    (run.hz.length ? '<span class="hz">' + run.hz.map((h) => h.name).join(" &middot; ") + "</span>" : "") +
-    '<span class="holds">' + marks.join("") + "</span></div>";
+    '<div class="hud"><span class="fl">' + (run.boss ? "Floor <b>" + run.floor + "</b> · " + run.boss.name : "Floor <b>" + run.floor + "</b>") + "</span>" +
+    (run.hz.length ? '<span class="hz">' + run.hz.map((h) => h.name).join(" · ") + "</span>" : "") +
+    '<span class="holds">' + marks.join("") + "</span></div>" +
+    (kit.length ? '<div class="kit">' + kit.join("") + "</div>" : "");
 }
 
 function nextFloor() {
   clearTimers();
+  run.phase = null;
   run.prev = run.scene;
   run.floor++;
-  run.spec = floorSpec(run.floor);
-  run.hz = pickHazards(run.floor);
-  run.scene = makeScene(run.spec.n);
-  run.at = 0; run.locked = false;
+  run.boss = run.floor % 5 === 0 ? BOSSES[(Math.floor(run.floor / 5) - 1) % BOSSES.length] : null;
+  run.spec = floorSpec(run.floor, !!run.boss);
+  run.hz = pickHazards(run.floor, !!run.boss);
+  run.scene = makeScene(run.spec.n, { mimic: run.hz.some((h) => h.id === "mimic") });
+  run.at = 0; run.locked = false; run.floorFacets = {};
+  run.anchorId = run.kit.anchor ? pick(run.scene.items).kind.id : null;
+  run.hookLine = null; run.palaceStop = null; run.palaceItem = null;
   keepAwake(true);
   hud();
-  if (!run.hz.length) return floorStudy();
+
+  if (!run.hz.length && !run.boss) return floorStudy();
 
   $("run-body").innerHTML =
-    '<div class="hazcard">' +
-    (run.hz.length > 1 ? '<span class="two">two of them</span>' : "") +
-    run.hz.map((h) => '<span class="n">' + h.name + '</span><span class="l">' + h.line + "</span>").join("") +
-    "</div>" +
-    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="hazGo">Ready</button></div>';
-  blip(330, 130);
-  later(() => { if (run && $("run-body") && $("run-body").querySelector(".hazcard")) floorStudy(); }, 2600);
+    (run.boss
+      ? '<div class="hazcard boss"><span class="two">floor ' + run.floor + " · it is waiting</span>" +
+        '<span class="n">' + run.boss.name + '</span><span class="l">' + run.boss.line + "</span></div>"
+      : "") +
+    (run.hz.length
+      ? '<div class="hazcard">' +
+        (run.hz.length > 1 ? '<span class="two">' + (run.hz.length > 2 ? "three at once" : "two at once") + "</span>" : "") +
+        run.hz.map((h) => '<span class="n">' + h.name + '</span><span class="l">' + h.line + "</span>").join("") +
+        "</div>"
+      : "") +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="hazGo">Go down</button></div>';
+  blip(run.boss ? 190 : 330, 170);
+  later(() => { const b = $("run-body"); if (run && b && b.querySelector(".hazcard")) floorStudy(); }, run.boss ? 3600 : 2700);
 }
 ACTS.hazGo = () => { clearTimers(); floorStudy(); };
 
-/* ---- study ---- */
+/* ---------- 1. look ---------- */
 function floorStudy() {
-  clearTimers();
+  if (!enter("study")) return;
   const ids = run.hz.map((h) => h.id);
   let ms = run.spec.study;
   if (ids.indexOf("rush") > -1) ms = Math.round(ms * 0.5);
-  if (run.boon.look) { ms += 3000; run.boon.look = false; }
+  if (ids.indexOf("fade") > -1) ms = Math.round(ms * 0.55);
+  if (run.kit.freeze) ms += 3500;
   hud();
+
+  /* the two boons that put something under the picture */
+  if (run.kit.detail) {
+    const t = pick(run.scene.items);
+    run.hookLine = "The " + t.colour.name + " " + t.kind.name + " — " + stateLabel(t).toLowerCase() + ".";
+  }
+  if (run.kit.palace) {
+    const stops = (state.walkStops && state.walkStops.length) ? state.walkStops : DEFAULT_STOPS;
+    run.palaceStop = pick(stops);
+    run.palaceItem = pick(run.scene.items);
+  }
+  const under =
+    (run.hookLine ? '<p class="read"><b>Hook.</b> ' + esc(run.hookLine) + "</p>" : "") +
+    (run.palaceStop ? '<p class="read"><b>Leave it there.</b> The ' + esc(run.palaceItem.colour.name) + " " +
+      esc(run.palaceItem.kind.name) + " goes at <b>" + esc(run.palaceStop) + "</b>. Watch it land.</p>" : "");
 
   if (ids.indexOf("blind") > -1) {
     $("run-body").innerHTML =
-      '<span class="lab">no picture &middot; build it</span>' +
+      '<span class="lab">no picture · build it</span>' +
       '<div class="desc" style="margin-top:8px"><ul>' +
-      describeScene(run.scene).map((d) => "<li>" + d + "</li>").join("") + "</ul></div>" +
+      describeScene(run.scene).map((d) => "<li>" + d + "</li>").join("") + "</ul></div>" + under +
       '<div class="bar"><i id="study-bar"></i></div>' +
-      '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">I’ve got it &rarr;</button></div>';
-    countdown("study-bar", Math.max(5000, run.spec.n * 2600), floorHold);
+      '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">It’s built &rarr;</button></div>';
+    countdown("study-bar", Math.max(5200, run.spec.n * 2600), floorHold);
     return;
   }
+  if (ids.indexOf("drip") > -1) return floorDrip(ms, under);
 
-  if (ids.indexOf("drip") > -1) return floorDrip(ms);
-
+  const opts = { anchor: run.anchorId };
   $("run-body").innerHTML =
-    '<div class="stage">' + drawScene(run.scene) + "</div>" +
+    '<div class="stage" id="stg">' + drawScene(run.scene, run.kit.outline ? { outline: true } : opts) + "</div>" + under +
     '<div class="bar"><i id="study-bar"></i></div>' +
-    '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">I’ve got it &rarr;</button></div>';
+    '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">Got it &rarr;</button></div>';
+
+  /* Trace Outline: silhouettes first, colour only once shape is in. */
+  if (run.kit.outline)
+    later(() => { const st = $("stg"); if (st) st.innerHTML = drawScene(run.scene, opts); }, Math.round(ms * 0.45));
+  /* The Fade takes it away in front of you rather than cutting. */
+  if (ids.indexOf("fade") > -1) {
+    const st = $("stg");
+    if (st) { st.style.transition = "opacity " + ms + "ms linear"; later(() => { st.style.opacity = "0.04"; }, 60); }
+  }
   countdown("study-bar", ms, floorHold);
 }
 ACTS.floorGot = () => { clearTimers(); floorHold(); };
 
-/* One at a time, then all of it gone — you never see the whole picture,
-   so it has to be assembled rather than photographed. */
-function floorDrip(total) {
-  const items = run.scene.items, each = Math.max(520, Math.round(total / items.length));
+function floorDrip(total, under) {
+  const items = run.scene.items, each = Math.max(560, Math.round(total / items.length));
   let i = 0;
   const show = () => {
     if (!run) return;
     if (i >= items.length) return floorHold();
     $("run-body").innerHTML =
-      '<span class="lab">one at a time &middot; ' + (i + 1) + " of " + items.length + "</span>" +
+      '<span class="lab">one at a time · ' + (i + 1) + " of " + items.length + "</span>" +
       '<div class="stage" style="margin-top:6px">' + drawScene({ items: [items[i]], id: "d" }) + "</div>" +
-      '<p class="sub" style="margin-top:12px">Add it to the ones already in there.</p>';
+      (under || "") +
+      '<p class="sub" style="margin-top:12px">Hook it onto what is already in there.</p>';
     i++;
     later(show, each);
   };
   show();
 }
 
-/* ---- hold ---- */
+/* ---------- 2. hold ----------
+   The instructions are the exercise. Recall can be faked from a
+   remembered sentence; holding an outline, walking a corner of it and
+   rebuilding what fades cannot. */
+function holdCues(scene) {
+  const occupied = scene.items.map((x) => x.cell);
+  const cues = [
+    { t: "Hold the outline.", s: "shape only · no colour yet" },
+    { t: "Now the colours. One at a time.", s: "let them arrive" },
+    { t: "Inspect the " + pick(occupied).name + ".", s: "go and look, don’t recall" },
+    { t: "Keep seeing it.", s: "don’t answer anything yet" },
+    { t: "Something is fading. Bring it back.", s: "rebuild from what held" },
+    { t: "Count what you can see.", s: "in the picture, not on your fingers" },
+    { t: "Walk the edges of it.", s: "corner to corner" },
+    { t: "Say each one as one word.", s: "colour and thing, fused" },
+    { t: "It slipped. Rebuild from the " + pick(occupied).name + ".", s: "anchor, then spread out" },
+    { t: "Hold all of it at once.", s: "not one at a time now" },
+  ];
+  let out = shuffle(cues);
+  out.unshift({ t: "Hold the outline.", s: "shape only · no colour yet" });
+  if (run.kit.colourbind)
+    out.splice(1, 0, { t: "Fuse them. “redcup”, one word.", s: "colour to object, said once" });
+  if (run.kit.corner && run.corner)
+    out.splice(2, 0, { t: "Back to the " + run.corner.name + ".", s: "your corner · deeper this time" });
+  const seen = {};
+  return out.filter((c) => (seen[c.t] ? false : (seen[c.t] = 1)));
+}
+
 function floorHold() {
-  clearTimers();
+  if (!enter("hold")) return;
   let ms = run.spec.hold;
-  if (run.boon.short) { ms = Math.round(ms * 0.45); run.boon.short = false; }
+  run.holdMs += ms;
   hud();
 
-  if (run.hz.some((h) => h.id === "pull")) {
+  const statical = run.hz.some((h) => h.id === "static");
+  const cues = holdCues(run.scene);
+  const slots = Math.max(2, Math.min(cues.length, Math.round(ms / 3400)));
+  const every = ms / slots;
+  let ci = 0;
+
+  const refreshBtn = run.charges
+    ? '<div class="row" style="margin-top:12px"><button class="btn" data-act="useRefresh">' +
+      "Spend a Refresh · " + run.charges + " left</button></div>"
+    : "";
+
+  const paint = () => {
+    if (!run) return;
+    const c = cues[ci % cues.length];
+    const dots = Array.from({ length: slots }, (_, i) => '<i class="' + (i <= ci ? "on" : "") + '"></i>').join("");
+    if (statical) {
+      $("run-body").innerHTML =
+        '<span class="lab">hold it · and this</span>' +
+        '<p class="cue warm" style="margin:12px 0 2px;font-size:19px">' + c.t + "</p>" +
+        '<p class="firelab" id="fire-sym" style="font-size:42px;margin:10px 0 0">&nbsp;</p>' +
+        '<div class="fire">' + FIRE_SYM.map((x) =>
+          '<button data-act="runFire" data-arg="' + x[0] + '">' + x[1] + "</button>").join("") + "</div>" +
+        refreshBtn + '<div class="bar go" style="margin-top:14px"><i id="hold-bar"></i></div>';
+      if (run.fire) run.fire.next();
+    } else {
+      $("run-body").innerHTML =
+        '<div class="void"><p class="cue">' + c.t + '</p><p class="cuesub">' + c.s + "</p>" +
+        '<div class="tick">' + dots + "</div></div>" +
+        refreshBtn + '<div class="bar go"><i id="hold-bar"></i></div>';
+    }
+    ci++;
+    if (ci < slots) later(paint, every);
+  };
+
+  if (statical) {
     run.fire = { asked: 0, right: 0, cur: null };
-    $("run-body").innerHTML =
-      '<span class="lab">hold it &middot; and do this</span>' +
-      '<p class="firelab" id="fire-sym" style="font-size:44px;margin:14px 0 0">&nbsp;</p>' +
-      '<p class="sub" style="text-align:center;margin:6px 0 0">Tap the side it points to.</p>' +
-      '<div class="fire">' +
-      FIRE_SYM.map((x) => '<button data-act="runFire" data-arg="' + x[0] + '">' + x[1] + "</button>").join("") +
-      "</div><div class=\"bar go\" style=\"margin-top:14px\"><i id=\"hold-bar\"></i></div>";
-    const nextSym = () => {
+    run.fire.next = () => {
       const x = pick(FIRE_SYM);
       run.fire.cur = x[0];
       const el = $("fire-sym");
       if (el) el.innerHTML = x[1];
     };
-    nextSym(); run.fire.next = nextSym;
-    countdown("hold-bar", ms, () => { blip(660, 110); floorAsk(); });
-    return;
   }
-
-  $("run-body").innerHTML =
-    '<span class="lab">hold it</span>' +
-    '<div class="stage" style="margin-top:6px"><div class="hold">' +
-    '<span class="holdbig">Keep it there.</span>Look around it, don’t recite it</div></div>' +
-    '<div class="bar go"><i id="hold-bar"></i></div>';
+  paint();
   countdown("hold-bar", ms, () => { blip(660, 110); floorAsk(); });
 }
 ACTS.runFire = (dir) => {
@@ -1784,12 +2077,23 @@ ACTS.runFire = (dir) => {
   if (dir === run.fire.cur) run.fire.right++;
   run.fire.next();
 };
+ACTS.useRefresh = () => {
+  if (!run || !run.charges) return;
+  run.charges--;
+  const b = document.querySelector('[data-act="useRefresh"]');
+  if (b) b.remove();
+  const host = $("run-body");
+  if (!host) return;
+  const flash = document.createElement("div");
+  flash.className = "stage";
+  flash.style.marginTop = "10px";
+  flash.innerHTML = drawScene(run.scene);
+  host.insertBefore(flash, host.firstChild);
+  hud();
+  later(() => flash.remove(), 1000);
+};
 
-/* ---- the hazards that own the question ---- */
-/* Every option is visible in the picture that comes back, so looking
-   cannot answer it — only knowing what you put there can. An earlier
-   version asked what had been removed, with options that were all
-   absent; that made the returned picture decorative. */
+/* ---------- the hazards that own the question ---------- */
 function thiefProbe() {
   const victim = pick(run.scene.items);
   const others = run.scene.items.filter((x) => x !== victim);
@@ -1800,8 +2104,8 @@ function thiefProbe() {
     q: "Something in here was never yours. Which?",
     stage: drawScene({ items: others.concat([intruder]), id: "t" }),
     opts: shuffle([kind.name].concat(sample(others.map((x) => x.kind.name), 3))),
-    answerText: kind.name, kind: "absent",
-    teach: "Everything you were offered was on the screen in front of you, so the only way through is knowing what you put in there. If it felt like a guess, the scene never became a picture — three anchors, properly, next time.",
+    answerText: kind.name, kind: "intrusion", facet: "intrusion",
+    teach: "Everything offered was on the screen in front of you, so only knowing what you put there can answer it. If it felt like a guess, the scene never became a picture.",
   };
 }
 function shiftProbe() {
@@ -1811,10 +2115,10 @@ function shiftProbe() {
   if (!free.length) return thiefProbe();
   const items = run.scene.items.map((x) => (x === moved ? Object.assign({}, x, { cell: pick(free) }) : x));
   return {
-    q: "One thing has moved. Which?",
+    q: "Something moved. Which?",
     stage: drawScene({ items: items, id: "s" }),
     opts: optionsAround(moved.kind.name, run.scene.items.map((x) => x.kind.name)),
-    answerText: moved.kind.name, kind: "place", teach: TEACH.place,
+    answerText: moved.kind.name, kind: "place", facet: "position", teach: TEACH.place,
   };
 }
 function liarProbe() {
@@ -1822,42 +2126,76 @@ function liarProbe() {
   const forms = [
     () => {
       const c = truth ? t.colour : pick(PALETTE.filter((p) => p.id !== t.colour.id));
-      return "The " + t.kind.name + " was " + c.name + ".";
+      return ["The " + t.kind.name + " was " + c.name + ".", "colour"];
     },
     () => {
       const c = truth ? t.cell : pick(CELLS.filter((x) => x.i !== t.cell.i));
-      return "The " + t.kind.name + " was in the " + c.name + ".";
+      return ["The " + t.kind.name + " was in the " + c.name + ".", "position"];
     },
     () => {
       const real = it.filter((x) => x.colour.id === t.colour.id).length;
       const n = truth ? real : Math.max(0, real + pick([-1, 1, 2]));
-      return "There " + (n === 1 ? "was" : "were") + " " + n + " " + t.colour.name + " thing" + (n === 1 ? "" : "s") + ".";
+      return ["There " + (n === 1 ? "was" : "were") + " " + n + " " + t.colour.name +
+        " thing" + (n === 1 ? "" : "s") + ".", "colour"];
     },
   ];
+  const f = pick(forms)();
   return {
-    q: "<b>" + pick(forms)() + "</b><br><span style=\"font-weight:400;font-size:15px;color:var(--dim)\">True or false?</span>",
-    opts: ["True", "False"], answerText: truth ? "True" : "False",
-    kind: "binding", teach: TEACH.binding, tf: true,
+    q: "<b>" + f[0] + "</b><br><span style=\"font-weight:400;font-size:15px;color:#7b8593\">True, or never happened?</span>",
+    opts: ["True", "Never happened"], answerText: truth ? "True" : "Never happened",
+    kind: "binding", facet: f[1], teach: TEACH.binding, tf: true,
+  };
+}
+function palaceProbe() {
+  const t = run.palaceItem;
+  return {
+    q: "You left something at <b>" + esc(run.palaceStop) + "</b>. What was it?",
+    opts: optionsAround(t.kind.name, run.scene.items.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))),
+    answerText: t.kind.name, kind: "place", facet: "object",
+    teach: "A place you already know does the holding for you. That is the whole of the technique, and it is the one with real evidence behind it.",
   };
 }
 
+/* Boons that make a question easier do it by taking a wrong answer off
+   the table — never by telling you the answer. */
+function applyKit(p) {
+  const k = run.kit;
+  let ease = false;
+  if (k.anchor && run.anchorId && p.about === run.anchorId) ease = true;
+  if (k.colourbind && (p.facet === "colour" || p.facet === "binding")) ease = true;
+  if (k.detail && p.facet === "detail") ease = true;
+  if (k.corner && run.corner && p.aboutCell != null && run.corner.cells.indexOf(p.aboutCell) > -1) ease = true;
+  if (!ease || p.opts.length <= 3) return p;
+  const right = p.opts[p.answer];
+  const drop = pick(p.opts.filter((o) => o !== right));
+  const opts = p.opts.filter((o) => o !== drop);
+  return Object.assign({}, p, { opts: opts, answer: opts.indexOf(right), eased: true });
+}
+
 function floorAsk() {
-  clearTimers();
+  if (!enter("ask")) return;
   keepAwake(false);
   const ids = run.hz.map((h) => h.id);
   let list;
   if (ids.indexOf("echo") > -1 && run.prev) {
     list = probesFor(run.prev, 1, "plain").map((p) =>
-      Object.assign({}, p, { q: "<span style=\"color:var(--signal)\">From the floor before &mdash;</span> " + p.q }));
+      Object.assign({}, p, { q: '<span style="color:#d98a4f">The floor before —</span> ' + p.q }));
   } else if (ids.indexOf("thief") > -1) list = [thiefProbe()];
   else if (ids.indexOf("shift") > -1) list = [shiftProbe()];
   else if (ids.indexOf("liar") > -1) list = [liarProbe()].concat(probesFor(run.scene, run.spec.probes - 1, "plain"));
+  else if (ids.indexOf("mimic") > -1)
+    list = probesFor(run.scene, run.spec.probes, "plain").filter((p) => p.facet === "colour" || p.facet === "binding")
+      .concat(probesFor(run.scene, run.spec.probes, "plain")).slice(0, run.spec.probes);
   else list = probesFor(run.scene, run.spec.probes, ids.indexOf("turn") > -1 ? "turn" : "plain");
 
-  /* The hazard probes carry their answer as text, the generated ones as
-     an index; settle it here so the handler only deals with one shape. */
-  run.probes = list.filter(Boolean).map((p) =>
-    p.answerText != null ? Object.assign({}, p, { answer: p.opts.indexOf(p.answerText) }) : p);
+  if (run.palaceStop && Math.random() < 0.8) list[list.length - 1] = palaceProbe();
+
+  run.probes = list.filter(Boolean).map((p) => {
+    const settled = p.answerText != null
+      ? Object.assign({}, p, { answer: p.opts.indexOf(p.answerText) })
+      : p;
+    return applyKit(settled);
+  });
   run.at = 0;
   askOne();
 }
@@ -1868,19 +2206,39 @@ function askOne() {
   hud();
   $("run-body").innerHTML =
     (p.stage ? '<div class="stage">' + p.stage + "</div>" : "") +
-    '<span class="lab">' + (run.probes.length > 1 ? "question " + (run.at + 1) + " of " + run.probes.length : "answer it") + "</span>" +
+    '<span class="lab">' + (run.probes.length > 1 ? (run.at + 1) + " of " + run.probes.length : "answer") +
+    (p.eased ? " · shortened" : "") + "</span>" +
     '<p class="qn">' + p.q + "</p>" +
     (p.tf
-      ? '<div class="tf" id="opts">' + p.opts.map((o, i) => '<button data-act="runAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>"
-      : '<div class="opts" id="opts">' + p.opts.map((o, i) => '<button data-act="runAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>");
+      ? '<div class="tf" id="opts">'
+      : '<div class="opts" id="opts">') +
+    p.opts.map((o, i) => '<button data-act="runAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>";
 }
+
+/* What kind of imagery just failed, said out loud, in one line. */
+function missLine(p) {
+  const f = run.floorFacets, other = Object.keys(f).filter((k) => k !== p.facet && f[k].r > 0);
+  const underFire = run.hz.some((h) => h.id === "static");
+  if (underFire) return "You lost it under the Static, not on your own.";
+  if (p.facet === "intrusion") return "Something that was never there got in.";
+  if (other.length) return FACET_NAME[other[0]] + " held. " + FACET_NAME[p.facet].toLowerCase() + " did not.";
+  return FACET_NAME[p.facet] + " went first.";
+}
+
+function tally(facet, ok) {
+  const bump = (m) => { m[facet] = m[facet] || { a: 0, r: 0 }; m[facet].a++; if (ok) m[facet].r++; };
+  bump(run.floorFacets);
+  bump(state.facets);
+  if (run.hz.some((h) => h.id === "static")) bump(state.facetsInt);
+};
 
 ACTS.runAns = (ixStr) => {
   const ix = +ixStr, p = run.probes[run.at];
   if (!p || run.locked) return;
   run.locked = true;
   const good = ix === p.answer;
-  $$("#opts button").forEach((b, i) => {
+  tally(p.facet, good);
+  document.querySelectorAll("#opts button").forEach((b, i) => {
     b.disabled = true;
     if (i === p.answer) b.className = "right";
     else if (i === ix) b.className = "wrong";
@@ -1888,94 +2246,159 @@ ACTS.runAns = (ixStr) => {
 
   if (good) {
     blip(880, 80);
-    later(() => { run.locked = false; run.at++; askOne(); }, 420);
+    later(() => { run.locked = false; run.at++; askOne(); }, 430);
     return;
   }
 
   run.holds--;
-  run.lastMiss = { q: p.q, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach };
-  run.killedBy = run.hz.length ? run.hz[0].name : null;
+  run.lastMiss = { q: p.q, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach, facet: p.facet };
+  run.killedBy = run.boss ? run.boss.name : (run.hz.length ? run.hz[0].name : null);
   blip(170, 260);
   hud();
   $("run-body").insertAdjacentHTML("beforeend",
-    '<div class="hit"><b>' + esc(p.opts[p.answer]) + "</b> &mdash; that's a hold. " +
-    (run.holds > 0 ? run.holds + " left." : "And that's the run.") + "</div>");
+    '<div class="hit"><b>' + esc(p.opts[p.answer]) + "</b> — " + missLine(p) + "<br>" +
+    (run.holds > 0 ? "That is a hold. " + run.holds + " left." : "That was the last one.") + "</div>");
   later(() => {
     run.locked = false;
     if (run.holds <= 0) return runOver();
     run.at++;
     askOne();
-  }, 1500);
+  }, 1700);
 };
 
 function floorCleared() {
-  if (run.boon.risk) {
-    run.boon.risk = false;
+  hud();
+  state.floorsCleared = (state.floorsCleared || 0) + 1;
+  if (run.boss) {
     run.maxHolds++;
     run.holds = Math.min(run.maxHolds, run.holds + 1);
+    blip(520, 200);
+    $("run-body").innerHTML =
+      '<span class="lab">it let you past</span>' +
+      '<h2 class="ask" style="margin:6px 0 10px;color:#e0913f">' + run.boss.name + " is behind you.</h2>" +
+      "<p>You carry one more hold from here.</p>" +
+      '<div class="row" style="margin-top:16px"><button class="btn prime" data-act="afterBoss">Keep going down</button></div>';
+    return;
   }
-  hud();
-  /* A breather and a choice every third floor; otherwise keep moving,
-     because stopping to read a report card is what killed the pace. */
   if (run.floor % 3 === 0) return offerBoon();
   blip(740, 90);
   nextFloor();
 }
+ACTS.afterBoss = () => offerBoon();
 
 function offerBoon() {
-  const usable = BOONS.filter((b) => b.ok());
-  const two = sample(usable, Math.min(2, usable.length));
+  const have = Object.keys(run.kit);
+  const usable = BOONS.filter((b) => b.id === "refresh" || have.indexOf(b.id) < 0);
+  const three = sample(usable, Math.min(3, usable.length));
   $("run-body").innerHTML =
     '<span class="lab">floor ' + run.floor + " clear</span>" +
-    '<h2 class="ask" style="margin:6px 0 4px">Still standing.</h2>' +
-    '<p class="sub">Take one before you go down.</p>' +
+    '<h2 class="ask" style="margin:6px 0 4px">Take something down with you.</h2>' +
+    '<p class="sub">These are techniques, not cheats. They stay for the rest of the run.</p>' +
     '<div class="boon">' +
-    two.map((b) => '<button data-act="takeBoon" data-arg="' + b.id + '">' +
-      '<span class="t' + (b.risk ? " risk" : "") + '">' + b.t + "</span>" +
-      '<span class="d">' + b.d + "</span></button>").join("") +
+    three.map((b) => '<button data-act="takeBoon" data-arg="' + b.id + '">' +
+      '<span class="k">' + b.k + '</span><span class="t">' + b.t + '</span><span class="d">' + b.d + "</span></button>").join("") +
     "</div>" +
-    '<div class="row" style="margin-top:14px"><button class="btn" data-act="takeBoon" data-arg="none">Neither, keep going</button></div>';
+    '<div class="row" style="margin-top:13px">' +
+    '<button class="btn" data-act="takeBoon" data-arg="push">Take nothing · two hazards next floor, and a hold back</button></div>';
 }
+
 ACTS.takeBoon = (id) => {
-  if (id === "heal") run.holds = Math.min(run.maxHolds, run.holds + 1);
-  if (id === "skip") run.boon.skip = true;
-  if (id === "look") run.boon.look = true;
-  if (id === "short") run.boon.short = true;
-  if (id === "risk") run.boon.risk = true;
+  if (id === "push") {
+    run.pushed = true;
+    run.holds = Math.min(run.maxHolds, run.holds + 1);
+    blip(740, 90);
+    return nextFloor();
+  }
+  if (id === "refresh") { run.charges++; blip(740, 90); return nextFloor(); }
+  if (id === "corner") {
+    run.kit.corner = true;
+    $("run-body").innerHTML =
+      '<span class="lab">corner lock</span>' +
+      '<h2 class="ask" style="margin:6px 0 10px">Which quarter is yours?</h2>' +
+      '<p class="sub">The hold will send you back to it, and questions about what lives there come with a shorter list.</p>' +
+      '<div class="opts" style="margin-top:14px">' +
+      CORNERS.map((c) => '<button data-act="pickCorner" data-arg="' + c.id + '">' + c.name + "</button>").join("") +
+      "</div>";
+    return;
+  }
+  run.kit[id] = true;
+  blip(740, 90);
+  nextFloor();
+};
+ACTS.pickCorner = (id) => {
+  run.corner = CORNERS.find((c) => c.id === id) || CORNERS[0];
   blip(740, 90);
   nextFloor();
 };
 
+/* ---------- what the run says about you ---------- */
+function diagnose(map) {
+  const rows = Object.keys(map).filter((k) => map[k].a >= 4)
+    .map((k) => ({ k: k, acc: map[k].r / map[k].a }));
+  if (rows.length < 2) return null;
+  rows.sort((a, b) => a.acc - b.acc);
+  const worst = rows[0], best = rows[rows.length - 1];
+  if (best.acc - worst.acc < 0.2) return null;
+  const say = {
+    colour: "Shape and place stay. Colour is the first thing you drop.",
+    binding: "You keep the objects and you keep the colours — you lose which belonged to which.",
+    detail: "Objects and places hold. The small detail on them collapses.",
+    position: "You know what was there. Where it was goes.",
+    object: "The layout survives better than what was actually in it.",
+    rotation: "It holds still and comes apart the moment it has to move.",
+    intrusion: "Things that were never there get in — the picture is loose enough to accept them.",
+  };
+  return (say[worst.k] || FACET_NAME[worst.k] + " is the weak one.") +
+    " " + FACET_NAME[best.k] + " is your strongest, at " + Math.round(best.acc * 100) +
+    "% against " + Math.round(worst.acc * 100) + "%.";
+}
+
+function interferenceLine() {
+  const all = state.facets, fire = state.facetsInt;
+  const sum = (m) => Object.keys(m).reduce((o, k) => ({ a: o.a + m[k].a, r: o.r + m[k].r }), { a: 0, r: 0 });
+  const A = sum(all), F = sum(fire);
+  if (F.a < 6 || A.a - F.a < 6) return null;
+  const clean = (A.r - F.r) / (A.a - F.a), under = F.r / F.a;
+  if (clean - under < 0.12) return "Interference barely touches you — you hold it just as well with something else running.";
+  return "Quiet, you hold " + Math.round(clean * 100) + "%. Under the Static, " + Math.round(under * 100) +
+    "%. That gap is the thing worth training.";
+}
+
 function runOver() {
   clearTimers();
+  run.phase = "over";
   keepAwake(false);
   const depth = run.floor;
   const best = Math.max(state.bestDepth || 0, depth);
   const isBest = depth > (state.bestDepth || 0);
   state.bestDepth = best;
-  state.runs.push({ at: now(), depth: depth, by: run.killedBy || "" });
+  state.runs.push({ at: now(), depth: depth, by: run.killedBy || "", hold: Math.round(run.holdMs / 1000) });
   state.rounds.push({ mode: "run", at: now(), level: depth, right: depth, asked: depth });
+  if (run.killedBy) state.killers[run.killedBy] = (state.killers[run.killedBy] || 0) + 1;
+  state.holdSec = (state.holdSec || 0) + Math.round(run.holdMs / 1000);
   save();
 
-  const m = run.lastMiss;
+  const m = run.lastMiss, d = diagnose(state.facets), inter = interferenceLine();
   $("run-hud").innerHTML = "";
   $("run-body").innerHTML =
     '<span class="lab">the run is over</span>' +
-    '<p style="margin:4px 0 0">You got to</p>' +
+    '<p style="margin:4px 0 0;color:#67707d">You got to</p>' +
     '<div class="depth">' + depth + "</div>" +
-    '<p style="margin:8px 0 0;font-size:17px">' +
-    (isBest && depth > 3 ? "Deeper than you’ve been." : "Your best is " + best + ".") +
+    '<p style="margin:8px 0 0;font-size:17px;color:#c3cbd5">' +
+    (isBest && depth > 3 ? "Deeper than you have been." : "Your best is " + best + ".") +
     (run.killedBy ? " " + run.killedBy + " had you." : "") + "</p>" +
     '<div class="stage" style="margin-top:16px">' + drawScene(run.scene) + "</div>" +
     '<p class="sub" style="margin-top:9px">The floor you went out on.</p>' +
     (m
-      ? '<div class="verdict miss"><span class="h">the one that did it</span>' +
-        m.q.replace(/<[^>]+>/g, "") + "<br>You said <b>" + esc(m.gave) + "</b>. The answer was <b>" + esc(m.want) + "</b>.</div>" +
-        '<div class="tip"><span class="h">for next time</span>' + m.teach + "</div>"
+      ? '<div class="hit" style="margin-top:14px"><b>' + FACET_NAME[m.facet] + "</b> — you said " +
+        esc(m.gave) + ", it was " + esc(m.want) + ".</div>"
       : "") +
+    (d ? '<div class="read"><b>What this run says.</b> ' + d + "</div>" : "") +
+    (inter ? '<div class="read"><b>Under fire.</b> ' + inter + "</div>" : "") +
+    (m && m.teach ? '<div class="read">' + m.teach + "</div>" : "") +
     '<div class="row" style="margin-top:18px">' +
     '<button class="btn prime" data-act="runStart">Go again</button>' +
-    '<button class="btn" data-go="home">Stop here</button></div>';
+    '<button class="btn" data-act="runQuit">Out</button></div>';
   blip(150, 420);
 }
 
@@ -2063,92 +2486,159 @@ function accuracy(mode, n) {
   return a ? Math.round((g / a) * 100) : null;
 }
 
+/* The run finds the weakness; this points at the drill for it. One
+   suggestion at a time, and only when there is enough to say it. */
+const DRILL_FOR = {
+  "The Shift": ["Shift keeps taking you. Drill holding <i>where</i> things are.", "scene"],
+  "The Stranger": ["The Stranger keeps getting in. Drill knowing exactly what you put there.", "scene"],
+  "The Static": ["The Static is what breaks it. Practise holding through interference.", "fire"],
+  "The Turn": ["The Turn is ending your runs. Practise moving the picture.", "turn"],
+  "The Blind": ["The Blind is ending your runs. Practise building one from words.", "blueprint"],
+  "The Echo": ["The Echo is ending your runs — you are dropping the old floor. Practise carrying more.", "stack"],
+  "The Drip": ["The Drip is ending your runs. Practise stacking them one at a time.", "stack"],
+  "The Fade": ["The Fade is ending your runs. Practise taking anchors fast.", "scene"],
+  "The Mimic": ["The Mimic is ending your runs. Drill colour and object as one thing.", "scene"],
+  "The Liar": ["The Liar keeps catching you. Practise re-looking rather than recalling.", "scene"],
+};
+const FACET_DRILL = {
+  rotation: ["Turning it is your weakest. Practise moving the picture.", "turn"],
+  binding: ["Colour-to-object binding is your weakest. Drill it while it is quiet.", "scene"],
+  colour: ["Colour goes first for you. Drill it while it is quiet.", "scene"],
+  position: ["Position is your weakest. Drill it while it is quiet.", "scene"],
+  detail: ["Small details collapse first for you. Drill them slowly.", "scene"],
+  object: ["What was actually there is the weak one. Try building from words.", "blueprint"],
+  intrusion: ["Things that were never there get in. Practise a shorter, sharper list.", "scene"],
+};
+
+function renderSuggest() {
+  const el = $("home-suggest");
+  if (!el) return;
+  el.innerHTML = "";
+  const kills = Object.keys(state.killers || {});
+  let pickOne = null;
+
+  if (kills.length) {
+    kills.sort((a, b) => state.killers[b] - state.killers[a]);
+    if (state.killers[kills[0]] >= 2 && DRILL_FOR[kills[0]]) pickOne = DRILL_FOR[kills[0]];
+  }
+  if (!pickOne) {
+    const f = state.facets || {};
+    const rows = Object.keys(f).filter((k) => f[k].a >= 6).map((k) => ({ k: k, acc: f[k].r / f[k].a }));
+    if (rows.length >= 2) {
+      rows.sort((a, b) => a.acc - b.acc);
+      if (rows[rows.length - 1].acc - rows[0].acc >= 0.2) pickOne = FACET_DRILL[rows[0].k];
+    }
+  }
+  if (!pickOne) return;
+  el.innerHTML = '<div class="suggest">' + pickOne[0] +
+    '<br><button class="btn" data-mode="' + pickOne[1] + '" style="margin-top:9px">' +
+    MODES[pickOne[1]].name + "</button></div>";
+}
+
 function paintBest() {
   const el = $("run-best");
   if (!el) return;
   el.innerHTML = state.bestDepth
-    ? "deepest so far &middot; floor " + state.bestDepth
-    : "three holds &middot; no streak &middot; nothing to keep up";
+    ? "deepest · floor " + state.bestDepth + (state.runs.length ? " · " + state.runs.length + " runs" : "")
+    : "three holds · hazards from floor three · a boss every fifth";
 }
 
 function renderHomeYou() {
   const el = $("home-you");
   if (!el) return;
-  if (!state.rounds.length) {
-    el.innerHTML = '<p class="sub" style="margin:0">Nothing yet. Start anywhere — the first few rounds are mostly the app working out where your edge is.</p>';
+  if (!state.runs.length && !state.rounds.length) {
+    el.innerHTML = '<p class="sub" style="margin:0">Nothing yet. Go down and find out where it breaks — the first few runs are mostly the app working out what your head does.</p>';
     return;
   }
-  const today_ = state.rounds.filter((r) => dayKey(r.at) === dayKey(now())).length;
-  const acc = accuracy(null, 25);
+  const runs = state.runs.slice(-12);
+  const avg = runs.length ? Math.round(runs.reduce((a, r) => a + r.depth, 0) / runs.length) : 0;
+  const kills = Object.keys(state.killers || {}).sort((a, b) => state.killers[b] - state.killers[a]);
   el.innerHTML =
     '<div class="grid2">' +
-    '<div class="stat"><span class="k">right now</span><span class="v">' + modeLine("scene").split(",")[0] +
-    '</span><span class="d">' + modeLine("scene").split(",").slice(1).join(",").trim() + " on the basic round</span></div>" +
-    '<div class="stat"><span class="k">lately</span><span class="v">' + (acc === null ? "—" : acc + "%") +
-    '</span><span class="d">of questions over your last few rounds</span></div>' +
+    '<div class="stat"><span class="k">deepest</span><span class="v">' + (state.bestDepth || 0) +
+    '</span><span class="d">' + (runs.length ? "lately about " + avg : "no runs yet") + "</span></div>" +
+    '<div class="stat"><span class="k">held for</span><span class="v">' +
+    Math.round((state.holdSec || 0) / 60) + 'm</span><span class="d">total time with the picture and nothing else</span></div>' +
     "</div>" +
-    '<p class="sub" style="margin-top:12px">' + state.rounds.length + " rounds so far" +
-    (today_ ? ", " + today_ + " today" : "") +
-    (state.walkBest ? " &middot; best walk: " + state.walkBest + " things" : "") +
-    ' &middot; <a href="#" data-go="you" style="color:var(--signal)">the longer version</a></p>';
+    (kills.length
+      ? '<p class="sub" style="margin-top:11px">Ends your runs most: <b>' + esc(kills[0]) + "</b>." : "") +
+    '<p class="sub" style="margin-top:6px"><a href="#" data-go="you" style="color:var(--signal)">The full read-out</a></p>';
 }
 
 function renderYou() {
   const b = $("you-body");
-  if (!state.rounds.length) {
-    b.innerHTML = '<p>Nothing to show yet. Come back after a few rounds.</p>' +
-      '<div class="row"><button class="btn prime" data-go="home">Go and do one</button></div>';
+  const f = state.facets || {};
+  const anyFacet = Object.keys(f).some((k) => f[k].a);
+  if (!state.runs.length && !anyFacet) {
+    b.innerHTML = "<p>Nothing to show yet. Go down a few floors first.</p>" +
+      '<div class="row"><button class="btn prime" data-act="runStart">Start The Run</button></div>';
     return;
   }
-  const modes = ["scene", "blueprint", "fire", "turn"];
-  const runs = state.runs.slice(-12);
-  const last = state.rounds.slice(-30);
-  const maxA = Math.max.apply(null, last.map((r) => r.asked || 1));
+
+  const runs = state.runs.slice(-20);
+  const avgDepth = runs.length ? (runs.reduce((a, r) => a + r.depth, 0) / runs.length).toFixed(1) : "—";
+  const avgHold = runs.length && runs.some((r) => r.hold)
+    ? Math.round(runs.reduce((a, r) => a + (r.hold || 0), 0) / runs.filter((r) => r.hold).length) : null;
+  const kills = Object.keys(state.killers || {}).sort((a, b) => state.killers[b] - state.killers[a]);
+  const d = diagnose(f), inter = interferenceLine();
+
+  const order = ["object", "position", "colour", "binding", "detail", "rotation", "intrusion"];
+  const bars = order.filter((k) => f[k] && f[k].a).map((k) => {
+    const acc = f[k].r / f[k].a, on = Math.round(acc * 12);
+    const weak = acc < 0.6;
+    return '<div class="facet"><div class="facetrow"><div class="facetname">' + FACET_NAME[k] + "</div>" +
+      '<div class="facetval">' + Math.round(acc * 100) + "% · " + f[k].a + "</div></div>" +
+      '<div class="fbar">' + Array.from({ length: 12 }, (_, i) =>
+        '<i class="' + (i < on ? (weak ? "weak" : "on") : "") + '"></i>').join("") + "</div></div>";
+  }).join("");
 
   b.innerHTML =
-    '<p class="sub" style="margin-bottom:18px">This is a description of where you are, not a target and not a score. A bad day means you slept badly or the room was loud. A gap of three weeks costs you nothing here.</p>' +
+    '<p class="sub" style="margin-bottom:18px">What the runs have worked out about your imagery. This is a description, not a target — a bad day means you slept badly or the room was loud.</p>' +
+
+    '<div class="grid2">' +
+    '<div class="stat"><span class="k">deepest floor</span><span class="v">' + (state.bestDepth || 0) +
+    '</span><span class="d">over ' + state.runs.length + " run" + (state.runs.length === 1 ? "" : "s") + "</span></div>" +
+    '<div class="stat"><span class="k">average run</span><span class="v">' + avgDepth +
+    '</span><span class="d">floors, over your last few</span></div>' +
+    '<div class="stat"><span class="k">hold per run</span><span class="v">' + (avgHold === null ? "—" : avgHold + "s") +
+    '</span><span class="d">time carrying the picture with nothing on screen</span></div>' +
+    '<div class="stat"><span class="k">floors cleared</span><span class="v">' + (state.floorsCleared || 0) +
+    '</span><span class="d">all runs, all time</span></div>' +
+    "</div>" +
+
+    (d ? '<div class="note" style="margin-top:16px"><b>What holds and what goes.</b> ' + d + "</div>" : "") +
+    (inter ? '<div class="note"><b>Under interference.</b> ' + inter + "</div>" : "") +
+
+    (bars ? '<div class="sec"><h3><span>Part by part</span></h3>' +
+      '<p class="sub" style="margin:-4px 0 8px">Share of questions you get right on each, and how many it is based on. Red is under sixty.</p>' +
+      bars + "</div>" : "") +
+
+    (kills.length
+      ? '<div class="sec"><h3><span>What ends your runs</span></h3><div class="tw"><table><tbody>' +
+        kills.slice(0, 6).map((k) =>
+          '<tr><td>' + esc(k) + '</td><td class="n" style="text-align:right">' + state.killers[k] + "</td></tr>").join("") +
+        "</tbody></table></div></div>"
+      : "") +
 
     (runs.length
-      ? '<div class="sec"><h3><span>The run</span></h3>' +
-        '<div class="grid2"><div class="stat"><span class="k">deepest</span><span class="v">floor ' +
-        state.bestDepth + '</span><span class="d">over ' + state.runs.length + " run" +
-        (state.runs.length === 1 ? "" : "s") + "</span></div>" +
-        '<div class="stat"><span class="k">lately</span><span class="v">' +
-        Math.round(runs.reduce((a, r) => a + r.depth, 0) / runs.length) +
-        '</span><span class="d">average floor over your last few</span></div></div>' +
-        (runs.filter((r) => r.by).length
-          ? '<p class="sub" style="margin-top:10px">What keeps ending them: ' +
-            Object.keys(runs.filter((r) => r.by).reduce((m, r) => { m[r.by] = (m[r.by] || 0) + 1; return m; }, {}))
-              .slice(0, 3).join(", ") + ".</p>"
-          : "") + "</div>"
-      : "") +
-    '<div class="sec"><h3><span>What each round is giving you now</span></h3>' +
-    modes.map((m) =>
-      '<div class="stat" style="margin-bottom:8px"><span class="k">' + MODES[m].name + "</span>" +
-      '<span class="v" style="font-size:17px">' + modeLine(m) + "</span>" +
-      '<span class="d">level ' + (state.level[m] || 1) + " of 20" +
-      (accuracy(m, 12) !== null ? " &middot; " + accuracy(m, 12) + "% lately" : "") + "</span></div>").join("") +
-    '<div class="stat"><span class="k">One more thing</span>' +
-    '<span class="v" style="font-size:17px">' + modeLine("stack") + "</span>" +
-    '<span class="d">the most you’ve carried in one run</span></div>' +
-    "</div>" +
-
-    (state.walkBest
-      ? '<div class="sec"><h3><span>The walk</span></h3>' +
-        '<div class="stat"><span class="k">best</span><span class="v">' + state.walkBest +
-        ' things</span><span class="d">carried in order, off a route you already knew</span></div>' +
-        '<p class="sub" style="margin-top:10px">This is the number worth watching over weeks. It tends to move a lot, and it moves because of technique rather than effort.</p></div>'
+      ? '<div class="sec"><h3><span>Last ' + runs.length + " runs</span></h3>" +
+        '<div class="spark">' + runs.map((r, i) =>
+          '<i class="' + (i === runs.length - 1 ? "last" : "") + '" style="height:' +
+          clamp(Math.round((r.depth / Math.max(4, state.bestDepth || 4)) * 100), 6, 100) + '%"></i>').join("") +
+        "</div><p class=\"sub\" style=\"margin-top:8px\">How deep each one got.</p></div>"
       : "") +
 
-    '<div class="sec"><h3><span>Last ' + last.length + " rounds</span></h3>" +
-    '<div class="spark">' +
-    last.map((r, i) =>
-      '<i class="' + (i === last.length - 1 ? "last" : "") + '" style="height:' +
-      Math.max(6, Math.round(((r.right || 0) / (r.asked || 1)) * 100)) + '%"></i>').join("") +
-    "</div>" +
-    '<p class="sub" style="margin-top:8px">Share of questions you got, round by round. It should hover around three quarters — if it sits at 100% the app will make it harder, and if it bottoms out it will ease off.</p></div>' +
+    '<div class="sec"><h3><span>Practice</span></h3><div id="you-suggest"></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn prime" data-act="runStart">Start The Run</button>' +
+    '<button class="btn" data-go="home">Back</button></div></div>';
 
-    '<div class="row" style="margin-top:20px"><button class="btn prime" data-go="home">Back</button></div>';
+  const sg = $("you-suggest");
+  if (sg) {
+    const hold = $("home-suggest");
+    renderSuggest();
+    if (hold && hold.innerHTML) sg.innerHTML = hold.innerHTML;
+    else sg.innerHTML = '<p class="sub" style="margin:0">Nothing stands out yet — keep going and the weak one will show.</p>';
+  }
 }
 
 /* ---------- boot ---------- */
