@@ -1,0 +1,3423 @@
+<title>Afterimage</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<meta name="theme-color" content="#14171b">
+<meta name="description" content="Attention and imagery training that teaches technique instead of selling you a daily drill.">
+
+<style>
+:root{
+  --ground:#e4e5e1; --panel:#f4f4f1; --panel-2:#eaeae6;
+  --ink:#14171b; --ink-soft:#3a4048; --dim:#6c727b;
+  --rule:#cbccc7; --hair:#dcddd8;
+  --signal:#b0500c; --signal-w:#b0500c14;
+  --go:#0e6a56; --go-w:#0e6a5614;
+  --warn:#8a2f22; --warn-w:#8a2f2214;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#15181d; --panel:#1c2027; --panel-2:#232830;
+    --ink:#e6e7e3; --ink-soft:#bcbfc5; --dim:#868c95;
+    --rule:#333844; --hair:#262b33;
+    --signal:#f0a057; --signal-w:#f0a0571f;
+    --go:#56c4a6; --go-w:#56c4a61f;
+    --warn:#e08573; --warn-w:#e085731f;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#15181d; --panel:#1c2027; --panel-2:#232830;
+  --ink:#e6e7e3; --ink-soft:#bcbfc5; --dim:#868c95;
+  --rule:#333844; --hair:#262b33;
+  --signal:#f0a057; --signal-w:#f0a0571f;
+  --go:#56c4a6; --go-w:#56c4a61f;
+  --warn:#e08573; --warn-w:#e085731f;
+}
+
+*{box-sizing:border-box}
+/* An SVG carrying only a viewBox has no intrinsic width. Chromium infers
+   one from the ratio; WebKit falls back to 300px and then uses that as a
+   grid item's minimum, which shoves the board wider than the phone and
+   drops the whole page into the corner. Every generated SVG below is
+   given real width/height attributes, and these two rules make it
+   impossible for any of them to push a container open. */
+svg{max-width:100%;height:auto}
+.opts>*,.pick>*,.tf>*,.grid2>*,.fire>*,.stack>*,.boon>*{min-width:0}
+html,body{max-width:100%;overflow-x:hidden}
+[hidden]{display:none!important}
+
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:"Hanken Grotesk","Helvetica Neue",Arial,sans-serif;
+  font-size:16px;line-height:1.55;
+  -webkit-text-size-adjust:100%;
+  -webkit-tap-highlight-color:transparent;
+}
+.app{max-width:760px;margin:0 auto;padding:22px 18px 60px}
+@media (max-width:420px){ .app{padding:18px 15px 52px} }
+
+h1,h2,h3{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;letter-spacing:-.02em;margin:0}
+.mast{border-bottom:1px solid var(--ink);padding-bottom:14px;margin-bottom:22px}
+.mast h1{font-size:clamp(25px,6.4vw,34px);font-weight:700;display:flex;align-items:center;gap:10px}
+.mast p{margin:7px 0 0;color:var(--dim);font-size:14px;max-width:52ch}
+.dot{width:10px;height:10px;background:var(--signal);flex:none;border-radius:50%}
+
+h2.ask{font-size:clamp(23px,5.6vw,30px);font-weight:700;line-height:1.16;margin-bottom:10px;text-wrap:balance}
+h3{font-size:15px;font-weight:700;margin-bottom:9px}
+p{margin:0 0 13px}
+.sub{color:var(--dim);font-size:14px;line-height:1.5}
+.lab{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim)}
+
+.sec{border-top:1px solid var(--rule);padding-top:16px;margin-top:26px}
+.sec h3{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);font-weight:500}
+
+.note{border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--panel);
+  padding:13px 15px;font-size:14px;line-height:1.5;margin:0 0 16px}
+.note b{font-weight:600}
+
+button{font:inherit;color:inherit}
+.btn{background:var(--panel);border:1px solid var(--rule);color:var(--ink);
+  padding:12px 16px;cursor:pointer;font-size:15px;font-weight:500;min-height:46px;border-radius:0}
+.btn:hover{border-color:var(--ink)}
+.btn.prime{background:var(--go);border-color:var(--go);color:var(--panel);font-weight:600}
+.btn.prime:hover{opacity:.9}
+.btn:disabled{opacity:.42;cursor:default}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.back{background:none;border:0;color:var(--dim);cursor:pointer;padding:9px 0;margin:0 0 6px;
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+.back:hover{color:var(--ink)}
+
+.stack{display:grid;gap:9px}
+.big{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--rule);
+  padding:15px 16px;cursor:pointer;border-radius:0}
+.big:hover{border-color:var(--ink)}
+.big .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;
+  font-size:18px;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+.big .d{display:block;color:var(--dim);font-size:13.5px;line-height:1.45;margin-top:4px}
+.big .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--signal);margin-bottom:5px}
+
+.field{background:var(--panel);border:1px solid var(--rule);color:var(--ink);
+  padding:12px 13px;font:inherit;font-size:max(1rem,16px);width:100%;border-radius:0}
+.field:focus{outline:2px solid var(--signal);outline-offset:-2px;border-color:var(--signal)}
+
+/* ---- the stage: always its own dark ground, in both themes, so the
+   colours mean the same thing every time and the picture is the only
+   bright thing on the screen ---- */
+.stage{position:relative;width:100%;background:#10131a;border:1px solid var(--rule);overflow:hidden}
+.stage svg{width:100%;height:auto;display:block}
+.stage .hold{color:#39404d;font-family:"JetBrains Mono",monospace;font-size:11px;
+  letter-spacing:.18em;text-transform:uppercase;text-align:center;padding:0 20px;line-height:1.9}
+.stage .holdbig{color:#5d6675;font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:19px;
+  font-weight:600;letter-spacing:-.01em;text-transform:none;display:block;margin-bottom:6px}
+.bar{height:3px;background:var(--hair);margin:0;position:relative;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--signal);width:0}
+.bar.go i{background:var(--go)}
+
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+@media (max-width:380px){.opts{grid-template-columns:minmax(0,1fr)}}
+.opts button{background:var(--panel);border:1px solid var(--rule);padding:14px 13px;cursor:pointer;
+  font-size:15px;text-align:left;min-height:52px;border-radius:0;line-height:1.3}
+.opts button:hover{border-color:var(--ink)}
+.opts button.right{border-color:var(--go);background:var(--go-w);box-shadow:inset 3px 0 0 var(--go)}
+.opts button.wrong{border-color:var(--warn);background:var(--warn-w);box-shadow:inset 3px 0 0 var(--warn)}
+.opts button:disabled{cursor:default}
+
+.qn{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 92;
+  font-size:clamp(19px,4.6vw,23px);font-weight:700;line-height:1.22;margin:16px 0 0;text-wrap:balance}
+.qcount{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);margin-top:14px;display:block}
+
+.verdict{border:1px solid var(--rule);background:var(--panel);padding:13px 15px;margin:14px 0 0;font-size:14.5px;line-height:1.5}
+.verdict.good{border-left:3px solid var(--go)}
+.verdict.miss{border-left:3px solid var(--warn)}
+.verdict .h{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);display:block;margin-bottom:5px}
+
+.tip{border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--signal-w);
+  padding:12px 14px;margin:14px 0 0;font-size:14px;line-height:1.5}
+.tip .h{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--signal);display:block;margin-bottom:5px}
+
+.desc{border:1px solid var(--rule);background:var(--panel);padding:16px 17px;font-size:16.5px;line-height:1.75}
+.desc li{margin-bottom:9px}
+.desc ul{margin:0;padding-left:20px}
+.desc b{font-weight:700}
+
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:420px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.stat{border:1px solid var(--rule);background:var(--panel);padding:13px 14px}
+.stat .k{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);display:block;margin-bottom:4px}
+.stat .v{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:25px;font-weight:700;
+  letter-spacing:-.02em;display:block;line-height:1.1}
+.stat .d{display:block;color:var(--dim);font-size:12.5px;margin-top:3px;line-height:1.35}
+
+.stops{display:grid;gap:7px;margin-top:10px}
+.stop{display:flex;gap:10px;align-items:center;border:1px solid var(--hair);background:var(--panel);padding:9px 11px}
+.stop .n{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);flex:none;min-width:18px}
+.stop input{flex:1;min-width:0;background:none;border:0;color:var(--ink);font:inherit;font-size:max(15px,16px);padding:2px 0}
+.stop input:focus{outline:none;color:var(--signal)}
+.stop .x{background:none;border:0;color:var(--dim);cursor:pointer;font-size:16px;padding:2px 5px;flex:none}
+
+.locus{border:1px solid var(--rule);background:var(--panel);padding:18px 18px 16px;text-align:center}
+.locus .where{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim);display:block;margin-bottom:8px}
+.locus .item{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(30px,8vw,44px);font-weight:700;letter-spacing:-.03em;line-height:1.1;display:block}
+.locus .cue{display:block;color:var(--signal);font-size:14.5px;margin-top:10px;line-height:1.45;text-wrap:balance}
+
+.recallrow{display:flex;gap:9px;align-items:center;border-bottom:1px solid var(--hair);padding:9px 0}
+.recallrow .n{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--dim);flex:none;min-width:70px}
+.recallrow .got{color:var(--go);font-weight:600}
+.recallrow .lost{color:var(--dim);text-decoration:line-through}
+
+.spark{display:flex;align-items:flex-end;gap:3px;height:42px;margin-top:10px}
+.spark i{flex:1;background:var(--rule);min-height:2px;display:block}
+.spark i.last{background:var(--signal)}
+
+.foot{border-top:1px solid var(--rule);margin-top:34px;padding-top:13px;display:flex;
+  gap:14px;align-items:center;flex-wrap:wrap}
+.errbar{border:1px solid var(--warn);border-left:3px solid var(--warn);background:var(--panel-2);
+  padding:11px 13px;margin-bottom:16px;font-size:13.5px;line-height:1.45;overflow-wrap:anywhere}
+.errbar b{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--warn);display:block;margin-bottom:4px;font-weight:500}
+
+.fire{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.fire button{background:var(--panel);border:1px solid var(--rule);padding:17px 8px;cursor:pointer;
+  font-family:"JetBrains Mono",monospace;font-size:19px;min-height:60px;border-radius:0}
+.fire button:hover{border-color:var(--ink)}
+.firelab{text-align:center;font-size:15px;margin:14px 0 0;line-height:1.4}
+.firelab b{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:21px;font-weight:700}
+
+/* ---- the run ---- */
+.run-card{display:block;width:100%;text-align:left;cursor:pointer;border-radius:0;
+  border:1px solid var(--ink);background:var(--panel);padding:17px 18px;margin-bottom:8px}
+.run-card:hover{background:var(--panel-2)}
+.run-card .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--signal);margin-bottom:5px}
+.run-card .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(27px,7vw,36px);font-weight:700;letter-spacing:-.03em;line-height:1.05}
+.run-card .d{display:block;color:var(--dim);font-size:13.5px;line-height:1.45;margin-top:7px}
+.run-card .best{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--signal);margin-top:11px}
+
+.hud{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--rule);
+  padding-bottom:9px;margin-bottom:14px;flex-wrap:wrap}
+.hud .fl{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:19px;font-weight:700;letter-spacing:-.02em}
+.hud .fl b{color:var(--signal)}
+.holds{display:flex;gap:5px;margin-left:auto}
+.holds i{width:11px;height:11px;border:1.5px solid var(--go);background:var(--go);display:block}
+.holds i.gone{background:none;border-color:var(--rule)}
+.hud .hz{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--signal)}
+
+.hazcard{border:1px solid var(--signal);background:var(--signal-w);padding:20px 18px;text-align:center}
+.hazcard .n{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(28px,7.5vw,38px);font-weight:700;letter-spacing:-.03em;line-height:1.05;color:var(--signal)}
+.hazcard .l{display:block;font-size:15.5px;margin-top:8px;line-height:1.4}
+.hazcard .two{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+
+.hit{border-left:3px solid var(--warn);background:var(--warn-w);border:1px solid var(--warn);
+  padding:13px 15px;margin-top:14px;font-size:15px;line-height:1.45}
+.hit b{font-weight:700}
+.clear{border:1px solid var(--go);background:var(--go-w);border-left:3px solid var(--go);
+  padding:13px 15px;margin-top:14px;font-size:15px}
+
+.boon{display:grid;gap:9px;margin-top:14px}
+.boon button{text-align:left;background:var(--panel);border:1px solid var(--rule);padding:14px 15px;
+  cursor:pointer;border-radius:0}
+.boon button:hover{border-color:var(--ink)}
+.boon .t{display:block;font-weight:700;font-size:16px}
+.boon .d{display:block;color:var(--dim);font-size:13px;margin-top:3px;line-height:1.4}
+.boon .risk{color:var(--signal)}
+
+.depth{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(56px,17vw,86px);font-weight:700;letter-spacing:-.05em;line-height:.9;color:var(--signal)}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.tf button{padding:20px 12px;font-size:17px;font-weight:600;background:var(--panel);
+  border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
+.tf button:hover{border-color:var(--ink)}
+
+/* ---- in the run, the room changes ----
+   Chrome dims, the subtitle and the footer go, and the ground goes dark
+   whatever the theme is. Entering the run should feel like entering
+   somewhere, not like opening another tab of the same app. */
+body.inrun{background:#0a0d12;color:#dde1e7}
+body.inrun .mast{border-bottom-color:#20262f;padding-bottom:9px;margin-bottom:16px}
+body.inrun .mast h1{font-size:19px;color:#6d7886;font-weight:600;letter-spacing:.02em}
+body.inrun .mast .dot{background:#8a4a12;width:7px;height:7px}
+body.inrun .mast p,body.inrun .foot{display:none}
+body.inrun .back{color:#4d5663}
+body.inrun .btn{background:#151a22;border-color:#2a323d;color:#dde1e7}
+body.inrun .btn:hover{border-color:#5a6675}
+body.inrun .btn.prime{background:#c2703c;border-color:#c2703c;color:#0a0d12}
+body.inrun .opts button,body.inrun .tf button{background:#141920;border-color:#262e39;color:#dde1e7}
+body.inrun .opts button.right,body.inrun .tf button.right{border-color:#46c26b;background:#46c26b1a;box-shadow:inset 3px 0 0 #46c26b}
+body.inrun .opts button.wrong,body.inrun .tf button.wrong{border-color:#e5484d;background:#e5484d1a;box-shadow:inset 3px 0 0 #e5484d}
+body.inrun .qn{color:#eef1f4}
+body.inrun .lab,body.inrun .sub{color:#67707d}
+body.inrun .bar{background:#1b212a}
+body.inrun .stage{border-color:#1e242d}
+body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
+
+/* the hold: nothing on the screen but the instruction */
+.void{position:relative;width:100%;min-height:230px;background:#07090d;border:1px solid #1a1f27;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:38px 22px 30px;text-align:center}
+.void > p{margin:0 0 9px}
+.cue{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(21px,5.6vw,29px);font-weight:700;line-height:1.14;letter-spacing:-.02em;
+  color:#c7ced8;text-wrap:balance;margin:0}
+.cue.warm{color:#d98a4f}
+.cuesub{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.16em;
+  text-transform:uppercase;color:#3f4854;margin:0}
+.void .tick{position:absolute;bottom:10px;left:0;right:0;display:flex;gap:4px;justify-content:center}
+.void .tick i{width:5px;height:5px;background:#222932;display:block}
+.void .tick i.on{background:#c2703c}
+
+/* the hazard announcement */
+.hazcard{border:1px solid #6f3a12;background:#160f09;padding:22px 18px;text-align:center}
+.hazcard .n{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(27px,7.4vw,37px);font-weight:700;letter-spacing:-.03em;line-height:1.04;color:#e0913f}
+.hazcard .l{display:block;font-size:15.5px;margin-top:7px;line-height:1.4;color:#a9b2bd;text-wrap:balance}
+.hazcard .two{display:block;font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.18em;
+  text-transform:uppercase;color:#5d6673;margin-bottom:12px}
+.hazcard + .hazcard{border-top:0}
+.boss{border-color:#7d2420;background:#160a09}
+.chamber{border-color:#2f5f6d;background:#08131a}
+.chamber .n{color:#5fb6c9}
+.chamber .two{color:#3f7583}
+.boss .n{color:#e0655a;font-size:clamp(30px,8.4vw,42px)}
+.boss .two{color:#8a4a45}
+
+/* hud */
+.hud{display:flex;align-items:center;gap:11px;border-bottom:1px solid #1e242d;
+  padding-bottom:9px;margin-bottom:14px;flex-wrap:wrap}
+.hud .fl{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:18px;font-weight:700;
+  letter-spacing:-.02em;color:#aab3bf}
+.hud .fl b{color:#e0913f}
+.holds{display:flex;gap:5px;margin-left:auto}
+.holds i{width:11px;height:11px;border:1.5px solid #46c26b;background:#46c26b;display:block}
+.holds i.gone{background:none;border-color:#2d343e}
+.hud .hz{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:#d98a4f}
+.kit{display:flex;gap:5px;flex-wrap:wrap;margin:-6px 0 14px}
+.kit span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.11em;text-transform:uppercase;
+  border:1px solid #2a323d;color:#7b8593;padding:3px 7px}
+
+.hit{border:1px solid #7d2c26;border-left:3px solid #e5484d;background:#170c0b;
+  padding:13px 15px;margin-top:14px;font-size:15px;line-height:1.45;color:#dbc2bf}
+.hit b{color:#f0a8a2}
+.read{border:1px solid #2a323d;border-left:3px solid #c2703c;background:#11151c;
+  padding:12px 14px;margin-top:12px;font-size:14px;line-height:1.5;color:#9aa4b1}
+.read b{color:#d98a4f;font-weight:600}
+
+/* boons */
+.boon{display:grid;gap:9px;margin-top:14px}
+.boon button{text-align:left;background:#12171f;border:1px solid #2a323d;padding:14px 15px;
+  cursor:pointer;border-radius:0;color:#dde1e7}
+.boon button:hover{border-color:#c2703c}
+.boon .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:17px;font-weight:700;
+  letter-spacing:-.02em;color:#e0913f}
+.boon .d{display:block;color:#8b95a3;font-size:13px;margin-top:4px;line-height:1.4}
+.boon .k{display:block;font-family:"JetBrains Mono",monospace;font-size:8.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:#5d6673;margin-bottom:5px}
+
+.depth{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 86;
+  font-size:clamp(62px,19vw,96px);font-weight:700;letter-spacing:-.05em;line-height:.88;color:#e0913f}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
+.tf button{padding:20px 12px;font-size:17px;font-weight:600;background:var(--panel);
+  border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
+
+/* the front door */
+.enter{display:block;width:100%;text-align:left;cursor:pointer;border-radius:0;
+  border:1px solid #c2703c;background:linear-gradient(160deg,#1a1109,#0e1218);padding:20px 19px;color:#e7ebf0}
+.enter:hover{border-color:#e0913f}
+.enter .k{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.16em;
+  text-transform:uppercase;color:#c2703c;margin-bottom:6px}
+.enter .t{display:block;font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
+  font-size:clamp(31px,8.5vw,44px);font-weight:700;letter-spacing:-.035em;line-height:1}
+.enter .d{display:block;color:#98a2b0;font-size:13.5px;line-height:1.45;margin-top:8px}
+.enter .best{display:block;font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:#c2703c;margin-top:12px}
+
+/* facet read-out */
+.facet{padding:11px 0;border-bottom:1px solid var(--hair)}
+.facetrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.facetname{font-size:14.5px;font-weight:600}
+.facetval{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--dim);flex:none}
+.fbar{display:flex;gap:2px;margin-top:7px}
+.fbar i{flex:1;height:6px;background:var(--rule)}
+.fbar i.on{background:var(--go)}
+.fbar i.weak{background:var(--warn)}
+.suggest{border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--signal-w);
+  padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.45}
+.suggest button{margin-top:9px}
+
+/* ---- answers you look at instead of read ---- */
+.pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.pick button{background:#0d1118;border:2px solid #232b36;border-radius:0;cursor:pointer;
+  padding:0;overflow:hidden;display:block;width:100%;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.pick button svg{width:100%;height:auto;display:block}
+.pick button:active{border-color:#c2703c}
+.pick button .cap{display:block;font-family:"JetBrains Mono",monospace;
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#4e5764;padding:5px 0;background:#070a0e}
+.pick button.right{border-color:#46c26b}
+.pick button.right .cap{color:#46c26b}
+.pick button.wrong{border-color:#e5484d}
+.pick button.wrong .cap{color:#e5484d}
+.pick button:disabled{cursor:default}
+.pick .num{display:flex;align-items:center;justify-content:center;min-height:112px;
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:44px;font-weight:700;color:#cfd6e0}
+.pick .words{display:flex;align-items:center;justify-content:center;min-height:92px;padding:12px;
+  font-size:15px;line-height:1.3;color:#cfd6e0;text-align:center}
+.qrow{display:flex;gap:12px;align-items:center;margin-top:4px}
+.qrow .qn{margin:0}
+.subj{width:60px;flex:none;border:1px solid #232b36}
+.subj svg{width:100%;height:auto;display:block}
+
+/* ---- motion ---- */
+@keyframes popin{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+.stage svg g[data-pop]{animation:popin .26s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes shake{10%,90%{transform:translateX(-3px)}20%,80%{transform:translateX(5px)}
+  30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+body.hurt .app{animation:shake .42s both}
+@keyframes flash{0%{box-shadow:inset 0 0 0 0 #46c26b00}35%{box-shadow:inset 0 0 0 5px #46c26b88}
+  100%{box-shadow:inset 0 0 0 0 #46c26b00}}
+body.good .pick{animation:flash .34s both}
+@keyframes slam{from{opacity:0;transform:translateY(-14px) scale(1.06)}to{opacity:1;transform:none}}
+.hazcard{animation:slam .3s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes drain{from{opacity:.25}to{opacity:1}}
+.holds i{transition:background .2s,border-color .2s}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.cue{animation:fadeup .3s both}
+
+.overrow{display:flex;gap:18px;align-items:flex-start}
+.overside{display:flex;flex-direction:column;gap:5px;padding-top:6px}
+.overside .kb{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:21px;font-weight:700;
+  color:#e0655a;letter-spacing:-.02em;line-height:1.1}
+.overside .pb{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:#c2703c}
+.overside .pb.dim{color:#5d6673}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app">
+
+<div class="errbar" id="err-bar" hidden></div>
+
+<header class="mast">
+  <h1><span class="dot"></span>Afterimage</h1>
+  <p>Holding a picture in your head after it's gone &mdash; and getting more detail out of it than you put in.</p>
+</header>
+
+<main>
+
+<!-- ============ HOME ============ -->
+<section id="s-home">
+  <button class="enter" data-act="runStart">
+    <span class="k">how far down can you hold it</span>
+    <span class="t">Start The Run</span>
+    <span class="d">Floors of pictures to hold, each one harder than the last, and things that come for them &mdash; the Stranger slips something in that was never yours, the Shift moves one while you’re not looking, the Echo asks about the floor before. Three holds. Lose them and the run is over.</span>
+    <span class="best" id="run-best"></span>
+  </button>
+
+  <div id="home-suggest"></div>
+
+  <div class="sec">
+    <h3><span>Where you're at</span></h3>
+    <div id="home-you"></div>
+  </div>
+
+  <details class="sec" id="prac">
+    <summary style="cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--dim);padding:2px 0">Practice specific skills</summary>
+    <p class="sub" style="margin:12px 0 10px">The run is built out of these. On its own each one is calmer, and it is where you drill whatever the run keeps taking from you. There are three different things being trained here and it is worth knowing which is which.</p>
+    <div class="note" style="margin-bottom:14px">
+      <b>Image hold</b> &mdash; take a whole scene in and inspect it after it has gone.<br>
+      <b>Single-point focus</b> &mdash; keep one object steady, and come back every time you slip.<br>
+      <b>Embodied scene</b> &mdash; stand inside a short scene and make it real enough to answer from.
+    </div>
+    <div class="stack">
+    <button class="big" data-mode="point">
+      <span class="k">single-point focus</span>
+      <span class="t">Single-Point Hold</span>
+      <span class="d">One object, ten seconds, then nothing. Attention slides off it and you bring it back &mdash; the returning is the rep, and it is counted as work rather than as a mistake.</span>
+    </button>
+    <button class="big" data-mode="sleep">
+      <span class="k">embodied scene &middot; calm</span>
+      <span class="t">Sleep Scene</span>
+      <span class="d">Nothing scored. A short scene of something you actually want to do, entered first person, given one thing to touch and one to hear, run five times slowly. Good when there is nothing left in the tank.</span>
+    </button>
+    <button class="big" data-mode="scene">
+      <span class="k">the basic one</span>
+      <span class="t">Look, then hold</span>
+      <span class="d">A small scene, a few seconds, then it's gone. The questions come after, and you won't know what they'll ask &mdash; which is the whole point.</span>
+    </button>
+    <button class="big" data-mode="blueprint">
+      <span class="k">no picture at all</span>
+      <span class="t">Build it from words</span>
+      <span class="d">You get a description and never see the thing. You have to make the picture yourself. Harder, and the one that's most like real life.</span>
+    </button>
+    <button class="big" data-mode="fire">
+      <span class="k">the adhd one</span>
+      <span class="t">Hold it while something pulls</span>
+      <span class="d">Same scene, but you have to do something else while you're holding it. Keeping hold through interruption is usually the part that's actually hard.</span>
+    </button>
+    <button class="big" data-mode="turn">
+      <span class="k">moving it</span>
+      <span class="t">Turn it around</span>
+      <span class="d">Hold the picture, then flip or rotate it in your head and answer about the version you've never seen.</span>
+    </button>
+    <button class="big" data-mode="stack">
+      <span class="k">at your edge</span>
+      <span class="t">One more thing</span>
+      <span class="d">The scene grows by one object at a time and you keep the whole thing. It ends when it falls over, which it will &mdash; that's where the practice is.</span>
+    </button>
+    <button class="big" data-mode="walk">
+      <span class="k">the one with real evidence</span>
+      <span class="t">Put it somewhere you know</span>
+      <span class="d">The memory palace, taught properly, on a route through somewhere real. Works on a shopping list, a set of steps, anything you actually need to carry.</span>
+    </button>
+    </div>
+  </details>
+
+  <div class="sec">
+    <h3><span>Worth reading once</span></h3>
+    <div class="stack">
+      <button class="big" data-go="learn">
+        <span class="t">The six techniques</span>
+        <span class="d">What to actually do in your head. This is the part that carries over &mdash; the drills are just where you practise it.</span>
+      </button>
+      <button class="big" data-go="about">
+        <span class="t">What this does and doesn't do</span>
+        <span class="d">Straight answer on what the research supports, including the bit where most brain-training doesn't work.</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THE RUN ============ -->
+<section id="s-run" hidden>
+  <button class="back" data-act="runQuit">&larr; end the run</button>
+  <div id="run-hud"></div>
+  <div id="run-body"></div>
+</section>
+
+<!-- ============ PLAY ============ -->
+<section id="s-play" hidden>
+  <button class="back" data-go="home">&larr; stop, keep what's done</button>
+  <div id="play-body"></div>
+</section>
+
+<!-- ============ WALK ============ -->
+<section id="s-walk" hidden>
+  <button class="back" data-go="home">&larr; stop, keep what's done</button>
+  <div id="walk-body"></div>
+</section>
+
+<!-- ============ LEARN ============ -->
+<section id="s-learn" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Six things to do in your head</h2>
+  <p class="sub" style="margin-bottom:20px">None of this is mystical and none of it needs talent. They're moves, and they work the first time you use them. When you miss a question in a round, it's nearly always because you skipped one of these.</p>
+  <div id="learn-body"></div>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section id="s-about" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">What this is honestly for</h2>
+  <div id="about-body"></div>
+</section>
+
+<!-- ============ YOU ============ -->
+<section id="s-you" hidden>
+  <button class="back" data-go="home">&larr; back</button>
+  <h2 class="ask">Where you're at</h2>
+  <div id="you-body"></div>
+</section>
+
+</main>
+
+<div class="foot">
+  <span class="lab" id="save-state">saved on this device</span>
+  <span class="lab" id="build-id" hidden></span>
+  <button class="back" id="force-update" style="margin:0">Force update</button>
+  <button class="back" id="reset-all" style="margin:0">Start over</button>
+</div>
+
+</div>
+
+<script>
+/* ================== Afterimage ==================
+   A trainer for holding imagery, built round the one part of the
+   memory literature that actually survives contact with real life:
+   technique. Capacity drills make you better at the drill. A method
+   you can deploy on purpose goes with you.
+
+   Everything the app knows lives in `state`. Every writer goes through
+   save(). Every handler hangs off `document`, installed here at the
+   top, so that nothing further down the file can quietly unwire the
+   controls by throwing.
+   ================================================ */
+
+const $  = (id) => document.getElementById(id);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+
+/* ---- errors, out loud ---- */
+const errSeen = [];
+function showError(msg) {
+  if (!msg || errSeen.indexOf(msg) > -1) return;
+  errSeen.push(msg);
+  const bar = $("err-bar");
+  if (!bar) return;
+  bar.hidden = false;
+  bar.innerHTML = "<b>something in the app broke</b>This is a bug on my side, not something you did. " +
+    "If you can, tell me what it says: " +
+    errSeen.map((m) => "<code>" + m.replace(/[<&]/g, (c) => (c === "<" ? "&lt;" : "&amp;")) + "</code>").join(" &middot; ");
+}
+addEventListener("error", (e) => showError((e.message || "error") + (e.lineno ? " @" + e.lineno : "")));
+addEventListener("unhandledrejection", (e) => showError("promise: " + String((e.reason && e.reason.message) || e.reason || "?")));
+function guard(fn) { return function (ev) { try { fn(ev); } catch (err) { showError(String((err && err.message) || err)); } }; }
+
+/* ---- every click in the app, from one place ---- */
+document.addEventListener("click", guard((e) => {
+  const go_ = e.target.closest("[data-go]");
+  if (go_) { go(go_.dataset.go); return; }
+  const mode = e.target.closest("[data-mode]");
+  if (mode) { startMode(mode.dataset.mode); return; }
+  const act = e.target.closest("[data-act]");
+  if (act) { act.dataset.arg ? ACTS[act.dataset.act](act.dataset.arg, act) : ACTS[act.dataset.act](act); return; }
+}));
+
+/* Actions are registered by whichever part of the file owns them; the
+   handler above is live before any of them exist. */
+const ACTS = Object.create(null);
+
+/* ---------- state ---------- */
+const LS_KEY = "afterimage:state:v1";
+
+const state = {
+  loaded: false,
+  level: { scene: 4, blueprint: 3, fire: 3, turn: 3, stack: 1, point: 3 },
+  recent: {},            /* mode -> array of 0/1, most recent last */
+  rounds: [],            /* {mode, at, level, right, asked} */
+  drifts: 0,             /* noticed and returned — the rep, not a failure */
+  anchorBest: 0,         /* longest hold, in seconds, with the anchor still there */
+  anchorKinds: {},       /* which objects are easiest to keep hold of */
+  states: {},            /* which states get chosen in the chamber */
+  bestDepth: 0,          /* deepest floor reached in a run */
+  runs: [],              /* {at, depth, by, hold} */
+  facets: {},            /* which part of the image holds: facet -> {a,r} */
+  facetsInt: {},         /* the same, but only while something interfered */
+  killers: {},           /* what ends runs: hazard name -> count */
+  holdSec: 0,            /* seconds spent holding, all runs */
+  floorsCleared: 0,
+  walkStops: null,       /* the route, once they've set one */
+  walkBest: 0,
+  walkRuns: [],
+  sees: null,            /* whether they get actual pictures */
+  seen: {},              /* which one-time explainers they've had */
+  sound: true,
+};
+
+let savedLocal = false;
+
+function payload() {
+  return {
+    level: state.level, recent: state.recent, rounds: state.rounds.slice(-400),
+    bestDepth: state.bestDepth, runs: state.runs.slice(-80),
+    drifts: state.drifts, anchorBest: state.anchorBest,
+    anchorKinds: state.anchorKinds, states: state.states,
+    facets: state.facets, facetsInt: state.facetsInt, killers: state.killers,
+    holdSec: state.holdSec, floorsCleared: state.floorsCleared,
+    walkStops: state.walkStops, walkBest: state.walkBest, walkRuns: state.walkRuns.slice(-60),
+    sees: state.sees, seen: state.seen, sound: state.sound,
+  };
+}
+function adopt(o) {
+  if (!o || typeof o !== "object") return;
+  if (o.level && typeof o.level === "object") Object.assign(state.level, o.level);
+  if (o.recent && typeof o.recent === "object") state.recent = o.recent;
+  if (Array.isArray(o.rounds)) state.rounds = o.rounds;
+  if (typeof o.drifts === "number") state.drifts = o.drifts;
+  if (typeof o.anchorBest === "number") state.anchorBest = o.anchorBest;
+  if (o.anchorKinds && typeof o.anchorKinds === "object") state.anchorKinds = o.anchorKinds;
+  if (o.states && typeof o.states === "object") state.states = o.states;
+  if (typeof o.bestDepth === "number") state.bestDepth = o.bestDepth;
+  if (Array.isArray(o.runs)) state.runs = o.runs;
+  if (o.facets && typeof o.facets === "object") state.facets = o.facets;
+  if (o.facetsInt && typeof o.facetsInt === "object") state.facetsInt = o.facetsInt;
+  if (o.killers && typeof o.killers === "object") state.killers = o.killers;
+  if (typeof o.holdSec === "number") state.holdSec = o.holdSec;
+  if (typeof o.floorsCleared === "number") state.floorsCleared = o.floorsCleared;
+  if (Array.isArray(o.walkStops)) state.walkStops = o.walkStops;
+  if (typeof o.walkBest === "number") state.walkBest = o.walkBest;
+  if (Array.isArray(o.walkRuns)) state.walkRuns = o.walkRuns;
+  if (o.sees === true || o.sees === false || o.sees === "some") state.sees = o.sees;
+  if (o.seen && typeof o.seen === "object") state.seen = o.seen;
+  if (typeof o.sound === "boolean") state.sound = o.sound;
+}
+function load() {
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) adopt(JSON.parse(raw)); }
+  catch (e) { showError("could not read saved progress: " + e.message); }
+  state.loaded = true;
+}
+function save() {
+  /* Never write before load() has read, or a flush in that window puts
+     an empty state over everything stored. */
+  if (!state.loaded) return;
+  try { localStorage.setItem(LS_KEY, JSON.stringify(payload())); savedLocal = true; }
+  catch (e) { savedLocal = false; }
+  const el = $("save-state");
+  if (el) el.textContent = savedLocal ? "saved on this device" : "can't save here — nothing will be kept";
+}
+addEventListener("pagehide", () => save());
+addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") save(); });
+
+/* ---------- small helpers ---------- */
+const now = () => Date.now();
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+function shuffle(a) {
+  const x = a.slice();
+  for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; }
+  return x;
+}
+function sample(a, n) { return shuffle(a).slice(0, n); }
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const dayKey = (t) => new Date(t).toDateString();
+
+/* ---------- a quiet marker at the end of a hold ---------- */
+let audio = null;
+function blip(hz, ms) {
+  if (!state.sound) return;
+  try {
+    if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    const o = audio.createOscillator(), g = audio.createGain();
+    o.type = "sine"; o.frequency.value = hz;
+    g.gain.setValueAtTime(0.0001, audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.06, audio.currentTime + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + ms / 1000);
+    o.connect(g); g.connect(audio.destination);
+    o.start(); o.stop(audio.currentTime + ms / 1000 + 0.02);
+  } catch (e) { /* no audio here, which is fine */ }
+}
+
+/* ---------- keep the screen up through a hold ---------- */
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && "wakeLock" in navigator && !wakeLock) wakeLock = await navigator.wakeLock.request("screen");
+    else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+  } catch (e) { wakeLock = null; }
+}
+
+/* ---------- router ---------- */
+const SCREENS = ["home", "run", "play", "walk", "learn", "about", "you"];
+let screen = "home";
+let stopRound = null;   /* set by whatever round is running, so leaving cleans up */
+
+function go(name) {
+  if (SCREENS.indexOf(name) < 0) return;
+  if (stopRound) { try { stopRound(); } catch (e) {} stopRound = null; }
+  keepAwake(false);
+  screen = name;
+  SCREENS.forEach((s) => { const el = $("s-" + s); if (el) el.hidden = s !== name; });
+  scrollTo(0, 0);
+  if (name === "home") { renderHomeYou(); paintBest(); renderSuggest(); }
+  if (name === "learn") renderLearn();
+  if (name === "about") renderAbout();
+  if (name === "you") renderYou();
+}
+
+/* ================= the picture engine =================
+   Every scene is generated, so there is no set of images to memorise
+   and the app always knows the exact truth of what it drew. Each object
+   lives in a 100x100 box and carries one extra detail beyond colour and
+   position — a handle that points somewhere, a lid that is open or shut
+   — because that detail is the thing nobody encodes unless they are
+   actually holding a picture.
+   ====================================================== */
+
+const INK = "#0d1016";     /* the stage ground, used for cut-outs */
+const METAL = "#c3cbd6";
+
+const PALETTE = [
+  { id: "red",    name: "red",    hex: "#e5484d" },
+  { id: "blue",   name: "blue",   hex: "#3e9bff" },
+  { id: "green",  name: "green",  hex: "#46c26b" },
+  { id: "yellow", name: "yellow", hex: "#f2c53d" },
+  { id: "orange", name: "orange", hex: "#f2812f" },
+  { id: "purple", name: "purple", hex: "#a87ff0" },
+  { id: "white",  name: "white",  hex: "#e8ecf1" },
+  { id: "pink",   name: "pink",   hex: "#f07ab0" },
+  { id: "teal",   name: "teal",   hex: "#2fd4c4" },
+  { id: "brown",  name: "brown",  hex: "#b07a4e" },
+];
+
+/* Two colours a person would reasonably mix up should never share a
+   scene — otherwise a miss tells you nothing about your memory. */
+const CLASH = [
+  ["red", "pink"], ["red", "orange"], ["orange", "yellow"], ["orange", "brown"],
+  ["purple", "pink"], ["blue", "teal"], ["white", "yellow"], ["green", "teal"],
+];
+function clashes(a, b) { return CLASH.some((p) => (p[0] === a && p[1] === b) || (p[1] === a && p[0] === b)); }
+
+const OBJECTS = [
+  {
+    id: "cup", name: "cup", ask: "Which way was the cup's handle pointing?",
+    states: [["left", "Left"], ["right", "Right"]],
+    draw: (c, s) =>
+      '<path d="M26 32 h48 v24 a24 24 0 0 1 -48 0 z" fill="' + c + '"/>' +
+      (s === "right"
+        ? '<path d="M74 40 h4 a13 13 0 0 1 0 26 h-4" fill="none" stroke="' + c + '" stroke-width="7"/>'
+        : '<path d="M26 40 h-4 a13 13 0 0 0 0 26 h4" fill="none" stroke="' + c + '" stroke-width="7"/>'),
+  },
+  {
+    id: "key", name: "key", ask: "Which way did the key's teeth point?",
+    states: [["up", "Up"], ["down", "Down"]],
+    draw: (c, s) =>
+      '<circle cx="26" cy="50" r="15" fill="none" stroke="' + c + '" stroke-width="8"/>' +
+      '<rect x="40" y="45" width="44" height="10" fill="' + c + '"/>' +
+      (s === "up"
+        ? '<rect x="58" y="32" width="8" height="13" fill="' + c + '"/><rect x="74" y="32" width="8" height="13" fill="' + c + '"/>'
+        : '<rect x="58" y="55" width="8" height="13" fill="' + c + '"/><rect x="74" y="55" width="8" height="13" fill="' + c + '"/>'),
+  },
+  {
+    id: "book", name: "book", ask: "How was the book sitting?",
+    states: [["up", "Standing up"], ["flat", "Lying flat"]],
+    draw: (c, s) =>
+      s === "up"
+        ? '<rect x="34" y="14" width="34" height="70" fill="' + c + '"/>' +
+          '<rect x="34" y="14" width="9" height="70" fill="#00000055"/>' +
+          '<rect x="64" y="17" width="4" height="64" fill="#ffffff55"/>'
+        : '<rect x="12" y="41" width="76" height="27" fill="' + c + '"/>' +
+          '<rect x="12" y="41" width="76" height="8" fill="#00000055"/>' +
+          '<rect x="15" y="60" width="70" height="4" fill="#ffffff66"/>',
+  },
+  {
+    id: "candle", name: "candle", ask: "Was the candle lit?",
+    states: [["lit", "Lit"], ["out", "Not lit"]],
+    draw: (c, s) =>
+      '<rect x="39" y="40" width="22" height="46" fill="' + c + '"/>' +
+      '<rect x="48" y="31" width="4" height="10" fill="#4a4f59"/>' +
+      (s === "lit"
+        ? '<ellipse cx="50" cy="22" rx="8" ry="13" fill="#f2c53d"/><ellipse cx="50" cy="24" rx="3.4" ry="6" fill="#fff6cf"/>'
+        : ""),
+  },
+  {
+    id: "bottle", name: "bottle", ask: "Did the bottle have its cap on?",
+    states: [["cap", "Cap on"], ["open", "Cap off"]],
+    draw: (c, s) =>
+      '<path d="M35 46 h30 v36 a5 5 0 0 1 -5 5 h-20 a5 5 0 0 1 -5 -5 z" fill="' + c + '"/>' +
+      '<path d="M43 28 h14 v18 h-14 z" fill="' + c + '"/>' +
+      (s === "cap"
+        ? '<rect x="41" y="17" width="18" height="11" fill="' + METAL + '"/>'
+        : '<rect x="41" y="25" width="18" height="4" fill="' + c + '"/>'),
+  },
+  {
+    id: "arrow", name: "arrow", ask: "Which way did the arrow point?",
+    states: [["up", "Up"], ["right", "Right"], ["down", "Down"], ["left", "Left"]],
+    draw: (c, s) => {
+      const deg = { up: 0, right: 90, down: 180, left: 270 }[s];
+      return '<g transform="rotate(' + deg + ' 50 50)">' +
+        '<path d="M50 12 L78 46 H62 V88 H38 V46 H22 Z" fill="' + c + '"/></g>';
+    },
+  },
+  {
+    id: "ball", name: "ball", ask: "Did the ball have stripes on it?",
+    states: [["striped", "Striped"], ["plain", "Plain"]],
+    draw: (c, s) =>
+      '<circle cx="50" cy="50" r="31" fill="' + c + '"/>' +
+      (s === "striped"
+        ? '<path d="M24 37 H76" stroke="#ffffffcc" stroke-width="7"/><path d="M24 63 H76" stroke="#ffffffcc" stroke-width="7"/>'
+        : '<circle cx="39" cy="39" r="7" fill="#ffffff44"/>'),
+  },
+  {
+    id: "box", name: "box", ask: "Was the box open or shut?",
+    states: [["open", "Open"], ["shut", "Shut"]],
+    draw: (c, s) =>
+      s === "shut"
+        ? '<rect x="20" y="40" width="60" height="44" fill="' + c + '"/>' +
+          '<rect x="16" y="30" width="68" height="12" fill="' + c + '"/><rect x="16" y="30" width="68" height="12" fill="#00000044"/>' +
+          '<rect x="46" y="40" width="8" height="44" fill="#00000044"/>'
+        : '<rect x="20" y="44" width="60" height="40" fill="' + c + '"/>' +
+          '<rect x="24" y="40" width="52" height="9" fill="' + INK + '"/>' +
+          '<path d="M20 42 L5 27 L17 23 L32 38 Z" fill="' + c + '"/>' +
+          '<path d="M80 42 L95 27 L83 23 L68 38 Z" fill="' + c + '"/>',
+  },
+  {
+    id: "plant", name: "plant", ask: "Was the plant flowering?",
+    states: [["flower", "It had flowers"], ["leaves", "Just leaves"]],
+    draw: (c, s) =>
+      '<path d="M32 62 H68 L63 88 H37 Z" fill="#7c848f"/>' +
+      '<rect x="48" y="34" width="4" height="28" fill="#46c26b"/>' +
+      '<ellipse cx="34" cy="48" rx="15" ry="7" fill="' + c + '" transform="rotate(-24 34 48)"/>' +
+      '<ellipse cx="66" cy="45" rx="15" ry="7" fill="' + c + '" transform="rotate(24 66 45)"/>' +
+      (s === "flower"
+        ? '<circle cx="50" cy="24" r="6" fill="#f07ab0"/><circle cx="39" cy="30" r="5" fill="#f07ab0"/><circle cx="61" cy="30" r="5" fill="#f07ab0"/>'
+        : ""),
+  },
+  {
+    id: "umbrella", name: "umbrella", ask: "Was the umbrella up or down?",
+    states: [["up", "Open"], ["down", "Folded up"]],
+    draw: (c, s) =>
+      s === "up"
+        ? '<path d="M12 56 A38 38 0 0 1 88 56 Z" fill="' + c + '"/>' +
+          '<path d="M50 56 V80 a9 9 0 0 1 -18 0" fill="none" stroke="' + METAL + '" stroke-width="5"/>'
+        : '<path d="M45 14 h10 l5 56 h-20 z" fill="' + c + '"/>' +
+          '<path d="M50 70 V84 a8 8 0 0 1 -16 0" fill="none" stroke="' + METAL + '" stroke-width="5"/>',
+  },
+  {
+    id: "fish", name: "fish", ask: "Which way was the fish facing?",
+    states: [["left", "Left"], ["right", "Right"]],
+    draw: (c, s) =>
+      '<g' + (s === "right" ? ' transform="translate(100 0) scale(-1 1)"' : "") + '>' +
+      '<path d="M16 50 Q40 24 66 50 Q40 76 16 50 Z" fill="' + c + '"/>' +
+      '<path d="M64 50 L88 32 L88 68 Z" fill="' + c + '"/>' +
+      '<circle cx="29" cy="45" r="3.6" fill="' + INK + '"/></g>',
+  },
+  {
+    id: "lamp", name: "lamp", ask: "Was the lamp on?",
+    states: [["on", "On"], ["off", "Off"]],
+    draw: (c, s) =>
+      '<path d="M28 52 L37 22 H63 L72 52 Z" fill="' + c + '"/>' +
+      '<rect x="48" y="52" width="4" height="30" fill="' + METAL + '"/>' +
+      '<rect x="36" y="82" width="28" height="6" fill="' + METAL + '"/>' +
+      (s === "on"
+        ? '<path d="M24 58 L14 66 M35 62 L30 74 M65 62 L70 74 M76 58 L86 66" ' +
+          'stroke="#f2c53d" stroke-width="5" stroke-linecap="round"/>' +
+          '<rect x="30" y="49" width="40" height="5" fill="#f2c53d"/>'
+        : ""),
+  },
+  {
+    id: "envelope", name: "envelope", ask: "Was the envelope sealed?",
+    states: [["sealed", "Sealed"], ["open", "Flap open"]],
+    draw: (c, s) =>
+      '<rect x="16" y="34" width="68" height="44" fill="' + c + '"/>' +
+      (s === "sealed"
+        ? '<path d="M16 34 L50 60 L84 34" fill="none" stroke="#00000066" stroke-width="4"/>'
+        : '<path d="M16 34 L50 11 L84 34 Z" fill="' + c + '"/>' +
+          '<path d="M16 34 L50 11 L84 34 M16 34 H84" fill="none" stroke="#00000077" stroke-width="3.5"/>'),
+  },
+  {
+    id: "clock", name: "clock", ask: "What time was the clock showing?",
+    states: [["12", "Twelve o'clock"], ["3", "Three o'clock"], ["6", "Six o'clock"], ["9", "Nine o'clock"]],
+    draw: (c, s) => {
+      const hour = { "12": [50, 28], "3": [70, 50], "6": [50, 70], "9": [30, 50] }[s];
+      return '<circle cx="50" cy="50" r="33" fill="' + c + '"/>' +
+        '<circle cx="50" cy="50" r="33" fill="none" stroke="#00000055" stroke-width="4"/>' +
+        '<path d="M50 50 L50 22" stroke="' + INK + '" stroke-width="4" stroke-linecap="round"/>' +
+        '<path d="M50 50 L' + hour[0] + " " + hour[1] + '" stroke="' + INK + '" stroke-width="7" stroke-linecap="round"/>' +
+        '<circle cx="50" cy="50" r="4" fill="' + INK + '"/>';
+    },
+  },
+  {
+    id: "flag", name: "flag", ask: "Which way was the flag flying?",
+    states: [["left", "Left"], ["right", "Right"]],
+    draw: (c, s) =>
+      s === "right"
+        ? '<rect x="24" y="12" width="5" height="76" fill="' + METAL + '"/>' +
+          '<path d="M29 18 H78 L67 35 L78 52 H29 Z" fill="' + c + '"/>'
+        : '<rect x="71" y="12" width="5" height="76" fill="' + METAL + '"/>' +
+          '<path d="M71 18 H22 L33 35 L22 52 H71 Z" fill="' + c + '"/>',
+  },
+  {
+    id: "eye", name: "eye", ask: "Was the eye open or shut?",
+    states: [["open", "Open"], ["shut", "Shut"]],
+    draw: (c, s) =>
+      s === "open"
+        ? '<path d="M10 50 Q50 18 90 50 Q50 82 10 50 Z" fill="#eceff3"/>' +
+          '<circle cx="50" cy="50" r="15" fill="' + c + '"/><circle cx="50" cy="50" r="6" fill="' + INK + '"/>'
+        : '<path d="M12 46 Q50 74 88 46" fill="none" stroke="' + c + '" stroke-width="8" stroke-linecap="round"/>' +
+          '<path d="M22 62 L18 71 M50 70 V80 M78 62 L82 71" stroke="' + c + '" stroke-width="5" stroke-linecap="round"/>',
+  },
+  {
+    id: "spoon", name: "spoon", ask: "Which end was the bowl of the spoon at?",
+    states: [["top", "The top"], ["bottom", "The bottom"]],
+    draw: (c, s) =>
+      s === "top"
+        ? '<ellipse cx="50" cy="29" rx="19" ry="22" fill="' + c + '"/><rect x="45" y="47" width="10" height="41" fill="' + c + '"/>'
+        : '<ellipse cx="50" cy="71" rx="19" ry="22" fill="' + c + '"/><rect x="45" y="12" width="10" height="41" fill="' + c + '"/>',
+  },
+  {
+    id: "door", name: "door", ask: "Was the door open or shut?",
+    states: [["open", "Open"], ["shut", "Shut"]],
+    draw: (c, s) =>
+      '<rect x="24" y="10" width="52" height="80" fill="none" stroke="#69717e" stroke-width="5"/>' +
+      (s === "shut"
+        ? '<rect x="29" y="15" width="42" height="70" fill="' + c + '"/><circle cx="63" cy="52" r="4" fill="' + INK + '"/>'
+        : '<rect x="29" y="15" width="42" height="70" fill="' + INK + '"/>' +
+          '<path d="M29 15 L11 23 L11 79 L29 85 Z" fill="' + c + '"/>'),
+  },
+  {
+    id: "hat", name: "hat", ask: "Did the hat have a band round it?",
+    states: [["band", "It had a band"], ["plain", "Plain"]],
+    draw: (c, s) =>
+      '<ellipse cx="50" cy="70" rx="39" ry="10" fill="' + c + '"/>' +
+      '<path d="M27 70 V44 a23 23 0 0 1 46 0 V70 Z" fill="' + c + '"/>' +
+      (s === "band" ? '<rect x="27" y="58" width="46" height="10" fill="#00000077"/>' : ""),
+  },
+  {
+    id: "scissors", name: "scissors", ask: "Were the scissors open or closed?",
+    states: [["open", "Open"], ["shut", "Closed"]],
+    draw: (c, s) => {
+      const tips = s === "open" ? [[20, 14], [80, 14]] : [[44, 12], [56, 12]];
+      return '<path d="M50 62 L' + tips[0][0] + " " + tips[0][1] + '" stroke="' + c + '" stroke-width="7" stroke-linecap="round"/>' +
+        '<path d="M50 62 L' + tips[1][0] + " " + tips[1][1] + '" stroke="' + c + '" stroke-width="7" stroke-linecap="round"/>' +
+        '<path d="M50 62 L38 74 M50 62 L62 74" stroke="' + METAL + '" stroke-width="5" stroke-linecap="round"/>' +
+        '<circle cx="34" cy="80" r="9" fill="none" stroke="' + METAL + '" stroke-width="5"/>' +
+        '<circle cx="66" cy="80" r="9" fill="none" stroke="' + METAL + '" stroke-width="5"/>' +
+        '<circle cx="50" cy="62" r="4" fill="' + METAL + '"/>';
+    },
+  },
+];
+
+/* What each object would sound and feel like, kept distinct enough that
+   a multiple-choice question about them is fair. These carry the
+   embodied side: a scene you can hear and touch survives a hold far
+   better than a flat picture of one, and it is the difference between
+   being in a place and looking at a photograph of it. */
+const SENSE = {
+  cup:       ["a dull tap on the table", "cool and smooth"],
+  key:       ["a thin metal jingle", "cold, with notches"],
+  book:      ["a soft thud of pages", "dry paper edges"],
+  candle:    ["almost nothing \u2014 a faint hiss", "waxy, slightly soft"],
+  bottle:    ["liquid sloshing", "cool glass, a little wet"],
+  arrow:     ["a quick whistle", "flat and light"],
+  ball:      ["a rubber bounce", "grippy, and it gives"],
+  box:       ["cardboard scraping", "dry card, sharp corners"],
+  plant:     ["leaves rustling", "waxy leaves, damp soil"],
+  umbrella:  ["a snap of fabric", "taut nylon on a hard spine"],
+  fish:      ["a wet flap", "slick and cold"],
+  lamp:      ["a switch clicking", "warm shade, cool metal stem"],
+  envelope:  ["paper sliding", "thin, with a gummed edge"],
+  clock:     ["a steady tick", "smooth glass over a face"],
+  flag:      ["cloth snapping in wind", "coarse cloth, a smooth pole"],
+  eye:       ["nothing at all", "warm, and you would flinch"],
+  spoon:     ["a metallic clink", "cold and thin"],
+  door:      ["a heavy click", "solid and cool"],
+  hat:       ["no sound, just felt", "soft felt, firm brim"],
+  scissors:  ["a sharp snip", "cold steel rings"],
+};
+OBJECTS.forEach((o) => { const x = SENSE[o.id]; if (x) { o.sound = x[0]; o.touch = x[1]; } });
+
+/* Standing in the scene rather than looking at it: the bottom row is
+   nearest you, the top row is across the room, columns are your sides. */
+const NEAR = ["across the room", "an arm's length away", "right in front of you"];
+const SIDE = ["on your left", "straight ahead", "on your right"];
+const place1p = (cell) => SIDE[cell.col] + ", " + NEAR[cell.row];
+const nearness = (cell) => cell.row * 3 + (cell.col === 1 ? 1 : 0);
+
+const CELLS = [
+  { i: 0, col: 0, row: 0, name: "top left" },
+  { i: 1, col: 1, row: 0, name: "top middle" },
+  { i: 2, col: 2, row: 0, name: "top right" },
+  { i: 3, col: 0, row: 1, name: "middle left" },
+  { i: 4, col: 1, row: 1, name: "the middle" },
+  { i: 5, col: 2, row: 1, name: "middle right" },
+  { i: 6, col: 0, row: 2, name: "bottom left" },
+  { i: 7, col: 1, row: 2, name: "bottom middle" },
+  { i: 8, col: 2, row: 2, name: "bottom right" },
+];
+const cellAt = (col, row) => CELLS.find((c) => c.col === col && c.row === row);
+
+/* ---------- building a scene ---------- */
+function makeScene(n, opts) {
+  n = clamp(n, 2, 9);
+  const o = opts || {};
+  const kinds = sample(OBJECTS, n);
+  const cells = sample(CELLS, n);
+
+  /* Normally no two colours anyone could confuse share a scene, so that a
+     miss means something. The Mimic is the deliberate exception: it seeds
+     the palette with a clashing pair, because telling two near-identical
+     things apart is a different skill and wants testing on purpose. */
+  const ok = [];
+  if (o.mimic) {
+    const pair = pick(CLASH);
+    ok.push(PALETTE.find((x) => x.id === pair[0]), PALETTE.find((x) => x.id === pair[1]));
+  }
+  for (const p of shuffle(PALETTE)) {
+    if (o.mimic && ok.length >= 4) break;
+    if (ok.indexOf(p) < 0 && ok.every((q) => o.mimic || !clashes(p.id, q.id))) ok.push(p);
+    if (ok.length >= Math.max(3, Math.min(6, n))) break;
+  }
+  const counts = {};
+  const colourFor = () => {
+    const room = ok.filter((p) => (counts[p.id] || 0) < (n > 5 ? 3 : 2));
+    const p = pick(room.length ? room : ok);
+    counts[p.id] = (counts[p.id] || 0) + 1;
+    return p;
+  };
+
+  const items = kinds.map((k, ix) => ({
+    kind: k, colour: colourFor(), state: pick(k.states), cell: cells[ix],
+  }));
+  return { items, id: uid(), mimic: !!o.mimic };
+}
+
+function stateLabel(item) { return item.state[1]; }
+
+function drawScene(scene, opts) {
+  const o = opts || {};
+  const parts = [];
+  for (const it of scene.items) {
+    const cx = 66.7 + it.cell.col * 133.3, cy = 50 + it.cell.row * 100;
+    const sc = 0.86;
+    /* Trace Outline shows the scene in one flat colour first, so shape has
+       to be taken in before colour is available to lean on. */
+    const paint = o.outline ? "#8d96a3" : it.colour.hex;
+    if (o.anchor && o.anchor === it.kind.id)
+      parts.push('<rect x="' + (cx - 52) + '" y="' + (cy - 49) + '" width="104" height="98" ' +
+        'fill="none" stroke="#f0a057" stroke-width="2.5" stroke-dasharray="7 5"/>');
+    parts.push('<g data-pop style="animation-delay:' + (parts.length * 45) + 'ms" ' +
+      'transform="translate(' + (cx - 50 * sc) + " " + (cy - 50 * sc) + ") scale(" + sc + ')">' +
+      it.kind.draw(paint, it.state[0]) + "</g>");
+  }
+  return '<svg width="400" height="300" viewBox="0 0 400 300" style="display:block;width:100%;height:auto" role="img" aria-label="' +
+    (o.alt || "a picture to remember") + '">' +
+    '<rect width="400" height="300" fill="' + INK + '"/>' + parts.join("") + "</svg>";
+}
+
+/* The same scene in words, for the round where you never see it. */
+function describeScene(scene) {
+  return scene.items.map((it) => {
+    return "A <b>" + it.colour.name + " " + it.kind.name + "</b> in the <b>" + it.cell.name + "</b>" +
+      " &mdash; " + stateLabel(it).toLowerCase() + ".";
+  });
+}
+
+/* ---------- the questions ----------
+   Built from the scene after the fact, never planned in advance, so
+   there is nothing to pre-encode. A round asks several of them about
+   one held picture, which is the part that forces an actual image
+   rather than a remembered sentence. */
+
+const TEACH = {
+  colour: "Colour goes first when you encode the shape and nothing else. Next time say them as one word in your head — “redcup” — so they can't come apart.",
+  state: "The small detail is the whole difference between holding a picture and holding a list of names. Give it a job: the handle is pointing at the door.",
+  place: "Position sticks when you <i>put</i> the thing somewhere instead of noticing it there. Imagine setting it down in that corner, with a sound.",
+  count: "Counting afterwards means looking again at the picture you're still holding. That's the actual skill — don't count while you study, count when you're asked.",
+  absent: "Spotting what wasn't there is the easy question. Missing it usually means the scene never became a picture — try three anchors next time instead of all of it.",
+  binding: "Colour and object come apart first under load. Tie them together: not “a cup, and something blue” but “the blue cup”, said once.",
+  relation: "Relations are cheaper to hold than positions. Two things touching, leaning or facing each other last far longer than two separate facts.",
+  turn: "Turning the picture only works if there is a picture. If you had to reason it out from a list of words, that's the signal — and it's fixable.",
+};
+
+/* Pools are often concatenated (the scene's own objects plus the whole
+   vocabulary), so they repeat. Two buttons reading the same word, with
+   only one of them counting as right, is not a memory test. */
+function optionsAround(correct, pool, n) {
+  const others = [];
+  for (const x of shuffle(pool))
+    if (x !== correct && others.indexOf(x) < 0) others.push(x);
+  return shuffle([correct].concat(others.slice(0, (n || 4) - 1)));
+}
+/* Which part of the mental image a question actually leans on. The run
+   scores these separately, because "you got it wrong" is useless and
+   "colour held, position went" is something you can act on. */
+const FACET = {
+  colour: "colour", count: "colour", binding: "binding", state: "detail",
+  place: "position", relation: "position", absent: "object", turn: "rotation",
+  intrusion: "intrusion",
+};
+const FACET_NAME = {
+  colour: "Colour", binding: "Colour-to-object binding", detail: "Small details",
+  position: "Position", object: "What was there", rotation: "Turning it",
+  intrusion: "Rejecting what was never there",
+};
+
+/* An answer you look at instead of read. This is the whole difference
+   between a quiz about a picture and a game made of pictures: matching
+   image to image also tests the held image far better than matching an
+   image to the word for it. */
+function mini(kindDef, hex, stateId) {
+  return '<svg width="100" height="100" viewBox="0 0 100 100" style="display:block;width:100%;height:auto">' +
+    '<rect width="100" height="100" fill="' + INK + '"/>' +
+    '<g transform="translate(9 9) scale(.82)">' + kindDef.draw(hex, stateId) + "</g></svg>";
+}
+function gridIcon(cell) {
+  let g = '<svg width="100" height="100" viewBox="0 0 100 100" style="display:block;width:100%;height:auto">' +
+    '<rect width="100" height="100" fill="' + INK + '"/>';
+  for (const c of CELLS) {
+    const x = 14 + c.col * 25, y = 14 + c.row * 25;
+    g += '<rect x="' + x + '" y="' + y + '" width="21" height="21" fill="' +
+      (c.i === cell.i ? "#f0a057" : "#232b36") + '"/>';
+  }
+  return g + "</svg>";
+}
+function visFor(text, target) {
+  const col = PALETTE.find((p) => p.name === text);
+  if (col && target) return mini(target.kind, col.hex, target.state[0]);
+  const cell = CELLS.find((c) => c.name === text);
+  if (cell) return gridIcon(cell);
+  if (target) {
+    const st = target.kind.states.find((x) => x[1] === text);
+    if (st) return mini(target.kind, target.colour.hex, st[0]);
+  }
+  const obj = OBJECTS.find((o) => o.name === text);
+  if (obj) return mini(obj, "#9aa4b1", obj.states[0][0]);
+  if (/^\d+$/.test(text)) return '<div class="num">' + text + "</div>";
+  return null;
+}
+function addVis(p, target) {
+  p.vis = p.opts.map((o) => visFor(o, target));
+  if (p.vis.every((v) => v === null)) p.vis = null;
+  return p;
+}
+
+function mkProbe(q, correct, opts, kind, target) {
+  const list = opts.slice();
+  return addVis({ q, opts: list, answer: list.indexOf(correct), kind,
+           facet: FACET[kind] || "object", teach: TEACH[kind],
+           about: target ? target.kind.id : null,
+           aboutCell: target ? target.cell.i : null }, target);
+}
+
+function probesFor(scene, count, flavour) {
+  const it = scene.items, made = [], used = {};
+  const builders = [];
+
+  builders.push(() => {
+    const t = pick(it);
+    return mkProbe("What colour was the " + t.kind.name + "?", t.colour.name,
+      optionsAround(t.colour.name, PALETTE.map((p) => p.name)), "colour", t);
+  });
+  builders.push(() => {
+    const t = pick(it);
+    const labels = t.kind.states.map((s) => s[1]);
+    return mkProbe(t.kind.ask, stateLabel(t),
+      shuffle(labels), "state", t);
+  });
+  builders.push(() => {
+    const t = pick(it);
+    return mkProbe("What was in the " + t.cell.name + "?", t.kind.name,
+      optionsAround(t.kind.name, OBJECTS.map((o) => o.name)), "place", t);
+  });
+  builders.push(() => {
+    const t = pick(it);
+    const pr = mkProbe("Where was this?", t.cell.name,
+      optionsAround(t.cell.name, CELLS.map((c) => c.name)), "place", t);
+    pr.subject = mini(t.kind, "#8d96a3", t.kind.states[0][0]);
+    return pr;
+  });
+  builders.push(() => {
+    /* White and yellow turn up as page edges, flames and highlights
+       inside other objects, so counting them has two fair answers. */
+    const countable = it.filter((x) => x.colour.id !== "white" && x.colour.id !== "yellow");
+    if (!countable.length) return null;
+    const target = pick(countable).colour;
+    const c = it.filter((x) => x.colour.id === target.id).length;
+    const nums = shuffle([c, c + 1, Math.max(0, c - 1), c + 2].filter((v, i, a) => a.indexOf(v) === i)).slice(0, 4);
+    if (nums.indexOf(c) < 0) nums[0] = c;
+    return mkProbe("How many " + target.name + " things were there?", String(c),
+      shuffle(nums.map(String)), "count");
+  });
+  builders.push(() => {
+    const present = it.map((x) => x.kind.name);
+    const absent = pick(OBJECTS.filter((o) => present.indexOf(o.name) < 0)).name;
+    return mkProbe("Which of these was <i>not</i> in it?", absent,
+      shuffle(sample(present, 3).concat([absent])), "absent");
+  });
+  builders.push(() => {
+    const solo = it.filter((x) => it.filter((y) => y.colour.id === x.colour.id).length === 1);
+    if (!solo.length) return null;
+    const t = pick(solo);
+    return mkProbe("One thing was " + t.colour.name + ". What was it?", t.kind.name,
+      optionsAround(t.kind.name, OBJECTS.map((o) => o.name)), "binding", t);
+  });
+  builders.push(() => {
+    const dirs = [
+      ["directly above", 0, -1], ["directly below", 0, 1],
+      ["directly to the left of", -1, 0], ["directly to the right of", 1, 0],
+    ];
+    const tries = shuffle(it);
+    for (const t of tries) {
+      for (const d of shuffle(dirs)) {
+        const c = cellAt(t.cell.col + d[1], t.cell.row + d[2]);
+        if (!c) continue;
+        const other = it.find((x) => x.cell.i === c.i);
+        if (!other) continue;
+        return mkProbe("What was " + d[0] + " the " + t.kind.name + "?", other.kind.name,
+          optionsAround(other.kind.name, it.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "relation", other);
+      }
+    }
+    return null;
+  });
+
+  /* Turn-it rounds ask about a version of the picture that was never shown. */
+  const turners = [
+    {
+      label: "flipped left-to-right, like a mirror",
+      map: (c) => cellAt(2 - c.col, c.row),
+    },
+    {
+      label: "turned a quarter turn clockwise",
+      map: (c) => cellAt(2 - c.row, c.col),
+    },
+    {
+      label: "turned upside down",
+      map: (c) => cellAt(2 - c.col, 2 - c.row),
+    },
+  ];
+  function turnProbe() {
+    const t = pick(turners), item = pick(it), dest = t.map(item.cell);
+    if (!dest) return null;
+    return mkProbe("Now picture the whole thing <b>" + t.label + "</b>. What ends up in the " + dest.name + "?",
+      item.kind.name, optionsAround(item.kind.name, it.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "turn", item);
+  }
+
+  let guard_ = 0;
+  while (made.length < count && guard_++ < 80) {
+    let p = null;
+    if (flavour === "turn" && made.length === 0) p = turnProbe();
+    else if (flavour === "turn" && Math.random() < 0.55) p = turnProbe();
+    else p = pick(builders)();
+    if (!p || p.answer < 0) continue;
+    if (used[p.q]) continue;
+    used[p.q] = 1;
+    made.push(p);
+  }
+  return made;
+}
+
+/* ============ standing in it ============
+   The flat version asks what was in the picture. This asks what was
+   near you, what your hand would have reached, what it would have
+   sounded like. Those cannot be answered off a remembered list of
+   words, only off a place you were actually inside.
+   ======================================== */
+
+FACET_NAME.embodied = "Being inside it";
+FACET_NAME.anchor = "Holding one thing";
+FACET.embodied = "embodied";
+
+function describe1p(scene) {
+  const sorted = scene.items.slice().sort((a, b) => nearness(b.cell) - nearness(a.cell));
+  return sorted.map((it) =>
+    "The <b>" + it.colour.name + " " + it.kind.name + "</b> is " + place1p(it.cell) + ".");
+}
+
+function embodiedProbes(scene, count) {
+  const it = scene.items, out = [], used = {};
+  const byNear = it.slice().sort((a, b) => nearness(b.cell) - nearness(a.cell));
+  const names = it.map((x) => x.kind.name);
+  const builders = [];
+
+  const closest = byNear[0], furthest = byNear[byNear.length - 1];
+  builders.push(() => mkProbe("You are standing in it. What is <b>closest to you</b>?",
+    closest.kind.name, optionsAround(closest.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", closest));
+  builders.push(() => mkProbe("What is <b>furthest away</b>?",
+    furthest.kind.name, optionsAround(furthest.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", furthest));
+  builders.push(() => {
+    const left = it.filter((x) => x.cell.col === 0);
+    if (!left.length) return null;
+    const t = pick(left);
+    return mkProbe("What is <b>on your left</b>?", t.kind.name,
+      optionsAround(t.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", t);
+  });
+  builders.push(() => {
+    const right = it.filter((x) => x.cell.col === 2);
+    if (!right.length) return null;
+    const t = pick(right);
+    return mkProbe("What is <b>on your right</b>?", t.kind.name,
+      optionsAround(t.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", t);
+  });
+  builders.push(() => mkProbe("You reach out without looking. What does your hand find <b>first</b>?",
+    closest.kind.name, optionsAround(closest.kind.name, names.concat(OBJECTS.map((o) => o.name))), "embodied", closest));
+  builders.push(() => {
+    const t = pick(it.filter((x) => x.kind.sound));
+    if (!t) return null;
+    return mkProbe("You knock the " + t.kind.name + " over. What do you <b>hear</b>?", t.kind.sound,
+      optionsAround(t.kind.sound, OBJECTS.filter((o) => o.sound).map((o) => o.sound)), "embodied", t);
+  });
+  builders.push(() => {
+    const t = pick(it.filter((x) => x.kind.touch));
+    if (!t) return null;
+    return mkProbe("You put your hand on the " + t.kind.name + ". What does it <b>feel</b> like?", t.kind.touch,
+      optionsAround(t.kind.touch, OBJECTS.filter((o) => o.touch).map((o) => o.touch)), "embodied", t);
+  });
+
+  let guard_ = 0;
+  while (out.length < count && guard_++ < 60) {
+    const p = pick(builders)();
+    if (!p || p.answer < 0 || used[p.q]) continue;
+    used[p.q] = 1;
+    out.push(p);
+  }
+  return out;
+}
+
+/* A question aimed squarely at whatever is being held as the anchor. */
+function anchorProbe(scene, item) {
+  const others = scene.items.filter((x) => x !== item);
+  const forms = [
+    () => mkProbe("The anchor \u2014 what colour?", item.colour.name,
+      optionsAround(item.colour.name, PALETTE.map((x) => x.name)), "colour", item),
+    () => mkProbe("The anchor \u2014 " + item.kind.ask.replace(/^Wh/, "wh").replace(/\?$/, "?"), stateLabel(item),
+      shuffle(item.kind.states.map((x) => x[1])), "state", item),
+    () => {
+      const pr = mkProbe("Where was the anchor?", item.cell.name,
+        optionsAround(item.cell.name, CELLS.map((c) => c.name)), "place", item);
+      pr.subject = mini(item.kind, "#8d96a3", item.kind.states[0][0]);
+      return pr;
+    },
+    () => others.length
+      ? mkProbe("What was nearest the anchor?",
+          others.sort((a, b) => (Math.abs(a.cell.col - item.cell.col) + Math.abs(a.cell.row - item.cell.row)) -
+            (Math.abs(b.cell.col - item.cell.col) + Math.abs(b.cell.row - item.cell.row)))[0].kind.name,
+          optionsAround(others[0].kind.name, others.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "relation", others[0])
+      : null,
+  ];
+  const p = pick(forms)();
+  if (!p) return null;
+  p.isAnchor = true;
+  return p;
+}
+
+/* ================== rounds ==================
+   Study, then hold, then questions you could not have planned for.
+   The hold is the part that matters, so it is never skipped and the
+   screen is deliberately empty through it.
+   ============================================ */
+
+const MODES = {
+  scene:     { name: "Look, then hold", screen: "play" },
+  blueprint: { name: "Build it from words", screen: "play" },
+  fire:      { name: "Hold it while something pulls", screen: "play" },
+  turn:      { name: "Turn it around", screen: "play" },
+  stack:     { name: "One more thing", screen: "play" },
+  walk:      { name: "Put it somewhere you know", screen: "walk" },
+  point:     { name: "Single-Point Hold", screen: "play" },
+  sleep:     { name: "Sleep Scene", screen: "play" },
+};
+
+const PRIMER = {
+  scene: {
+    h: "Look, then hold",
+    p: "A few objects appear for a few seconds. Then they're gone and you keep them. The questions afterwards are picked at random from everything the picture knows &mdash; colours, which way a handle pointed, what was next to what &mdash; so there's no way to guess in advance and no way to get through it on a list of words.",
+    t: "Don't try to take all of it. Pick two or three things and encode those properly: colour and object as one word, and put each one down somewhere rather than noticing it there.",
+  },
+  blueprint: {
+    h: "Build it from words",
+    p: "You get a description and you never see the picture. You have to make it. This is the harder direction and it's the one that's actually like life &mdash; someone tells you where something is, and either you build it or you lose it.",
+    t: "Build the picture as you read, one object at a time, and put each one in place before you move to the next. If you get to the end and it's still a sentence rather than a scene, go back to the first object.",
+  },
+  fire: {
+    h: "Hold it while something pulls",
+    p: "Same picture, but you have to do something else while you're holding it. For most people with ADHD the trouble was never the holding on a quiet screen &mdash; it's that anything arriving knocks the thing out. This is that, on purpose, in small doses.",
+    t: "Before the task starts, take one last look at your picture and freeze it. Then when the task ends, look back at it immediately, before you try to answer anything.",
+  },
+  turn: {
+    h: "Turn it around",
+    p: "Hold the picture, then flip or rotate the whole thing in your head, and answer about the version you were never shown. Nothing on the screen can help you here &mdash; if it's a picture, turning it is easy, and if it's a list of sentences, it's nearly impossible.",
+    t: "Turn the whole scene at once, like a tray, rather than working out each object's new home one at a time.",
+  },
+  stack: {
+    h: "One more thing",
+    p: "It starts with two objects and adds one each time. You only ever see the new one &mdash; the rest you're carrying. It ends when one falls out, which it will, and the number you reach is the useful bit.",
+    t: "As each new thing arrives, hook it to something already in there rather than filing it separately. The new cup goes <i>on top of</i> the book that's already in the corner.",
+  },
+};
+
+PRIMER.point = {
+  h: "Single-Point Hold",
+  p: "One object, looked at properly, then held on its own with nothing else on the screen. Attention will slide off it &mdash; that is not the failure, it is the thing being trained. When you notice you have gone, tap <b>I drifted</b> and come back. The noticing and the returning is the rep; the app counts them as work done, not as mistakes.",
+  t: "Do not grip it. Let it sit there and keep looking. If it dims, take the outline first, then the colour, then where it sits.",
+};
+PRIMER.sleep = {
+  h: "Sleep Scene",
+  p: "The calm one. You build a short scene of something you actually want to do, step inside it, give it one thing to touch and one thing to hear, and run it a few times slowly. Nothing is scored and nothing can go wrong here.",
+  t: "Rehearsing an action in first person makes starting it easier &mdash; that is the whole claim, and it is a real one. It does not make anything happen by itself. Keep it short, keep it specific, and stop before you start analysing it.",
+};
+
+function paramsFor(mode, level) {
+  const L = clamp(level, 1, 20);
+  return {
+    n: clamp(3 + Math.floor(L / 3.2), 3, 8),
+    study: Math.max(1800, 7200 - L * 300),
+    hold: Math.min(32000, 2200 + L * 1700),
+    probes: clamp(1 + Math.floor(L / 4), 1, 4),
+  };
+}
+
+let round = null;
+let timers = [];
+function later(fn, ms) { const t = setTimeout(guard(fn), ms); timers.push(t); return t; }
+function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+function startMode(mode) {
+  if (mode === "walk") { go("walk"); startWalk(); return; }
+  go("play");
+  if (!state.seen[mode]) { primer(mode); return; }
+  if (mode === "point") return startPoint();
+  if (mode === "sleep") return startSleep();
+  newRound(mode);
+}
+ACTS.primerGo = (mode) => {
+  state.seen[mode] = 1; save();
+  if (mode === "point") return startPoint();
+  if (mode === "sleep") return startSleep();
+  newRound(mode);
+};
+ACTS.again = () => { if (round) newRound(round.mode); };
+
+function primer(mode) {
+  const P = PRIMER[mode];
+  $("play-body").innerHTML =
+    '<h2 class="ask">' + P.h + "</h2>" +
+    "<p>" + P.p + "</p>" +
+    '<div class="tip"><span class="h">what to do in your head</span>' + P.t + "</div>" +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="primerGo" data-arg="' + mode + '">Start</button>' +
+    '<button class="btn" data-go="learn">Read the techniques first</button></div>';
+}
+
+function newRound(mode) {
+  clearTimers();
+  const level = state.level[mode] || 1;
+  const P = paramsFor(mode, level);
+
+  if (mode === "stack") return startStack();
+
+  round = {
+    mode, level, params: P,
+    scene: makeScene(P.n),
+    probes: [], at: 0, right: 0, answered: [],
+    startedAt: now(),
+  };
+  round.probes = probesFor(round.scene, P.probes, mode === "turn" ? "turn" : "plain");
+  stopRound = () => { clearTimers(); keepAwake(false); };
+  phaseStudy();
+}
+
+/* ---- 1. study ---- */
+function phaseStudy() {
+  const R = round, P = R.params;
+  keepAwake(true);
+  const isWords = R.mode === "blueprint";
+  const ms = isWords ? Math.max(6000, P.n * 3000) : P.study;
+
+  $("play-body").innerHTML =
+    '<span class="lab">' + MODES[R.mode].name + " &middot; level " + R.level + "</span>" +
+    '<h2 class="ask" style="margin:6px 0 12px">' +
+    (isWords ? "Build this in your head" : "Take it in") + "</h2>" +
+    (isWords
+      ? '<div class="desc"><ul>' + describeScene(R.scene).map((d) => "<li>" + d + "</li>").join("") + "</ul></div>"
+      : '<div class="stage">' + drawScene(R.scene) + "</div>") +
+    '<div class="bar"><i id="study-bar"></i></div>' +
+    '<div class="row" style="margin-top:14px">' +
+    '<button class="btn" data-act="gotIt">I\'ve got it &rarr;</button></div>' +
+    '<p class="sub" style="margin-top:12px">' +
+    (isWords
+      ? "Put each one in place as you read it. Moving on early is fine — the sooner it's a picture, the sooner you can start holding it."
+      : "Two or three things, properly, beats all of them vaguely.") + "</p>";
+
+  countdown("study-bar", ms, phaseHold);
+}
+ACTS.gotIt = () => { clearTimers(); phaseHold(); };
+
+function countdown(barId, ms, done) {
+  const start = now();
+  const step = () => {
+    const el = $(barId);
+    if (!el) return;
+    const p = clamp((now() - start) / ms, 0, 1);
+    el.style.width = (p * 100).toFixed(1) + "%";
+    if (p >= 1) { done(); return; }
+    later(step, 60);
+  };
+  step();
+}
+
+/* ---- 2. hold ---- */
+function phaseHold() {
+  const R = round, ms = R.params.hold;
+  if (R.mode === "fire") return holdUnderFire(ms);
+
+  $("play-body").innerHTML =
+    '<span class="lab">holding</span>' +
+    '<div class="stage" style="margin-top:6px"><div class="hold">' +
+    '<span class="holdbig">Keep it there.</span>' +
+    "Look around it, don’t just recite it" +
+    "</div></div>" +
+    '<div class="bar go"><i id="hold-bar"></i></div>' +
+    '<p class="sub" style="margin-top:12px">Walk your eyes over the picture you’re holding. Check a colour. Check which way something was pointing. That re-looking is the actual exercise.</p>';
+
+  countdown("hold-bar", ms, () => { blip(660, 120); phaseProbe(); });
+}
+
+/* The interference task: a shape points somewhere, you tap the matching
+   side. Small, fast, and genuinely disruptive — which is the point. */
+const FIRE_SYM = [["left", "&#9664;"], ["up", "&#9650;"], ["right", "&#9654;"]];
+function holdUnderFire(ms) {
+  const R = round;
+  R.fire = { asked: 0, right: 0, cur: null };
+  $("play-body").innerHTML =
+    '<span class="lab">holding &middot; and this</span>' +
+    '<p class="firelab" id="fire-sym" style="font-size:44px;margin:16px 0 0">&nbsp;</p>' +
+    '<p class="sub" style="text-align:center;margin:6px 0 0">Tap the side it points to. Keep the picture.</p>' +
+    '<div class="fire">' +
+    FIRE_SYM.map((s) => '<button data-act="fireTap" data-arg="' + s[0] + '">' + s[1] + "</button>").join("") +
+    "</div>" +
+    '<div class="bar go" style="margin-top:14px"><i id="hold-bar"></i></div>';
+
+  const nextSym = () => {
+    const s = pick(FIRE_SYM);
+    R.fire.cur = s[0];
+    const el = $("fire-sym");
+    if (el) el.innerHTML = s[1];
+  };
+  nextSym();
+  R.fire.next = nextSym;
+  countdown("hold-bar", ms, () => { blip(660, 120); phaseProbe(); });
+}
+ACTS.fireTap = (dir) => {
+  const R = round;
+  if (!R || !R.fire || !R.fire.cur) return;
+  R.fire.asked++;
+  if (dir === R.fire.cur) R.fire.right++;
+  R.fire.next();
+};
+
+/* ---- 3. the questions ---- */
+function phaseProbe() {
+  const R = round;
+  keepAwake(false);
+  const p = R.probes[R.at];
+  if (!p) return phaseDone();
+
+  $("play-body").innerHTML =
+    '<span class="lab">it’s gone &middot; question ' + (R.at + 1) + " of " + R.probes.length + "</span>" +
+    '<p class="qn">' + p.q + "</p>" +
+    '<div class="opts" id="opts">' +
+    p.opts.map((o, i) => '<button data-act="answer" data-arg="' + i + '">' + o + "</button>").join("") +
+    "</div>" +
+    (R.probes.length > 1 && R.at === 0
+      ? '<p class="sub" style="margin-top:14px">There’s more than one question about this picture, so don’t let go of it yet.</p>'
+      : "");
+}
+
+ACTS.answer = (ixStr) => {
+  const R = round, ix = +ixStr, p = R.probes[R.at];
+  if (!p || R.locked) return;
+  R.locked = true;
+  const good = ix === p.answer;
+  if (good) { R.right++; blip(880, 90); } else blip(200, 180);
+  R.answered.push({ q: p.q, ok: good, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach });
+
+  $$("#opts button").forEach((b, i) => {
+    b.disabled = true;
+    if (i === p.answer) b.className = "right";
+    else if (i === ix) b.className = "wrong";
+  });
+  later(() => { R.locked = false; R.at++; phaseProbe(); }, good ? 520 : 1150);
+};
+
+/* ---- 4. what happened ---- */
+function phaseDone() {
+  const R = round;
+  const ratio = R.probes.length ? R.right / R.probes.length : 0;
+  let moved = 0;
+  if (ratio >= 0.8) moved = 1;
+  else if (ratio <= 0.4) moved = -1;
+  state.level[R.mode] = clamp((state.level[R.mode] || 1) + moved, 1, 20);
+  state.rounds.push({ mode: R.mode, at: now(), level: R.level, right: R.right, asked: R.probes.length });
+  save();
+
+  const misses = R.answered.filter((a) => !a.ok);
+  const teach = misses.length ? misses[0].teach : null;
+
+  $("play-body").innerHTML =
+    '<span class="lab">' + MODES[R.mode].name + "</span>" +
+    '<h2 class="ask" style="margin:6px 0 12px">' +
+    (R.right === R.probes.length
+      ? "All of them."
+      : R.right === 0 ? "None of those stuck." : R.right + " of " + R.probes.length + ".") +
+    "</h2>" +
+    (R.fire
+      ? '<p class="sub" style="margin-bottom:12px">And ' + R.fire.right + " of " + R.fire.asked +
+        " on the side task. Holding both is the whole trick, and it is genuinely hard.</p>"
+      : "") +
+    '<div class="stage">' + drawScene(R.scene) + "</div>" +
+    '<p class="sub" style="margin-top:10px">Here it is again. Worth a few seconds — seeing what you missed is where most of the learning is.</p>' +
+    R.answered.map((a) =>
+      '<div class="verdict ' + (a.ok ? "good" : "miss") + '">' +
+      '<span class="h">' + (a.ok ? "got it" : "missed") + "</span>" +
+      a.q.replace(/<[^>]+>/g, "") +
+      (a.ok ? " &mdash; " + a.want : "<br>You said <b>" + esc(a.gave) + "</b>. The answer was <b>" + esc(a.want) + "</b>.") +
+      "</div>").join("") +
+    (teach ? '<div class="tip"><span class="h">try this next time</span>' + teach + "</div>" : "") +
+    (moved === 1
+      ? '<p class="sub" style="margin-top:14px">That was comfortable, so the next one is a little bigger.</p>'
+      : moved === -1
+        ? '<p class="sub" style="margin-top:14px">That was over your edge, so the next one eases off. Nothing is lost by that — sitting just inside the edge is where this works.</p>'
+        : '<p class="sub" style="margin-top:14px">About right. This is roughly your edge, which is where it should sit.</p>') +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="again">Again</button>' +
+    '<button class="btn" data-go="home">That’s enough</button></div>';
+}
+
+/* ---------- one more thing ----------
+   Only the new object is ever shown. Everything before it you are
+   carrying, so the load is real and the number you reach means
+   something. */
+function growScene(scene) {
+  const usedKinds = scene.items.map((x) => x.kind.id);
+  const usedCells = scene.items.map((x) => x.cell.i);
+  const kinds = OBJECTS.filter((o) => usedKinds.indexOf(o.id) < 0);
+  const cells = CELLS.filter((c) => usedCells.indexOf(c.i) < 0);
+  if (!kinds.length || !cells.length) return null;
+  const inScene = scene.items.map((x) => x.colour);
+  const room = PALETTE.filter((p) => inScene.every((q) => !clashes(p.id, q.id)));
+  const item = {
+    kind: pick(kinds), cell: pick(cells), colour: pick(room.length ? room : PALETTE),
+  };
+  item.state = pick(item.kind.states);
+  scene.items.push(item);
+  return item;
+}
+
+function startStack() {
+  round = { mode: "stack", scene: { items: [], id: uid() }, step: 0, at: 0, right: 0, answered: [], startedAt: now() };
+  stopRound = () => { clearTimers(); keepAwake(false); };
+  keepAwake(true);
+  stackShow(growScene(round.scene));
+}
+
+function stackShow(newItem) {
+  const R = round;
+  R.step = R.scene.items.length;
+  const ms = Math.max(1500, 2900 - R.step * 130);
+  const solo = { items: [newItem], id: "one" };
+
+  $("play-body").innerHTML =
+    '<span class="lab">' +
+    (R.step === 1 ? "starting with one" : "carrying " + (R.step - 1) + " &middot; here comes one more") + "</span>" +
+    '<div class="stage" style="margin-top:6px">' + drawScene(solo) + "</div>" +
+    '<div class="bar"><i id="study-bar"></i></div>' +
+    '<p class="sub" style="margin-top:12px">Hook it onto something already in there rather than filing it on its own.</p>';
+
+  countdown("study-bar", ms, () => {
+    $("play-body").innerHTML =
+      '<span class="lab">holding ' + R.step + "</span>" +
+      '<div class="stage" style="margin-top:6px"><div class="hold">' +
+      '<span class="holdbig">All of it, together.</span>Not just the new one</div></div>' +
+      '<div class="bar go"><i id="hold-bar"></i></div>';
+    countdown("hold-bar", 1400, () => {
+      const p = probesFor(R.scene, 1, "plain")[0];
+      if (!p) return stackEnd();
+      R.cur = p;
+      $("play-body").innerHTML =
+        '<span class="lab">carrying ' + R.step + "</span>" +
+        '<p class="qn">' + p.q + "</p>" +
+        '<div class="opts" id="opts">' +
+        p.opts.map((o, i) => '<button data-act="stackAns" data-arg="' + i + '">' + o + "</button>").join("") +
+        "</div>";
+    });
+  });
+}
+
+ACTS.stackAns = (ixStr) => {
+  const R = round, ix = +ixStr, p = R.cur;
+  if (!p || R.locked) return;
+  R.locked = true;
+  const good = ix === p.answer;
+  R.answered.push({ q: p.q, ok: good, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach });
+  $$("#opts button").forEach((b, i) => {
+    b.disabled = true;
+    if (i === p.answer) b.className = "right";
+    else if (i === ix) b.className = "wrong";
+  });
+  if (good) {
+    blip(880, 90);
+    later(() => {
+      R.locked = false;
+      const nx = growScene(R.scene);
+      if (!nx) return stackEnd(true);
+      stackShow(nx);
+    }, 560);
+  } else {
+    blip(200, 180);
+    later(() => { R.locked = false; stackEnd(); }, 900);
+  }
+};
+
+function stackEnd(maxed) {
+  const R = round;
+  keepAwake(false);
+  const held = R.scene.items.length - (maxed ? 0 : 1);
+  state.level.stack = clamp(Math.max(state.level.stack || 1, held - 2), 1, 20);
+  state.rounds.push({ mode: "stack", at: now(), level: held, right: held, asked: held });
+  save();
+  const last = R.answered[R.answered.length - 1];
+  $("play-body").innerHTML =
+    '<span class="lab">one more thing</span>' +
+    '<h2 class="ask" style="margin:6px 0 12px">You held ' + held + ".</h2>" +
+    (maxed
+      ? "<p>That's the whole board. There isn't any more to add, which is a good problem.</p>"
+      : "<p>It came apart on the one after that, which is exactly what it's supposed to do. The number is only interesting over weeks, not today.</p>") +
+    '<div class="stage">' + drawScene(R.scene) + "</div>" +
+    (last && !last.ok
+      ? '<div class="verdict miss"><span class="h">the one that went</span>' + last.q.replace(/<[^>]+>/g, "") +
+        "<br>You said <b>" + esc(last.gave) + "</b>. The answer was <b>" + esc(last.want) + "</b>.</div>" +
+        '<div class="tip"><span class="h">try this next time</span>' + last.teach + "</div>"
+      : "") +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="again">Again</button>' +
+    '<button class="btn" data-go="home">That’s enough</button></div>';
+}
+
+/* ============ single-point hold ============
+   One object and nothing else. The point is not the questions at the
+   end; it is the twenty seconds in the middle where attention slides
+   off and you bring it back. Drifting is counted as work, because it is.
+   =========================================== */
+
+let point = null;
+
+function startPoint() {
+  const kind = pick(OBJECTS), colour = pick(PALETTE), cell = pick(CELLS);
+  const item = { kind: kind, colour: colour, state: pick(kind.states), cell: cell };
+  const lvl = clamp(state.level.point || 3, 1, 20);
+  point = { item: item, drifts: 0, at: 0, right: 0, answered: [], hold: 6000 + lvl * 1200, level: lvl };
+  point.probes = [
+    mkProbe("What <b>colour</b> was it?", colour.name, optionsAround(colour.name, PALETTE.map((x) => x.name)), "colour", item),
+    mkProbe(kind.ask, stateLabel(item), shuffle(kind.states.map((x) => x[1])), "state", item),
+    mkProbe("<b>Where</b> on the screen was it?", cell.name, optionsAround(cell.name, CELLS.map((c) => c.name)), "place", item),
+    kind.sound ? mkProbe("Knock it over. What would you <b>hear</b>?", kind.sound,
+      optionsAround(kind.sound, OBJECTS.filter((o) => o.sound).map((o) => o.sound)), "embodied", item) : null,
+    kind.touch ? mkProbe("Put your hand on it. What does it <b>feel</b> like?", kind.touch,
+      optionsAround(kind.touch, OBJECTS.filter((o) => o.touch).map((o) => o.touch)), "embodied", item) : null,
+  ].filter(Boolean);
+  stopRound = () => { clearTimers(); keepAwake(false); };
+  keepAwake(true);
+  pointLook();
+}
+
+function pointLook() {
+  clearTimers();
+  $("play-body").innerHTML =
+    '<span class="lab">ten seconds · just look</span>' +
+    '<div class="stage" style="margin-top:6px">' + drawScene({ items: [point.item], id: "p" }) + "</div>" +
+    '<div class="bar"><i id="pt-bar"></i></div>' +
+    '<p class="sub" style="margin-top:12px">Outline, then colour, then where it sits. Do not rush it — there is only one thing here.</p>';
+  countdown("pt-bar", 10000, pointHold);
+}
+
+const POINT_CUES = [
+  ["Keep it.", "nothing else on the screen, nothing else in your head"],
+  ["See its outline.", "edges only"],
+  ["See its colour.", "fill it in"],
+  ["See where it sits.", "hold the place as well as the thing"],
+  ["It dimmed. Bring it back.", "outline first"],
+  ["Stay with it.", "not rebuilding anything · just this"],
+  ["If a thought pulls, return.", "no commentary · just go back"],
+  ["The return is the rep.", "you are not failing when it goes"],
+];
+
+function pointHold() {
+  clearTimers();
+  const ms = point.hold, slots = Math.max(3, Math.round(ms / 3400)), every = ms / slots;
+  let i = 0;
+  const paint = () => {
+    if (!point) return;
+    const c = POINT_CUES[i % POINT_CUES.length];
+    $("play-body").innerHTML =
+      '<p class="lab" style="margin:0 0 6px">holding · the ' + esc(point.item.colour.name) + " " + esc(point.item.kind.name) + "</p>" +
+      '<div class="void"><p class="cue">' + c[0] + '</p><p class="cuesub">' + c[1] + "</p>" +
+      '<div class="tick">' + Array.from({ length: slots }, (_, k) =>
+        '<i class="' + (k <= i ? "on" : "") + '"></i>').join("") + "</div></div>" +
+      '<div class="row" style="margin-top:12px"><button class="btn" data-act="pointDrift">I drifted</button></div>' +
+      '<div class="bar go" style="margin-top:12px"><i id="ph-bar"></i></div>';
+    i++;
+    if (i < slots) later(paint, every);
+  };
+  paint();
+  countdown("ph-bar", ms, () => { blip(660, 110); keepAwake(false); pointAsk(); });
+}
+ACTS.pointDrift = () => {
+  if (!point) return;
+  point.drifts++;
+  state.drifts = (state.drifts || 0) + 1;
+  const c = document.querySelector(".cue"), sub = document.querySelector(".cuesub");
+  if (c) { c.textContent = "Back to the " + point.item.kind.name + "."; c.className = "cue warm"; }
+  if (sub) sub.textContent = "noticed and returned · " + point.drifts + " so far";
+  blip(430, 90);
+};
+
+function pointAsk() {
+  const p = point.probes[point.at];
+  if (!p) return pointDone();
+  $("play-body").innerHTML =
+    '<span class="lab">it’s gone · ' + (point.at + 1) + " of " + point.probes.length + "</span>" +
+    '<p class="qn">' + p.q + "</p>" +
+    '<div class="opts" id="opts">' +
+    p.opts.map((o, i) => '<button data-act="pointAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>";
+}
+ACTS.pointAns = (ixStr) => {
+  const ix = +ixStr, p = point.probes[point.at];
+  if (!p || point.locked) return;
+  point.locked = true;
+  const good = ix === p.answer;
+  if (good) point.right++;
+  point.answered.push({ q: p.q, ok: good, want: p.opts[p.answer], gave: p.opts[ix], facet: p.facet });
+  state.facets[p.facet] = state.facets[p.facet] || { a: 0, r: 0 };
+  state.facets[p.facet].a++;
+  if (good) state.facets[p.facet].r++;
+  document.querySelectorAll("#opts button").forEach((b, i) => {
+    b.disabled = true;
+    if (i === p.answer) b.className = "right";
+    else if (i === ix) b.className = "wrong";
+  });
+  blip(good ? 880 : 200, good ? 90 : 180);
+  later(() => { point.locked = false; point.at++; pointAsk(); }, good ? 500 : 1100);
+};
+
+function pointDone() {
+  const n = point.probes.length, ratio = point.right / n;
+  state.level.point = clamp((state.level.point || 3) + (ratio >= 0.8 ? 1 : ratio <= 0.4 ? -1 : 0), 1, 20);
+  state.rounds.push({ mode: "point", at: now(), level: point.level, right: point.right, asked: n });
+  if (Math.round(point.hold / 1000) > (state.anchorBest || 0) && ratio >= 0.6)
+    state.anchorBest = Math.round(point.hold / 1000);
+  save();
+  const miss = point.answered.filter((a) => !a.ok);
+  $("play-body").innerHTML =
+    '<span class="lab">single-point hold</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">' + point.right + " of " + n + ", held for " +
+    Math.round(point.hold / 1000) + " seconds.</h2>" +
+    (point.drifts
+      ? "<p>You went " + point.drifts + " time" + (point.drifts === 1 ? "" : "s") + " and came back " +
+        point.drifts + ". That is the exercise — not the part that went wrong.</p>"
+      : "<p>No drifts reported. Either it was genuinely steady, or it went without you noticing — the second one is worth watching for.</p>") +
+    '<div class="stage">' + drawScene({ items: [point.item], id: "pd" }) + "</div>" +
+    miss.map((a) => '<div class="verdict miss"><span class="h">' + FACET_NAME[a.facet] + "</span>" +
+      a.q.replace(/<[^>]+>/g, "") + "<br>You said <b>" + esc(a.gave) + "</b>. It was <b>" + esc(a.want) + "</b>.</div>").join("") +
+    '<div class="tip" style="margin-top:14px"><span class="h">next time</span>' +
+    (miss.some((a) => a.facet === "embodied")
+      ? "The sound and the feel of a thing tend to hold longer than its colour. Give it both while you are looking."
+      : "Longer holds are where this pays. If that one felt easy, the next is longer.") + "</div>" +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="againPoint">Again</button>' +
+    '<button class="btn" data-go="home">That’s enough</button></div>';
+}
+ACTS.againPoint = () => startPoint();
+
+/* ============ sleep scene ============
+   Calm, unscored. Rehearsing an action in first person makes starting
+   it easier; that is the entire claim, it is a real one, and it is not
+   a claim that imagining a thing brings it about.
+   ===================================== */
+
+const SLEEP_SCENES = [
+  "I open the app and start without deciding to.",
+  "I pick up my keys and go.",
+  "I see the floor of my room clear.",
+  "I hold the image steadily and it does not wobble.",
+  "I start the thing I have been putting off.",
+  "I walk into work already steady.",
+];
+const TOUCHES = ["something cool under my hand", "the weight of it in my fingers", "rough fabric", "a smooth flat surface", "warm air on my face"];
+const SOUNDS = ["a door clicking shut", "my own footsteps", "traffic a long way off", "something set down on a table", "the room being quiet"];
+
+let sleepS = null;
+
+function startSleep() {
+  sleepS = { line: "", touch: "", sound: "", loop: 0 };
+  $("play-body").innerHTML =
+    '<span class="lab">sleep scene · nothing is scored</span>' +
+    '<h2 class="ask" style="margin:6px 0 8px">What are you running?</h2>' +
+    '<p class="sub">Short and specific. One action, in your own life, that you would like to be easy.</p>' +
+    '<div class="stack" style="margin-top:14px">' +
+    sample(SLEEP_SCENES, 4).map((x) =>
+      '<button class="big" data-act="sleepLine" data-arg="' + esc(x) + '"><span class="t" style="font-size:16px">' + esc(x) + "</span></button>").join("") +
+    "</div>" +
+    '<div class="row" style="margin-top:14px"><input class="field" id="own-scene" placeholder="or type your own" autocomplete="off">' +
+    '<button class="btn" data-act="sleepOwn">Use it</button></div>';
+}
+ACTS.sleepLine = (x) => { sleepS.line = x; sleepEnter(); };
+ACTS.sleepOwn = () => {
+  const v = ($("own-scene") ? $("own-scene").value : "").trim();
+  if (!v) return;
+  sleepS.line = v; sleepEnter();
+};
+
+function sleepEnter() {
+  $("play-body").innerHTML =
+    '<div class="void"><p class="cue">' + esc(sleepS.line) + "</p>" +
+    '<p class="cuesub">from your own eyes · not watching yourself do it</p></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="sleepTouch">I am in it</button></div>';
+}
+ACTS.sleepTouch = () => {
+  $("play-body").innerHTML =
+    '<span class="lab">one thing to feel</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">What does your hand find?</h2>' +
+    '<div class="opts">' + sample(TOUCHES, 4).map((x) =>
+      '<button data-act="setTouch" data-arg="' + esc(x) + '">' + esc(x) + "</button>").join("") + "</div>";
+};
+ACTS.setTouch = (x) => {
+  sleepS.touch = x;
+  $("play-body").innerHTML =
+    '<span class="lab">one thing to hear</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">What can you hear?</h2>' +
+    '<div class="opts">' + sample(SOUNDS, 4).map((y) =>
+      '<button data-act="setSound" data-arg="' + esc(y) + '">' + esc(y) + "</button>").join("") + "</div>";
+};
+ACTS.setSound = (y) => { sleepS.sound = y; sleepS.loop = 0; sleepLoop(); };
+
+function sleepLoop() {
+  if (sleepS.loop >= 5) return sleepDone();
+  sleepS.loop++;
+  keepAwake(true);
+  $("play-body").innerHTML =
+    '<span class="lab">pass ' + sleepS.loop + " of 5 · slowly</span>" +
+    '<div class="void"><p class="cue">' + esc(sleepS.line) + "</p>" +
+    '<p class="cuesub">' + esc(sleepS.touch) + " · " + esc(sleepS.sound) + "</p>" +
+    '<div class="tick">' + Array.from({ length: 5 }, (_, i) =>
+      '<i class="' + (i < sleepS.loop ? "on" : "") + '"></i>').join("") + "</div></div>" +
+    '<div class="bar go"><i id="sl-bar"></i></div>' +
+    '<p class="sub" style="margin-top:12px">Run it through once. Do not add anything. Do not check whether it is working.</p>';
+  countdown("sl-bar", 7000, sleepLoop);
+}
+
+function sleepDone() {
+  keepAwake(false);
+  state.sleeps = (state.sleeps || 0) + 1;
+  state.rounds.push({ mode: "sleep", at: now(), level: 1, right: 1, asked: 1 });
+  save();
+  $("play-body").innerHTML =
+    '<span class="lab">done</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">Stop there.</h2>' +
+    "<p>Do not go over it and do not check whether it took. The useful part has already happened: you have run the thing through in first person, which is what makes starting it easier than it was an hour ago.</p>" +
+    '<p class="sub">That is the whole claim here, and it is a real one. It is not a claim that picturing a thing brings it about.</p>' +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="againSleep">Another</button>' +
+    '<button class="btn" data-go="home">Leave it</button></div>';
+}
+ACTS.againSleep = () => startSleep();
+
+/* ================== the walk ==================
+   The memory palace, which is the one technique here with a serious
+   evidence base behind it. Route first, then things go on the route.
+   ============================================== */
+
+const DEFAULT_STOPS = [
+  "Your front door", "The hallway", "The kitchen sink", "The fridge",
+  "Where you sit down", "The bathroom mirror", "Your bed",
+  "The wardrobe or where clothes go", "A window you look out of", "Where your shoes are",
+];
+
+const NOUNS = [
+  "anvil", "penguin", "lantern", "saxophone", "cactus", "kettle", "violin", "hammer",
+  "walrus", "ladder", "trumpet", "pineapple", "anchor", "typewriter", "octopus",
+  "chandelier", "tractor", "accordion", "crocodile", "telescope", "mattress", "bagpipes",
+  "wheelbarrow", "jellyfish", "harmonica", "toaster", "flamingo", "canoe", "boulder",
+  "microscope", "parrot", "sledgehammer", "wardrobe", "trombone", "hedgehog", "kayak",
+];
+const SHOPPING = [
+  "milk", "bread", "eggs", "batteries", "toothpaste", "bananas", "coffee", "bin bags",
+  "shampoo", "washing-up liquid", "chicken", "rice", "onions", "cheese", "painkillers",
+];
+
+const CUES = [
+  "Make it far too big for the space.",
+  "Make it move &mdash; falling, rolling, flapping.",
+  "Make it wrong: leaking, on fire, upside down.",
+  "Make it make a noise you can hear.",
+  "Put yourself in it &mdash; you have to step over it.",
+  "Multiply it. There are hundreds of them.",
+  "Make it the wrong material &mdash; glass, fur, wet concrete.",
+];
+
+let walk = null;
+
+function startWalk() {
+  if (!state.walkStops || !state.walkStops.length) return walkSetup();
+  walkChoose();
+}
+
+function walkSetup() {
+  const stops = state.walkStops && state.walkStops.length ? state.walkStops : DEFAULT_STOPS;
+  $("walk-body").innerHTML =
+    '<h2 class="ask">First, a route you already know</h2>' +
+    "<p>Pick somewhere you could walk through with your eyes shut &mdash; usually where you live. The stops need to be in a fixed order, and they need to be places you can actually picture, not a list of rooms.</p>" +
+    '<p class="sub">These are a starting point. Change any of them to something truer for your place, and drop any that don’t exist. Order matters more than the number.</p>' +
+    '<div class="stops" id="stop-list">' +
+    stops.map((s, i) =>
+      '<div class="stop"><span class="n">' + (i + 1) + '</span>' +
+      '<input value="' + esc(s) + '" data-stop="' + i + '">' +
+      '<button class="x" data-act="dropStop" data-arg="' + i + '" aria-label="remove">&times;</button></div>').join("") +
+    "</div>" +
+    '<div class="row" style="margin-top:12px">' +
+    '<button class="btn" data-act="addStop">Add a stop</button>' +
+    '<button class="btn prime" data-act="saveStops">Save the route</button></div>' +
+    '<div class="tip" style="margin-top:18px"><span class="h">why this one is different</span>' +
+    "This is the technique that survives testing. In a 2017 study, people with ordinary memories trained on it for half an hour a day for six weeks and went from recalling around 26 words out of 72 to around 62 &mdash; and they still had it four months later. " +
+    "Nothing about their raw capacity changed. They just had somewhere to put things.</div>";
+}
+
+function readStops() {
+  return $$("#stop-list input").map((i) => i.value.trim()).filter(Boolean);
+}
+ACTS.addStop = () => {
+  const cur = readStops();
+  state.walkStops = cur.concat(["Somewhere next along"]);
+  save(); walkSetup();
+  const inputs = $$("#stop-list input");
+  const last = inputs[inputs.length - 1];
+  if (last) { last.focus(); last.select(); }
+};
+ACTS.dropStop = (ixStr) => {
+  const cur = readStops();
+  cur.splice(+ixStr, 1);
+  state.walkStops = cur; save(); walkSetup();
+};
+ACTS.saveStops = () => {
+  const cur = readStops();
+  if (cur.length < 4) { showError("a route needs at least four stops"); return; }
+  state.walkStops = cur; save(); walkChoose();
+};
+ACTS.editRoute = () => walkSetup();
+
+function walkChoose() {
+  const stops = state.walkStops;
+  const n = clamp((state.walkBest || 0) + 2, 5, stops.length);
+  $("walk-body").innerHTML =
+    '<h2 class="ask">What are you carrying?</h2>' +
+    '<p class="sub">' + n + " things, onto the first " + n + " stops of your route. " +
+    (state.walkBest ? "Your best so far is " + state.walkBest + "." : "") + "</p>" +
+    '<div class="stack" style="margin-top:14px">' +
+    '<button class="big" data-act="walkGo" data-arg="nouns"><span class="t">Give me things to carry</span>' +
+    '<span class="d">Random solid objects. Best for practising the technique itself, because nothing about them is familiar.</span></button>' +
+    '<button class="big" data-act="walkGo" data-arg="shop"><span class="t">A shopping list</span>' +
+    '<span class="d">The realistic version. Same skill, applied to something you might actually need to hold.</span></button>' +
+    '<button class="big" data-act="walkOwn"><span class="t">Something of mine</span>' +
+    '<span class="d">Paste in a real list &mdash; the steps of a job, what you need from a room, anything. This is the point of the whole technique.</span></button>' +
+    "</div>" +
+    '<div class="row" style="margin-top:18px"><button class="btn" data-act="editRoute">Change the route</button></div>';
+}
+
+ACTS.walkOwn = () => {
+  $("walk-body").innerHTML =
+    '<h2 class="ask">Your list</h2>' +
+    '<p class="sub">One per line. Short and concrete works best &mdash; “ring the dentist” beats “sort out health stuff”.</p>' +
+    '<textarea class="field" id="own-list" rows="8" placeholder="milk&#10;ring the dentist&#10;bin bags"></textarea>' +
+    '<div class="row" style="margin-top:12px"><button class="btn prime" data-act="walkGo" data-arg="own">Put these on the route</button>' +
+    '<button class="btn" data-act="walkBack">Back</button></div>';
+  const t = $("own-list"); if (t) t.focus();
+};
+ACTS.walkBack = () => walkChoose();
+
+ACTS.walkGo = (which) => {
+  const stops = state.walkStops;
+  let items;
+  if (which === "own") {
+    const raw = ($("own-list") ? $("own-list").value : "").split("\n").map((x) => x.trim()).filter(Boolean);
+    if (!raw.length) { showError("nothing in that list yet"); return; }
+    items = raw.slice(0, stops.length);
+  } else {
+    const n = clamp((state.walkBest || 0) + 2, 5, stops.length);
+    items = sample(which === "shop" ? SHOPPING : NOUNS, n);
+  }
+  walk = { items, stops: stops.slice(0, items.length), at: 0, cues: shuffle(CUES), startedAt: now() };
+  stopRound = () => { clearTimers(); keepAwake(false); };
+  keepAwake(true);
+  walkPlace();
+};
+
+function walkPlace() {
+  const W = walk;
+  if (W.at >= W.items.length) return walkRecallStart();
+  const cue = W.cues[W.at % W.cues.length];
+  $("walk-body").innerHTML =
+    '<span class="lab">placing ' + (W.at + 1) + " of " + W.items.length + "</span>" +
+    '<div class="locus" style="margin-top:8px">' +
+    '<span class="where">' + esc(W.stops[W.at]) + "</span>" +
+    '<span class="item">' + esc(W.items[W.at]) + "</span>" +
+    '<span class="cue">' + cue + "</span></div>" +
+    '<div class="bar"><i id="place-bar"></i></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn" data-act="placed">Done, next &rarr;</button></div>' +
+    '<p class="sub" style="margin-top:12px">Don’t just set it down there. Something has to happen &mdash; it falls, it blocks you, it soaks something. Ten seconds of that beats a minute of staring.</p>';
+  countdown("place-bar", 14000, () => ACTS.placed());
+}
+ACTS.placed = () => { clearTimers(); walk.at++; walkPlace(); };
+
+function walkRecallStart() {
+  walk.at = 0; walk.got = [];
+  blip(660, 120);
+  walkRecall();
+}
+
+function walkRecall() {
+  const W = walk;
+  if (W.at >= W.stops.length) return walkDone();
+  $("walk-body").innerHTML =
+    '<span class="lab">walking it &middot; stop ' + (W.at + 1) + " of " + W.stops.length + "</span>" +
+    '<h2 class="ask" style="margin:8px 0 6px">' + esc(W.stops[W.at]) + "</h2>" +
+    '<p class="sub">What did you leave here?</p>' +
+    '<input class="field" id="recall-in" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="whatever’s there">' +
+    '<div class="row" style="margin-top:12px">' +
+    '<button class="btn prime" data-act="recallGo">Next stop &rarr;</button>' +
+    '<button class="btn" data-act="recallSkip">Nothing there</button></div>';
+  const i = $("recall-in");
+  if (i) i.focus();
+}
+
+function norm(s) { return String(s).toLowerCase().replace(/[^a-z0-9 ]/g, "").trim(); }
+function matches(said, want) {
+  const a = norm(said), b = norm(want);
+  if (!a) return false;
+  if (a === b) return true;
+  if (b.length >= 4 && (a.indexOf(b) > -1 || b.indexOf(a) > -1) && Math.abs(a.length - b.length) <= 3) return true;
+  const aw = a.split(" "), bw = b.split(" ");
+  return bw.length > 1 && aw.length > 1 && aw[0] === bw[0] && aw.length === bw.length;
+}
+ACTS.recallGo = () => {
+  const W = walk, said = $("recall-in") ? $("recall-in").value : "";
+  W.got.push({ said, want: W.items[W.at], ok: matches(said, W.items[W.at]) });
+  W.at++; walkRecall();
+};
+ACTS.recallSkip = () => {
+  const W = walk;
+  W.got.push({ said: "", want: W.items[W.at], ok: false });
+  W.at++; walkRecall();
+};
+
+function walkDone() {
+  const W = walk;
+  keepAwake(false);
+  const right = W.got.filter((g) => g.ok).length;
+  const best = Math.max(state.walkBest || 0, right);
+  const isBest = right > (state.walkBest || 0);
+  state.walkBest = best;
+  state.walkRuns.push({ at: now(), n: W.items.length, right });
+  state.rounds.push({ mode: "walk", at: now(), level: W.items.length, right, asked: W.items.length });
+  save();
+
+  $("walk-body").innerHTML =
+    '<span class="lab">the walk</span>' +
+    '<h2 class="ask" style="margin:6px 0 12px">' + right + " of " + W.items.length +
+    (isBest && right > 4 ? ", and that’s the most you’ve carried yet." : ".") + "</h2>" +
+    '<div style="margin:14px 0">' +
+    W.got.map((g, i) =>
+      '<div class="recallrow"><span class="n">' + esc(W.stops[i].slice(0, 22)) + "</span>" +
+      '<span class="' + (g.ok ? "got" : "lost") + '">' + esc(g.want) + "</span>" +
+      (g.ok ? "" : '<span class="sub" style="margin-left:auto">' + (g.said ? "you said " + esc(g.said) : "blank") + "</span>") +
+      "</div>").join("") +
+    "</div>" +
+    (right < W.items.length
+      ? '<div class="tip"><span class="h">what usually went wrong</span>' +
+        "The ones that vanish are nearly always the ones you placed politely. If it just sat on the counter, it’s gone. " +
+        "The ones that stay are the ones that did something to the place &mdash; broke it, blocked it, soaked it.</div>"
+      : '<div class="tip"><span class="h">all of them</span>' +
+        "Worth noticing that you did not try harder than usual. You had somewhere to put things. That is the entire trick, and it works on real lists too.</div>") +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="walkAgain">Again, longer</button>' +
+    '<button class="btn" data-go="home">That’s enough</button></div>';
+}
+ACTS.walkAgain = () => walkChoose();
+
+/* ================== THE RUN ==================
+   The game. Floors go down, holds are what you have to lose, hazards are
+   things that come for the picture, and boons are real techniques rather
+   than power-ups with made-up names.
+
+   The part that matters most is the hold. Recall is easy to test and
+   easy to fake from a remembered sentence; what this is actually for is
+   the image itself, so the blank screen gives instructions — hold the
+   outline, inspect that corner, bring back what is fading — and only
+   then asks anything.
+   ============================================= */
+
+const HAZARDS = [
+  { id: "rush",   slot: "study",    from: 3,  name: "The Rush",     line: "Half the look." },
+  { id: "drip",   slot: "study",    from: 3,  name: "The Drip",     line: "One at a time. Then gone." },
+  { id: "fade",   slot: "study",    from: 4,  name: "The Fade",     line: "It dies while you watch." },
+  { id: "blind",  slot: "study",    from: 7,  name: "The Blind",    line: "No picture. Build it." },
+  { id: "static", slot: "hold",     from: 4,  name: "The Static",   line: "Something else, while you hold." },
+  { id: "mimic",  slot: "scene",    from: 5,  name: "The Mimic",    line: "Two wear the same colour." },
+  { id: "thief",  slot: "question", from: 4,  name: "The Stranger", line: "It leaves something behind." },
+  { id: "shift",  slot: "question", from: 5,  name: "The Shift",    line: "Something moves in the dark." },
+  { id: "liar",   slot: "question", from: 5,  name: "The Liar",     line: "It tells you something. Maybe." },
+  { id: "turn",   slot: "question", from: 6,  name: "The Turn",     line: "Turn it over in the dark." },
+  { id: "echo",   slot: "question", from: 8,  name: "The Echo",     line: "It asks about the last floor." },
+];
+const HAZ = (id) => HAZARDS.find((h) => h.id === id);
+
+/* Every fifth floor. Two or three of them at once, and one more question. */
+const BOSSES = [
+  { name: "THE HOLLOW",   line: "Nothing is where you left it." },
+  { name: "THE COPY",     line: "Almost right is still wrong." },
+  { name: "THE LONG DARK",line: "It holds longer than you do." },
+  { name: "THE UNDERTOW", line: "It takes it while you look away." },
+  { name: "THE CHORUS",   line: "Everything at once." },
+];
+
+const BOONS = [
+  { id: "anchor", t: "Anchor", k: "you choose it",
+    d: "You pick which one to keep. Questions about it get a shorter list." },
+  { id: "flame", t: "One-Point Flame", k: "one thing, all the way down",
+    d: "Next floor is nothing but the anchor, in depth." },
+  { id: "return", t: "Return", k: "the cue when it breaks",
+    d: "When something breaks the hold, you get the cue: return." },
+  { id: "gaze", t: "Steady Gaze", k: "look longer at one",
+    d: "The anchor alone, three seconds, after the scene goes." },
+  { id: "first", t: "First Person", k: "from your own eyes",
+    d: "Scenes become a place you stand in." },
+  { id: "touch", t: "Touch Hook", k: "add a hand",
+    d: "One object arrives with what it feels like." },
+  { id: "sound", t: "Sound Hook", k: "add an ear",
+    d: "One object arrives with the sound it makes." },
+  { id: "already", t: "Already There", k: "before the strain",
+    d: "One steady line before each hold." },
+  { id: "loop", t: "Loop Scene", k: "three passes",
+    d: "The picture comes three times instead of once." },
+  { id: "embody", t: "Embodied Anchor", k: "hold it with your hand",
+    d: "The anchor comes with weight and texture." },
+  { id: "colourbind", t: "Colour-bind", k: "one word, not two",
+    d: "The hold fuses colour to object. Both get easier." },
+  { id: "outline", t: "Trace Outline", k: "shape before colour",
+    d: "Silhouettes first, colour second." },
+  { id: "palace", t: "Palace Door", k: "somewhere real",
+    d: "One object is left on a route you know." },
+  { id: "freeze", t: "Freeze-frame", k: "longer look",
+    d: "Three and a half more seconds of looking." },
+  { id: "corner", t: "Corner Lock", k: "one quarter, deeply",
+    d: "Pick a quarter. The hold keeps going back to it." },
+  { id: "detail", t: "Detail Hook", k: "the thing nobody encodes",
+    d: "One small detail is named while you look." },
+  { id: "refresh", t: "Refresh", k: "one flash, on demand",
+    d: "A charge you spend to see it again for a second." },
+];
+
+/* The State Chamber. Not a mood exercise: you rehearse being the way
+   you want to be for thirty seconds, then immediately do the thing.
+   Rehearsing an action makes starting it measurably easier, which is
+   the whole and only claim being made here. */
+const STATES = [
+  { id: "steady",   name: "Steady",     line: "You are already steady. The picture is already there. Nothing about this needs forcing." },
+  { id: "sharp",    name: "Sharp",      line: "You are sharp. Detail arrives without being dragged. You look, and it is there." },
+  { id: "calm",     name: "Calm",       line: "You are calm. Nothing here is urgent. The image sits where you put it." },
+  { id: "locked",   name: "Locked in",  line: "You are locked in. The room is gone. There is the picture and nothing else in the way." },
+  { id: "vivid",    name: "Vivid",      line: "You see it in colour. It has weight and edges. You could walk round it." },
+  { id: "unbothered", name: "Unbothered", line: "Something interrupts and it does not matter. You look back and the picture is still there." },
+  { id: "focused",  name: "Focused",    line: "One thing at a time. You are not chasing anything. You are just here, looking." },
+];
+
+const CORNERS = [
+  { id: "tl", name: "top left",     cells: [0, 1, 3, 4] },
+  { id: "tr", name: "top right",    cells: [1, 2, 4, 5] },
+  { id: "bl", name: "bottom left",  cells: [3, 4, 6, 7] },
+  { id: "br", name: "bottom right", cells: [4, 5, 7, 8] },
+];
+
+let run = null;
+
+/* A floor moves study -> hold -> ask, and each of those can be reached
+   two ways: the timer running out, or you tapping past it. Tap at the
+   same moment the bar fills and both arrive, giving the floor two
+   countdowns racing each other and two sets of questions. This makes
+   entering a phase idempotent: the second arrival is dropped. */
+function enter(name) {
+  if (!run || run.phase === name) return false;
+  run.phase = name;
+  clearTimers();
+  return true;
+}
+
+function floorSpec(f, boss) {
+  return {
+    n: clamp(3 + Math.floor((f - 1) / 2) + (boss ? 1 : 0), 3, 8),
+    study: Math.max(1500, 5600 - f * 250),
+    hold: Math.min(14000, 2600 + f * 600),
+    probes: clamp(1 + Math.floor(f / 5) + (boss ? 1 : 0), 1, 4),
+  };
+}
+
+function pickHazards(f, boss) {
+  if (f < 3 || run.skipNext) { run.skipNext = false; return []; }
+  const pool = HAZARDS.filter((h) => f >= h.from && (h.id !== "echo" || run.prev));
+  if (!pool.length) return [];
+  const want = boss ? (f >= 15 ? 3 : 2) : (run.pushed ? 2 : (f >= 10 && f % 3 === 0 ? 2 : 1));
+  const out = [];
+  for (const sl of shuffle(["question", "study", "hold", "scene"])) {
+    if (out.length >= want) break;
+    const c = pool.filter((h) => h.slot === sl);
+    if (c.length) out.push(pick(c));
+  }
+  run.pushed = false;
+  /* Words-only and a picture that returns cannot both be true, and the
+     Mimic needs a picture to be confusable in. */
+  return out.some((h) => h.id === "blind")
+    ? out.filter((h) => ["thief", "shift", "mimic"].indexOf(h.id) < 0)
+    : out;
+}
+
+ACTS.runStart = () => {
+  document.body.classList.add("inrun");
+  go("run");
+  run = {
+    floor: 0, holds: 3, maxHolds: 3, prev: null, scene: null, hz: [], boss: null,
+    kit: {}, charges: 0, corner: null, skipNext: false, pushed: false,
+    anchor: null, anchorId: null, hookLine: null, palaceStop: null, palaceItem: null,
+    flameNext: false, drifts: 0, anchorHeld: 0, stateLine: null,
+    probes: [], at: 0, locked: false, floorFacets: {},
+    killedBy: null, lastMiss: null, holdMs: 0, startedAt: now(),
+  };
+  stopRound = () => { clearTimers(); keepAwake(false); document.body.classList.remove("inrun"); };
+  nextFloor();
+};
+ACTS.runQuit = () => {
+  clearTimers(); keepAwake(false);
+  document.body.classList.remove("inrun");
+  run = null; go("home");
+};
+
+function hud() {
+  const el = $("run-hud");
+  if (!el || !run) return;
+  const marks = [];
+  for (let i = 0; i < run.maxHolds; i++) marks.push('<i class="' + (i < run.holds ? "" : "gone") + '"></i>');
+  const kit = Object.keys(run.kit).map((k) => {
+    const b = BOONS.find((x) => x.id === k);
+    return b ? "<span>" + b.t + (k === "corner" && run.corner ? " · " + run.corner.name : "") + "</span>" : "";
+  });
+  if (run.charges) kit.push("<span>Refresh ×" + run.charges + "</span>");
+  el.innerHTML =
+    '<div class="hud"><span class="fl">' + (run.boss ? "Floor <b>" + run.floor + "</b> · " + run.boss.name : "Floor <b>" + run.floor + "</b>") + "</span>" +
+    (run.hz.length ? '<span class="hz">' + run.hz.map((h) => h.name).join(" · ") + "</span>" : "") +
+    '<span class="holds">' + marks.join("") + "</span></div>" +
+    (kit.length ? '<div class="kit">' + kit.join("") + "</div>" : "");
+}
+
+function nextFloor() {
+  clearTimers();
+  run.phase = null;
+  run.prev = run.scene;
+  run.floor++;
+  run.boss = run.floor % 5 === 0 ? BOSSES[(Math.floor(run.floor / 5) - 1) % BOSSES.length] : null;
+  run.spec = floorSpec(run.floor, !!run.boss);
+  run.hz = pickHazards(run.floor, !!run.boss);
+  run.scene = makeScene(run.spec.n, { mimic: run.hz.some((h) => h.id === "mimic") });
+  run.at = 0; run.locked = false; run.floorFacets = {};
+  run.flameThis = run.flameNext; run.flameNext = false;
+  /* Every floor has an anchor: one object to keep when the rest goes.
+     It is handed to you unless you took the boon that lets you pick. */
+  run.anchor = pick(run.scene.items);
+  run.anchorId = run.anchor.kind.id;
+  run.hookLine = null; run.palaceStop = null; run.palaceItem = null;
+  run.stateLine = null;
+  run.embodied = !!run.kit.first;
+  keepAwake(true);
+  hud();
+
+  /* A room every sixth floor where you rehearse the state first and then
+     immediately do the thing in it. */
+  if (!run.boss && run.floor >= 4 && run.floor % 6 === 4) return stateChamber();
+  announceFloor();
+}
+
+function stateChamber() {
+  $("run-body").innerHTML =
+    '<div class="hazcard chamber"><span class="two">floor ' + run.floor + "</span>" +
+    '<span class="n">STATE CHAMBER</span>' +
+    '<span class="l">Pick one. Then go down as it.</span></div>' +
+    '<div class="opts" style="margin-top:14px">' +
+    sample(STATES, 4).map((x) => '<button data-act="pickState" data-arg="' + x.id + '">' + x.name + "</button>").join("") +
+    "</div>";
+}
+ACTS.pickState = (id) => {
+  const st = STATES.find((x) => x.id === id) || STATES[0];
+  run.stateLine = st.line;
+  run.embodied = true;
+  state.states = state.states || {};
+  state.states[st.name] = (state.states[st.name] || 0) + 1;
+  $("run-body").innerHTML =
+    '<div class="void"><p class="cue warm">' + st.line + '</p>' +
+    '<p class="cuesub">from your own eyes</p></div>' +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="chamberGo">I am. Go down</button></div>';
+  later(() => { const b = $("run-body"); if (run && b && b.querySelector(".void")) announceFloor(); }, 6000);
+};
+ACTS.chamberGo = () => { clearTimers(); announceFloor(); };
+
+function announceFloor() {
+  if (!run.hz.length && !run.boss) return floorStudy();
+  $("run-body").innerHTML =
+    (run.boss
+      ? '<div class="hazcard boss"><span class="two">floor ' + run.floor + " · it is waiting</span>" +
+        '<span class="n">' + run.boss.name + '</span><span class="l">' + run.boss.line + "</span></div>"
+      : "") +
+    (run.hz.length
+      ? '<div class="hazcard">' +
+        (run.hz.length > 1 ? '<span class="two">' + (run.hz.length > 2 ? "three at once" : "two at once") + "</span>" : "") +
+        run.hz.map((h) => '<span class="n">' + h.name + '</span><span class="l">' + h.line + "</span>").join("") +
+        "</div>"
+      : "") +
+    '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="hazGo">Go down</button></div>';
+  blip(run.boss ? 190 : 330, 170);
+  later(() => { const b = $("run-body"); if (run && b && b.querySelector(".hazcard")) floorStudy(); }, run.boss ? 3600 : 2700);
+}
+ACTS.hazGo = () => { clearTimers(); floorStudy(); };
+
+/* ---------- 1. look ---------- */
+function floorStudy() {
+  if (!enter("study")) return;
+  const ids = run.hz.map((h) => h.id);
+  let ms = run.spec.study;
+  if (ids.indexOf("rush") > -1) ms = Math.round(ms * 0.5);
+  if (ids.indexOf("fade") > -1) ms = Math.round(ms * 0.55);
+  if (run.kit.freeze) ms += 3500;
+  hud();
+
+  /* the two boons that put something under the picture */
+  if (run.kit.detail) {
+    const t = pick(run.scene.items);
+    run.hookLine = "The " + t.colour.name + " " + t.kind.name + " — " + stateLabel(t).toLowerCase() + ".";
+  }
+  if (run.kit.palace) {
+    const stops = (state.walkStops && state.walkStops.length) ? state.walkStops : DEFAULT_STOPS;
+    run.palaceStop = pick(stops);
+    run.palaceItem = pick(run.scene.items);
+  }
+  const a = run.anchor;
+  const touchLine = run.kit.touch || run.kit.embody
+    ? '<p class="read"><b>Touch.</b> ' + esc(a.kind.name) + " \u2014 " + esc(a.kind.touch || "cool and solid") + "</p>"
+    : "";
+  const soundLine = run.kit.sound
+    ? '<p class="read"><b>Sound.</b> ' + esc(a.kind.name) + " \u2014 " + esc(a.kind.sound || "a dull knock") + "</p>"
+    : "";
+  const firstLine = run.embodied
+    ? '<p class="read"><b>You are standing in it.</b></p>'
+    : "";
+  const under =
+    (run.hookLine ? '<p class="read"><b>Hook.</b> ' + esc(run.hookLine) + "</p>" : "") +
+    touchLine + soundLine + firstLine +
+    (run.palaceStop ? '<p class="read"><b>' + esc(run.palaceItem.kind.name) + " \u2192 " + esc(run.palaceStop) + "</b></p>" : "");
+
+  if (ids.indexOf("blind") > -1) {
+    $("run-body").innerHTML =
+      '<span class="lab">no picture · build it</span>' +
+      '<div class="desc" style="margin-top:8px"><ul>' +
+      describeScene(run.scene).map((d) => "<li>" + d + "</li>").join("") + "</ul></div>" + under +
+      '<div class="bar"><i id="study-bar"></i></div>' +
+      '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">It’s built &rarr;</button></div>';
+    countdown("study-bar", Math.max(5200, run.spec.n * 2600), floorHold);
+    return;
+  }
+  if (ids.indexOf("drip") > -1) return floorDrip(ms, under);
+
+  const opts = { anchor: run.anchorId };
+  $("run-body").innerHTML =
+    '<div class="stage" id="stg">' + drawScene(run.scene, run.kit.outline ? { outline: true } : opts) + "</div>" + under +
+    '<div class="bar"><i id="study-bar"></i></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn" data-act="floorGot">Got it &rarr;</button></div>';
+
+  /* Trace Outline: silhouettes first, colour only once shape is in. */
+  if (run.kit.outline)
+    later(() => { const st = $("stg"); if (st) st.innerHTML = drawScene(run.scene, opts); }, Math.round(ms * 0.45));
+  /* Loop Scene: three passes rather than one long look. */
+  if (run.kit.loop) {
+    const blink = (n) => {
+      if (n > 2 || !run) return;
+      later(() => {
+        const st = $("stg");
+        if (!st) return;
+        st.style.opacity = "0.02";
+        later(() => { if ($("stg")) $("stg").style.opacity = "1"; blink(n + 1); }, 260);
+      }, Math.round(ms / 3.4));
+    };
+    blink(0);
+  }
+  /* The Fade takes it away in front of you rather than cutting. */
+  if (ids.indexOf("fade") > -1) {
+    const st = $("stg");
+    if (st) { st.style.transition = "opacity " + ms + "ms linear"; later(() => { st.style.opacity = "0.04"; }, 60); }
+  }
+  countdown("study-bar", ms, afterStudy);
+}
+ACTS.floorGot = () => { clearTimers(); afterStudy(); };
+
+/* Between looking and holding: pick the anchor if that is yours to do,
+   then a last long look at it alone, then the line that takes the panic
+   out of the fade. */
+function afterStudy() {
+  if (!enter("between")) return;
+  if (run.kit.anchor && !run.anchorPicked) return pickAnchor();
+  if (run.kit.gaze && !run.gazed) return steadyGaze();
+  if (run.kit.already && !run.saidAlready) return alreadyThere();
+  run.anchorPicked = false; run.gazed = false; run.saidAlready = false;
+  run.phase = null;
+  floorHold();
+}
+
+function pickAnchor() {
+  $("run-body").innerHTML =
+    '<span class="lab">choose your anchor</span>' +
+    '<h2 class="ask" style="margin:6px 0 10px">Which one are you keeping?</h2>' +
+    '<div class="opts" style="margin-top:14px">' +
+    shuffle(run.scene.items).map((x) =>
+      '<button data-act="setAnchor" data-arg="' + x.kind.id + '">' + x.colour.name + " " + x.kind.name + "</button>").join("") +
+    "</div>";
+}
+ACTS.setAnchor = (kindId) => {
+  const found = run.scene.items.find((x) => x.kind.id === kindId);
+  if (found) { run.anchor = found; run.anchorId = kindId; }
+  run.anchorPicked = true;
+  run.phase = null;
+  afterStudy();
+};
+
+function steadyGaze() {
+  run.gazed = true;
+  $("run-body").innerHTML =
+    '<span class="lab">steady gaze · the anchor alone</span>' +
+    '<div class="stage" style="margin-top:6px">' + drawScene({ items: [run.anchor], id: "g" }) + "</div>" +
+
+    '<div class="bar"><i id="gaze-bar"></i></div>';
+  countdown("gaze-bar", 3000, () => { run.phase = null; afterStudy(); });
+}
+
+function alreadyThere() {
+  run.saidAlready = true;
+  const line = run.stateLine || pick(STATES).line;
+  $("run-body").innerHTML =
+    '<div class="void"><p class="cue warm">' + line + '</p>' +
+    '<p class="cuesub">already there · nothing to force</p></div>' +
+    '<div class="bar"><i id="alr-bar"></i></div>';
+  countdown("alr-bar", 3400, () => { run.phase = null; afterStudy(); });
+}
+
+function floorDrip(total, under) {
+  const items = run.scene.items, each = Math.max(560, Math.round(total / items.length));
+  let i = 0;
+  const show = () => {
+    if (!run) return;
+    if (i >= items.length) return floorHold();
+    $("run-body").innerHTML =
+      '<span class="lab">one at a time · ' + (i + 1) + " of " + items.length + "</span>" +
+      '<div class="stage" style="margin-top:6px">' + drawScene({ items: [items[i]], id: "d" }) + "</div>" +
+      (under || "") +
+      "";
+    i++;
+    later(show, each);
+  };
+  show();
+}
+
+/* ---------- 2. hold ----------
+   The instructions are the exercise. Recall can be faked from a
+   remembered sentence; holding an outline, walking a corner of it and
+   rebuilding what fades cannot. */
+function holdCues(scene) {
+  const a = run.anchor, name = a.kind.name, full = a.colour.name + " " + name;
+  /* Single-point first: one stable thing beats trying to hold all of it,
+     and the returning is the exercise rather than a failure to avoid. */
+  const anchorCues = [
+    { t: "Keep the " + full + ".", s: "one thing · let the rest go for now" },
+    { t: "See its outline.", s: "edges only" },
+    { t: "See its colour.", s: "fill it in" },
+    { t: "See where it sits.", s: "the " + a.cell.name },
+    { t: "If the rest fades, keep the " + name + ".", s: "the anchor is the last thing to go" },
+    { t: "Return to the " + name + ".", s: "no commentary · just go back" },
+  ];
+  if (run.kit.embody)
+    anchorCues.splice(2, 0, { t: "Keep your hand on it.", s: a.kind.touch || "feel the weight of it" });
+  if (run.kit.sound)
+    anchorCues.push({ t: "Hear it.", s: a.kind.sound || "one sound, close" });
+
+  const sceneCues = run.embodied
+    ? [
+      { t: "Look left, then right.", s: "from your own eyes, not from above" },
+      { t: "What is nearest your hand?", s: "reach without looking" },
+      { t: "Step forward once.", s: "let the near things get bigger" },
+      { t: "Now hold all of it, from where you stand.", s: "you are in it, not looking at it" },
+    ]
+    : [
+      { t: "Now build outward from it.", s: "nearest neighbour first" },
+      { t: "Hold all of it at once.", s: "not one at a time now" },
+      { t: "Count what you can see.", s: "in the picture, not on your fingers" },
+      { t: "Walk the edges of it.", s: "corner to corner" },
+      { t: "Something is fading. Bring it back.", s: "rebuild from the anchor" },
+    ];
+  if (run.kit.colourbind)
+    sceneCues.unshift({ t: "Fuse them. “" + a.colour.name + name + "”, one word.", s: "colour to object, said once" });
+  if (run.kit.corner && run.corner)
+    sceneCues.unshift({ t: "Back to the " + run.corner.name + ".", s: "your corner · deeper this time" });
+
+  let out = anchorCues.concat(shuffle(sceneCues));
+  if (run.flameThis)
+    out = anchorCues.concat([{ t: "Nothing but the " + name + ".", s: "the rest does not matter this floor" }]);
+  if (run.kit.return && run.hz.some((h) => h.id === "static"))
+    out.unshift({ t: "Return to the anchor.", s: "every time it breaks · that is the drill" });
+  const seen = {};
+  return out.filter((c) => (seen[c.t] ? false : (seen[c.t] = 1)));
+}
+
+ACTS.drift = () => {
+  if (!run || !run.anchor) return;
+  run.drifts++;
+  state.drifts = (state.drifts || 0) + 1;
+  const c = document.querySelector(".cue"), sub = document.querySelector(".cuesub");
+  if (c) { c.textContent = "Return to the " + run.anchor.kind.name + "."; c.className = "cue warm"; }
+  if (sub) sub.textContent = "noticing it is the rep · " + run.drifts + " so far";
+  blip(430, 90);
+};
+
+function floorHold() {
+  if (!enter("hold")) return;
+  let ms = run.spec.hold;
+  run.holdMs += ms;
+  hud();
+
+  const statical = run.hz.some((h) => h.id === "static");
+  const cues = holdCues(run.scene);
+  const slots = Math.max(2, Math.min(cues.length, Math.round(ms / 3400)));
+  const every = ms / slots;
+  let ci = 0;
+
+  const buttons =
+    '<div class="row" style="margin-top:12px">' +
+    '<button class="btn" data-act="drift">I drifted</button>' +
+    (run.charges ? '<button class="btn" data-act="useRefresh">Refresh · ' + run.charges + "</button>" : "") +
+    "</div>";
+
+  const paint = () => {
+    if (!run) return;
+    const c = cues[ci % cues.length];
+    const dots = Array.from({ length: slots }, (_, i) => '<i class="' + (i <= ci ? "on" : "") + '"></i>').join("");
+    if (statical) {
+      $("run-body").innerHTML =
+        '<p class="lab" style="margin:0 0 4px">anchor · the ' + esc(run.anchor.colour.name) + " " + esc(run.anchor.kind.name) + "</p>" +
+        '<p class="cue warm" style="margin:12px 0 2px;font-size:19px">' + c.t + "</p>" +
+        '<p class="firelab" id="fire-sym" style="font-size:42px;margin:10px 0 0">&nbsp;</p>' +
+        '<div class="fire">' + FIRE_SYM.map((x) =>
+          '<button data-act="runFire" data-arg="' + x[0] + '">' + x[1] + "</button>").join("") + "</div>" +
+        buttons + '<div class="bar go" style="margin-top:14px"><i id="hold-bar"></i></div>';
+      if (run.fire) run.fire.next();
+    } else {
+      $("run-body").innerHTML =
+        '<p class="lab" style="margin:0 0 6px">anchor · the ' + esc(run.anchor.colour.name) + " " + esc(run.anchor.kind.name) + "</p>" +
+        '<div class="void"><p class="cue">' + c.t + '</p><p class="cuesub">' + c.s + "</p>" +
+        '<div class="tick">' + dots + "</div></div>" +
+        buttons + '<div class="bar go"><i id="hold-bar"></i></div>';
+    }
+    ci++;
+    if (ci < slots) later(paint, every);
+  };
+
+  if (statical) {
+    run.fire = { asked: 0, right: 0, cur: null };
+    run.fire.next = () => {
+      const x = pick(FIRE_SYM);
+      run.fire.cur = x[0];
+      const el = $("fire-sym");
+      if (el) el.innerHTML = x[1];
+    };
+  }
+  paint();
+  countdown("hold-bar", ms, () => { blip(660, 110); floorAsk(); });
+}
+ACTS.runFire = (dir) => {
+  if (!run || !run.fire || !run.fire.cur) return;
+  run.fire.asked++;
+  if (dir === run.fire.cur) run.fire.right++;
+  run.fire.next();
+};
+ACTS.useRefresh = () => {
+  if (!run || !run.charges) return;
+  run.charges--;
+  const b = document.querySelector('[data-act="useRefresh"]');
+  if (b) b.remove();
+  const host = $("run-body");
+  if (!host) return;
+  const flash = document.createElement("div");
+  flash.className = "stage";
+  flash.style.marginTop = "10px";
+  flash.innerHTML = drawScene(run.scene);
+  host.insertBefore(flash, host.firstChild);
+  hud();
+  later(() => flash.remove(), 1000);
+};
+
+/* ---------- the hazards that own the question ---------- */
+function thiefProbe() {
+  const victim = pick(run.scene.items);
+  const others = run.scene.items.filter((x) => x !== victim);
+  const used = run.scene.items.map((x) => x.kind.id);
+  const kind = pick(OBJECTS.filter((o) => used.indexOf(o.id) < 0));
+  const intruder = { kind: kind, cell: victim.cell, colour: victim.colour, state: pick(kind.states) };
+  return {
+    q: "Something in here was never yours. Which?",
+    stage: drawScene({ items: others.concat([intruder]), id: "t" }),
+    opts: shuffle([kind.name].concat(sample(others.map((x) => x.kind.name), 3))),
+    answerText: kind.name, kind: "intrusion", facet: "intrusion",
+    teach: "Everything offered was on the screen in front of you, so only knowing what you put there can answer it. If it felt like a guess, the scene never became a picture.",
+  };
+}
+function shiftProbe() {
+  const moved = pick(run.scene.items);
+  const taken = run.scene.items.map((x) => x.cell.i);
+  const free = CELLS.filter((c) => taken.indexOf(c.i) < 0);
+  if (!free.length) return thiefProbe();
+  const items = run.scene.items.map((x) => (x === moved ? Object.assign({}, x, { cell: pick(free) }) : x));
+  return {
+    q: "Something moved. Which?",
+    stage: drawScene({ items: items, id: "s" }),
+    opts: optionsAround(moved.kind.name, run.scene.items.map((x) => x.kind.name)),
+    answerText: moved.kind.name, kind: "place", facet: "position", teach: TEACH.place,
+  };
+}
+function liarProbe() {
+  const it = run.scene.items, t = pick(it), truth = Math.random() < 0.5;
+  const forms = [
+    () => {
+      const c = truth ? t.colour : pick(PALETTE.filter((p) => p.id !== t.colour.id));
+      return ["The " + t.kind.name + " was " + c.name + ".", "colour"];
+    },
+    () => {
+      const c = truth ? t.cell : pick(CELLS.filter((x) => x.i !== t.cell.i));
+      return ["The " + t.kind.name + " was in the " + c.name + ".", "position"];
+    },
+    () => {
+      const real = it.filter((x) => x.colour.id === t.colour.id).length;
+      const n = truth ? real : Math.max(0, real + pick([-1, 1, 2]));
+      return ["There " + (n === 1 ? "was" : "were") + " " + n + " " + t.colour.name +
+        " thing" + (n === 1 ? "" : "s") + ".", "colour"];
+    },
+  ];
+  const f = pick(forms)();
+  return {
+    q: "<b>" + f[0] + "</b><br><span style=\"font-weight:400;font-size:15px;color:#7b8593\">True, or never happened?</span>",
+    opts: ["True", "Never happened"], answerText: truth ? "True" : "Never happened",
+    kind: "binding", facet: f[1], teach: TEACH.binding, tf: true,
+  };
+}
+function palaceProbe() {
+  const t = run.palaceItem;
+  return {
+    q: "You left something at <b>" + esc(run.palaceStop) + "</b>. What was it?",
+    opts: optionsAround(t.kind.name, run.scene.items.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))),
+    answerText: t.kind.name, kind: "place", facet: "object",
+    teach: "A place you already know does the holding for you. That is the whole of the technique, and it is the one with real evidence behind it.",
+  };
+}
+
+/* Boons that make a question easier do it by taking a wrong answer off
+   the table — never by telling you the answer. */
+function applyKit(p) {
+  const k = run.kit;
+  let ease = false;
+  if (k.anchor && run.anchorId && p.about === run.anchorId) ease = true;
+  if (k.colourbind && (p.facet === "colour" || p.facet === "binding")) ease = true;
+  if (k.detail && p.facet === "detail") ease = true;
+  if (k.corner && run.corner && p.aboutCell != null && run.corner.cells.indexOf(p.aboutCell) > -1) ease = true;
+  if (!ease || p.opts.length <= 3) return p;
+  const right = p.opts[p.answer];
+  const drop = pick(p.opts.filter((o) => o !== right));
+  const opts = p.opts.filter((o) => o !== drop);
+  return Object.assign({}, p, { opts: opts, answer: opts.indexOf(right), eased: true });
+}
+
+function floorAsk() {
+  if (!enter("ask")) return;
+  keepAwake(false);
+  const ids = run.hz.map((h) => h.id);
+  let list;
+  if (ids.indexOf("echo") > -1 && run.prev) {
+    list = probesFor(run.prev, 1, "plain").map((p) =>
+      Object.assign({}, p, { q: '<span style="color:#d98a4f">The floor before —</span> ' + p.q }));
+  } else if (ids.indexOf("thief") > -1) list = [thiefProbe()];
+  else if (ids.indexOf("shift") > -1) list = [shiftProbe()];
+  else if (ids.indexOf("liar") > -1) list = [liarProbe()].concat(probesFor(run.scene, run.spec.probes - 1, "plain"));
+  else if (ids.indexOf("mimic") > -1)
+    list = probesFor(run.scene, run.spec.probes, "plain").filter((p) => p.facet === "colour" || p.facet === "binding")
+      .concat(probesFor(run.scene, run.spec.probes, "plain")).slice(0, run.spec.probes);
+  else list = probesFor(run.scene, run.spec.probes, ids.indexOf("turn") > -1 ? "turn" : "plain");
+
+  /* One-Point Flame: this floor is nothing but the anchor, in depth. */
+  if (run.flameThis) {
+    list = [];
+    for (let i = 0; i < 3 && list.length < 3; i++) {
+      const ap = anchorProbe(run.scene, run.anchor);
+      if (ap && !list.some((x) => x.q === ap.q)) list.push(ap);
+    }
+  } else if (run.embodied) {
+    const emb = embodiedProbes(run.scene, Math.max(1, run.spec.probes - 1));
+    if (emb.length) list = emb.concat(list).slice(0, run.spec.probes);
+  }
+
+  /* Every floor tests the anchor, without making the floor longer. */
+  if (!run.flameThis && run.anchor && list.length) {
+    const ap = anchorProbe(run.scene, run.anchor);
+    const hazardOwned = ids.some((x) => ["thief", "shift", "liar", "echo"].indexOf(x) > -1);
+    if (ap && (list.length >= 2 || !hazardOwned)) list[list.length - 1] = ap;
+  }
+
+  if (run.palaceStop && Math.random() < 0.8 && list.length > 1) list[0] = palaceProbe();
+
+  run.probes = list.filter(Boolean).map((p) => {
+    const settled = p.answerText != null
+      ? Object.assign({}, p, { answer: p.opts.indexOf(p.answerText) })
+      : p;
+    return applyKit(settled);
+  });
+  run.at = 0;
+  askOne();
+}
+
+function askOne() {
+  const p = run.probes[run.at];
+  if (!p) return floorCleared();
+  hud();
+  const v = p.vis;
+  $("run-body").innerHTML =
+    (p.stage ? '<div class="stage">' + p.stage + "</div>" : "") +
+    '<div class="qrow">' + (p.subject ? '<div class="subj">' + p.subject + "</div>" : "") +
+    '<p class="qn">' + p.q + "</p></div>" +
+    '<div class="pick" id="opts">' +
+    p.opts.map((o, i) =>
+      '<button data-act="runAns" data-arg="' + i + '">' +
+      (v && v[i] ? v[i] : '<div class="words">' + o + "</div>") +
+      '<span class="cap">' + o + "</span></button>").join("") +
+    "</div>";
+}
+
+/* What kind of imagery just failed, said out loud, in one line. */
+function missLine(p) {
+  const f = run.floorFacets, other = Object.keys(f).filter((k) => k !== p.facet && f[k].r > 0);
+  const underFire = run.hz.some((h) => h.id === "static");
+  if (p.isAnchor && underFire) return "<b>The anchor went under the Static.</b>";
+  if (p.isAnchor) return "<b>You lost the anchor.</b>";
+  if (run.anchorHeld) return "<b>Anchor held. The rest didn\u2019t.</b>";
+  if (p.facet === "embodied") return "<b>You held a picture, not a place.</b>";
+  if (underFire) return "<b>The Static took it.</b>";
+  if (p.facet === "intrusion") return "<b>Something got in.</b>";
+  if (other.length) return "<b>" + FACET_NAME[other[0]] + " held. " + FACET_NAME[p.facet].toLowerCase() + " went.</b>";
+  return "<b>" + FACET_NAME[p.facet] + " went first.</b>";
+}
+
+function tally(facet, ok) {
+  const bump = (m) => { m[facet] = m[facet] || { a: 0, r: 0 }; m[facet].a++; if (ok) m[facet].r++; };
+  bump(run.floorFacets);
+  bump(state.facets);
+  if (run.hz.some((h) => h.id === "static")) bump(state.facetsInt);
+};
+
+ACTS.runAns = (ixStr) => {
+  const ix = +ixStr, p = run.probes[run.at];
+  if (!p || run.locked) return;
+  run.locked = true;
+  const good = ix === p.answer;
+  tally(p.facet, good);
+  if (p.isAnchor) {
+    tally("anchor", good);
+    const k = run.anchor.kind.id;
+    state.anchorKinds[k] = state.anchorKinds[k] || { a: 0, r: 0 };
+    state.anchorKinds[k].a++;
+    if (good) {
+      state.anchorKinds[k].r++;
+      run.anchorHeld++;
+      const secs = Math.round(run.spec.hold / 1000);
+      if (secs > (state.anchorBest || 0)) state.anchorBest = secs;
+    }
+  }
+  document.querySelectorAll("#opts button").forEach((b, i) => {
+    b.disabled = true;
+    if (i === p.answer) b.className = "right";
+    else if (i === ix) b.className = "wrong";
+  });
+
+  if (good) {
+    blip(880, 80);
+    document.body.classList.add("good");
+    later(() => document.body.classList.remove("good"), 360);
+    later(() => { run.locked = false; run.at++; askOne(); }, 420);
+    return;
+  }
+  document.body.classList.add("hurt");
+  later(() => document.body.classList.remove("hurt"), 440);
+
+  run.holds--;
+  run.lastMiss = { q: p.q, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach, facet: p.facet };
+  run.killedBy = run.boss ? run.boss.name : (run.hz.length ? run.hz[0].name : null);
+  blip(170, 260);
+  hud();
+  $("run-body").insertAdjacentHTML("beforeend", '<div class="hit">' + missLine(p) + "</div>");
+  later(() => {
+    run.locked = false;
+    if (run.holds <= 0) return runOver();
+    run.at++;
+    askOne();
+  }, 1500);
+};
+
+function floorCleared() {
+  hud();
+  state.floorsCleared = (state.floorsCleared || 0) + 1;
+  if (run.boss) {
+    run.maxHolds++;
+    run.holds = Math.min(run.maxHolds, run.holds + 1);
+    blip(520, 200);
+    $("run-body").innerHTML =
+      '<span class="lab">it let you past</span>' +
+      '<h2 class="ask" style="margin:6px 0 10px;color:#e0913f">' + run.boss.name + " is behind you.</h2>" +
+      '<p class="sub">+1 hold, for good.</p>' +
+      '<div class="row" style="margin-top:16px"><button class="btn prime" data-act="afterBoss">Keep going down</button></div>';
+    return;
+  }
+  if (run.floor % 3 === 0) return offerBoon();
+  blip(740, 90);
+  nextFloor();
+}
+ACTS.afterBoss = () => offerBoon();
+
+function offerBoon() {
+  const have = Object.keys(run.kit);
+  const usable = BOONS.filter((b) => b.id === "refresh" || have.indexOf(b.id) < 0);
+  const three = sample(usable, Math.min(3, usable.length));
+  $("run-body").innerHTML =
+    '<span class="lab">floor ' + run.floor + " clear</span>" +
+    '<h2 class="ask" style="margin:6px 0 10px">Take one down with you.</h2>' +
+    '<div class="boon">' +
+    three.map((b) => '<button data-act="takeBoon" data-arg="' + b.id + '">' +
+      '<span class="k">' + b.k + '</span><span class="t">' + b.t + '</span><span class="d">' + b.d + "</span></button>").join("") +
+    "</div>" +
+    '<div class="row" style="margin-top:13px">' +
+    '<button class="btn" data-act="takeBoon" data-arg="push">Nothing · two hazards, +1 hold</button></div>';
+}
+
+ACTS.takeBoon = (id) => {
+  if (id === "push") {
+    run.pushed = true;
+    run.holds = Math.min(run.maxHolds, run.holds + 1);
+    blip(740, 90);
+    return nextFloor();
+  }
+  if (id === "refresh") { run.charges++; blip(740, 90); return nextFloor(); }
+  if (id === "flame") { run.flameNext = true; blip(740, 90); return nextFloor(); }
+  if (id === "corner") {
+    run.kit.corner = true;
+    $("run-body").innerHTML =
+      '<span class="lab">corner lock</span>' +
+      '<h2 class="ask" style="margin:6px 0 10px">Which quarter is yours?</h2>' +
+      '<p class="sub">The hold will send you back to it, and questions about what lives there come with a shorter list.</p>' +
+      '<div class="opts" style="margin-top:14px">' +
+      CORNERS.map((c) => '<button data-act="pickCorner" data-arg="' + c.id + '">' + c.name + "</button>").join("") +
+      "</div>";
+    return;
+  }
+  run.kit[id] = true;
+  blip(740, 90);
+  nextFloor();
+};
+ACTS.pickCorner = (id) => {
+  run.corner = CORNERS.find((c) => c.id === id) || CORNERS[0];
+  blip(740, 90);
+  nextFloor();
+};
+
+/* ---------- what the run says about you ---------- */
+function diagnose(map) {
+  const rows = Object.keys(map).filter((k) => map[k].a >= 4)
+    .map((k) => ({ k: k, acc: map[k].r / map[k].a }));
+  if (rows.length < 2) return null;
+  rows.sort((a, b) => a.acc - b.acc);
+  const worst = rows[0], best = rows[rows.length - 1];
+  if (best.acc - worst.acc < 0.2) return null;
+  const say = {
+    colour: "Shape and place stay. Colour is the first thing you drop.",
+    binding: "You keep the objects and you keep the colours — you lose which belonged to which.",
+    detail: "Objects and places hold. The small detail on them collapses.",
+    position: "You know what was there. Where it was goes.",
+    object: "The layout survives better than what was actually in it.",
+    rotation: "It holds still and comes apart the moment it has to move.",
+    intrusion: "Things that were never there get in — the picture is loose enough to accept them.",
+  };
+  return (say[worst.k] || FACET_NAME[worst.k] + " is the weak one.") +
+    " " + FACET_NAME[best.k] + " is your strongest, at " + Math.round(best.acc * 100) +
+    "% against " + Math.round(worst.acc * 100) + "%.";
+}
+
+/* Does holding one thing actually hold up better than holding all of it,
+   and does it carry the rest? Both are answerable from what is tracked. */
+function anchorLine() {
+  const f = state.facets, A = f.anchor;
+  if (!A || A.a < 5) return null;
+  const rest = Object.keys(f).filter((k) => k !== "anchor")
+    .reduce((o, k) => ({ a: o.a + f[k].a, r: o.r + f[k].r }), { a: 0, r: 0 });
+  if (rest.a < 8) return null;
+  const an = A.r / A.a, other = rest.r / rest.a;
+  const kinds = Object.keys(state.anchorKinds || {}).filter((k) => state.anchorKinds[k].a >= 3)
+    .sort((a, b) => (state.anchorKinds[b].r / state.anchorKinds[b].a) - (state.anchorKinds[a].r / state.anchorKinds[a].a));
+  const easiest = kinds.length ? " Easiest thing for you to keep hold of: the " +
+    ((OBJECTS.find((o) => o.id === kinds[0]) || {}).name || kinds[0]) + "." : "";
+  if (an - other >= 0.12)
+    return "You hold the anchor at " + Math.round(an * 100) + "% against " + Math.round(other * 100) +
+      "% for everything else. One point is clearly steadier for you than the whole scene — so build outward from it." + easiest;
+  if (other - an >= 0.12)
+    return "Odd one: the scene as a whole holds better than the single object you were told to keep, " +
+      Math.round(other * 100) + "% against " + Math.round(an * 100) + "%. You may be a whole-picture holder." + easiest;
+  return "Anchor and scene hold about the same, " + Math.round(an * 100) + "% against " +
+    Math.round(other * 100) + "%." + easiest;
+}
+
+function interferenceLine() {
+  const all = state.facets, fire = state.facetsInt;
+  const sum = (m) => Object.keys(m).reduce((o, k) => ({ a: o.a + m[k].a, r: o.r + m[k].r }), { a: 0, r: 0 });
+  const A = sum(all), F = sum(fire);
+  if (F.a < 6 || A.a - F.a < 6) return null;
+  const clean = (A.r - F.r) / (A.a - F.a), under = F.r / F.a;
+  if (clean - under < 0.12) return "Interference barely touches you — you hold it just as well with something else running.";
+  return "Quiet, you hold " + Math.round(clean * 100) + "%. Under the Static, " + Math.round(under * 100) +
+    "%. That gap is the thing worth training.";
+}
+
+function runOver() {
+  clearTimers();
+  run.phase = "over";
+  keepAwake(false);
+  const depth = run.floor;
+  const best = Math.max(state.bestDepth || 0, depth);
+  const isBest = depth > (state.bestDepth || 0);
+  state.bestDepth = best;
+  state.runs.push({ at: now(), depth: depth, by: run.killedBy || "", hold: Math.round(run.holdMs / 1000) });
+  state.rounds.push({ mode: "run", at: now(), level: depth, right: depth, asked: depth });
+  if (run.killedBy) state.killers[run.killedBy] = (state.killers[run.killedBy] || 0) + 1;
+  state.holdSec = (state.holdSec || 0) + Math.round(run.holdMs / 1000);
+  save();
+
+  /* One line, not a report. The full read-out lives on its own screen. */
+  const m = run.lastMiss;
+  const line = m ? FACET_NAME[m.facet] + " went." : "";
+  $("run-hud").innerHTML = "";
+  $("run-body").innerHTML =
+    '<div class="stage" style="margin-bottom:14px">' + drawScene(run.scene) + "</div>" +
+    '<div class="overrow"><div><span class="lab">floor</span><div class="depth">' + depth + "</div></div>" +
+    '<div class="overside">' +
+    (run.killedBy ? '<span class="kb">' + esc(run.killedBy) + "</span>" : "") +
+    (isBest && depth > 3 ? '<span class="pb">deepest yet</span>' : '<span class="pb dim">best ' + best + "</span>") +
+    (line ? '<span class="pb dim">' + line + "</span>" : "") +
+    (run.drifts ? '<span class="pb dim">' + run.drifts + " returns</span>" : "") +
+    "</div></div>" +
+    '<div class="row" style="margin-top:18px">' +
+    '<button class="btn prime" data-act="runStart">Again</button>' +
+    '<button class="btn" data-go="you">What broke</button>' +
+    '<button class="btn" data-act="runQuit">Out</button></div>';
+  blip(150, 420);
+}
+
+/* ================== the reading ================== */
+
+const TECHNIQUES = [
+  {
+    t: "Three, not everything",
+    d: "Seven objects go in and nothing comes out, because sweeping across all of them means encoding none of them. Three, done properly, beats seven done vaguely every time — and the odd thing is you often end up recalling more than three anyway, because the three you anchored drag the others back with them.",
+    w: "When the picture appears, choose. Two or three things. Ignore the rest on purpose.",
+  },
+  {
+    t: "Make it do something",
+    d: "A cup that sits there is a fact. A cup tipping over and running off the edge is an event, and events are what memory is built for. This isn't a trick — still images are simply a bad fit for the machinery, and motion costs you nothing to add.",
+    w: "Give at least one object a verb. It's falling, it's pointing at something, it's about to tip.",
+  },
+  {
+    t: "Put it there, don't notice it there",
+    d: "Noticing that something is in the corner is a weak, passive bit of encoding. Imagining yourself setting it down in that corner — with the sound it makes — binds the object to the place, and the place is what you'll be asked about.",
+    w: "Place each thing, physically, in your head. Hear it land.",
+  },
+  {
+    t: "Say colour and thing as one word",
+    d: "Colour and object come apart under load faster than anything else. You'll remember there was a cup, and that something was blue, and lose which was which. Fusing them into a single unit when you encode stops them separating.",
+    w: "Not “a cup, and something blue”. “Bluecup”. One word, said once.",
+  },
+  {
+    t: "Look again in your head",
+    d: "The whole difference between holding a picture and holding a sentence is whether you can get information out that you never deliberately put in. If your image is real, you can count things in it after the fact. If it's a description, you can only replay what you said.",
+    w: "During the hold, go looking. Check a colour you didn't study. Count something. Read a detail off the image.",
+  },
+  {
+    t: "Give it somewhere to live",
+    d: "The memory palace. Instead of holding items, you hold a route you already know cold, and hang the items off it. The route does the ordering and the retrieval for free, and it never fills up. This is the one with real, replicated evidence behind it, and it works the first day you use it.",
+    w: "Walk a route you know. One item per stop. Make each one interfere with the place it's in.",
+  },
+];
+
+function renderLearn() {
+  $("learn-body").innerHTML =
+    TECHNIQUES.map((x, i) =>
+      '<div class="note" style="margin-bottom:14px">' +
+      '<b style="font-family:\'Bricolage Grotesque\',Arial,sans-serif;font-size:18px;display:block;margin-bottom:6px">' +
+      (i + 1) + ". " + x.t + "</b>" + x.d +
+      '<div style="margin-top:9px;color:var(--signal);font-size:13.5px"><b>Do this:</b> ' + x.w + "</div></div>").join("") +
+    '<div class="sec"><h3><span>Then use them</span></h3>' +
+    '<div class="row"><button class="btn prime" data-mode="scene">Look, then hold</button>' +
+    '<button class="btn" data-mode="walk">Put it somewhere you know</button></div></div>';
+}
+
+function renderAbout() {
+  $("about-body").innerHTML =
+    "<p>You asked for something that pays dividends across memory, attention and executive function generally. The honest answer has three parts, and the middle one is the good news.</p>" +
+
+    '<div class="sec"><h3><span>1 &middot; Drills mostly make you better at the drill</span></h3>' +
+    "<p>Working-memory training — n-back, span games, the whole category — reliably improves the trained task and tasks that look almost identical to it. When people then measure whether anything changed in attention, symptoms, school or work, with raters who don't know who trained, the effect mostly disappears. " +
+    "This holds for ADHD specifically. So if an app tells you a daily drill will fix your executive function, it is selling you the drill.</p>" +
+    "<p>I'd rather say that up front than have you find out in six weeks.</p></div>" +
+
+    '<div class="sec"><h3><span>2 &middot; Technique is a different thing entirely</span></h3>' +
+    "<p>Method is not capacity. A method is something you pick up and deploy on purpose, and it goes wherever you go. The memory palace is the clearest case: in a 2017 study, people with ordinary memories trained on it for about half an hour a day for six weeks and went from recalling roughly 26 of 72 words to roughly 62, and were still holding it four months later. " +
+    "Their brains had started to look, in terms of connectivity, more like those of competitive memory athletes — who, when tested, have entirely unremarkable raw memory and simply know what to do.</p>" +
+    "<p>That's the part of this app I'd actually defend. The drills are where you practise the techniques under a bit of pressure; the techniques are the thing you keep.</p></div>" +
+
+    '<div class="sec"><h3><span>3 &middot; What the ADHD part changes</span></h3>' +
+    "<p>The bottleneck usually isn't how much you can hold. It's that holding it survives about four seconds of anything else happening. That's why one of the rounds makes you do something irritating in the middle of the hold — not because interference training is proven to generalise, but because it's the honest version of the problem, and practising the recovery move (look back at the picture <i>immediately</i>, before you try to answer) is a real, learnable habit.</p>" +
+    "<p>Also worth knowing: imagery varies enormously between people. Some see something close to a photograph; some get nothing visual at all and work spatially instead, knowing where things are without seeing them. Both work here. If you get no pictures, lean on position and relation, and ignore every instruction in the app with the word “see” in it.</p></div>" +
+
+    '<div class="sec"><h3><span>What actually moves executive function</span></h3>' +
+    "<p>Sleep, exercise, treatment if you're on it, and building outside scaffolding so less has to be held in your head at all. Those have the evidence. This is a supplement to them and a genuinely interesting thing to get good at — not a replacement, and I'd be lying if I dressed it up as one.</p>" +
+    '<div class="row" style="margin-top:16px"><button class="btn prime" data-go="learn">The techniques</button>' +
+    '<button class="btn" data-go="home">Back</button></div></div>';
+}
+
+/* ---------- where you're at ---------- */
+function modeLine(mode) {
+  const P = paramsFor(mode, state.level[mode] || 1);
+  if (mode === "stack") return "your best carry is " + Math.max(2, (state.level.stack || 1) + 2) + " objects";
+  return P.n + " things, " + Math.round(P.hold / 1000) + " seconds, " + P.probes +
+    " question" + (P.probes > 1 ? "s" : "");
+}
+function accuracy(mode, n) {
+  const rs = state.rounds.filter((r) => !mode || r.mode === mode).slice(-(n || 20));
+  const a = rs.reduce((s, r) => s + r.asked, 0), g = rs.reduce((s, r) => s + r.right, 0);
+  return a ? Math.round((g / a) * 100) : null;
+}
+
+/* The run finds the weakness; this points at the drill for it. One
+   suggestion at a time, and only when there is enough to say it. */
+const DRILL_FOR = {
+  "The Shift": ["Shift keeps taking you. Drill holding <i>where</i> things are.", "scene"],
+  "The Stranger": ["The Stranger keeps getting in. Drill knowing exactly what you put there.", "scene"],
+  "The Static": ["The Static is what breaks it. Practise holding through interference.", "fire"],
+  "The Turn": ["The Turn is ending your runs. Practise moving the picture.", "turn"],
+  "The Blind": ["The Blind is ending your runs. Practise building one from words.", "blueprint"],
+  "The Echo": ["The Echo is ending your runs — you are dropping the old floor. Practise carrying more.", "stack"],
+  "The Drip": ["The Drip is ending your runs. Practise stacking them one at a time.", "stack"],
+  "The Fade": ["The Fade is ending your runs. Practise taking anchors fast.", "scene"],
+  "The Mimic": ["The Mimic is ending your runs. Drill colour and object as one thing.", "scene"],
+  "The Liar": ["The Liar keeps catching you. Practise re-looking rather than recalling.", "scene"],
+};
+const FACET_DRILL = {
+  rotation: ["Turning it is your weakest. Practise moving the picture.", "turn"],
+  binding: ["Colour-to-object binding is your weakest. Drill it while it is quiet.", "scene"],
+  colour: ["Colour goes first for you. Drill it while it is quiet.", "scene"],
+  position: ["Position is your weakest. Drill it while it is quiet.", "scene"],
+  detail: ["Small details collapse first for you. Drill them slowly.", "scene"],
+  object: ["What was actually there is the weak one. Try building from words.", "blueprint"],
+  intrusion: ["Things that were never there get in. Practise a shorter, sharper list.", "scene"],
+};
+
+function renderSuggest() {
+  const el = $("home-suggest");
+  if (!el) return;
+  el.innerHTML = "";
+  const kills = Object.keys(state.killers || {});
+  let pickOne = null;
+
+  if (kills.length) {
+    kills.sort((a, b) => state.killers[b] - state.killers[a]);
+    if (state.killers[kills[0]] >= 2 && DRILL_FOR[kills[0]]) pickOne = DRILL_FOR[kills[0]];
+  }
+  if (!pickOne) {
+    const f = state.facets || {};
+    const rows = Object.keys(f).filter((k) => f[k].a >= 6).map((k) => ({ k: k, acc: f[k].r / f[k].a }));
+    if (rows.length >= 2) {
+      rows.sort((a, b) => a.acc - b.acc);
+      if (rows[rows.length - 1].acc - rows[0].acc >= 0.2) pickOne = FACET_DRILL[rows[0].k];
+    }
+  }
+  if (!pickOne) return;
+  el.innerHTML = '<div class="suggest">' + pickOne[0] +
+    '<br><button class="btn" data-mode="' + pickOne[1] + '" style="margin-top:9px">' +
+    MODES[pickOne[1]].name + "</button></div>";
+}
+
+function paintBest() {
+  const el = $("run-best");
+  if (!el) return;
+  el.innerHTML = state.bestDepth
+    ? "deepest · floor " + state.bestDepth + (state.runs.length ? " · " + state.runs.length + " runs" : "")
+    : "three holds · hazards from floor three · a boss every fifth";
+}
+
+function renderHomeYou() {
+  const el = $("home-you");
+  if (!el) return;
+  if (!state.runs.length && !state.rounds.length) {
+    el.innerHTML = '<p class="sub" style="margin:0">Nothing yet. Go down and find out where it breaks — the first few runs are mostly the app working out what your head does.</p>';
+    return;
+  }
+  const runs = state.runs.slice(-12);
+  const avg = runs.length ? Math.round(runs.reduce((a, r) => a + r.depth, 0) / runs.length) : 0;
+  const kills = Object.keys(state.killers || {}).sort((a, b) => state.killers[b] - state.killers[a]);
+  el.innerHTML =
+    '<div class="grid2">' +
+    '<div class="stat"><span class="k">deepest</span><span class="v">' + (state.bestDepth || 0) +
+    '</span><span class="d">' + (runs.length ? "lately about " + avg : "no runs yet") + "</span></div>" +
+    '<div class="stat"><span class="k">held for</span><span class="v">' +
+    Math.round((state.holdSec || 0) / 60) + 'm</span><span class="d">total time with the picture and nothing else</span></div>' +
+    "</div>" +
+    (kills.length
+      ? '<p class="sub" style="margin-top:11px">Ends your runs most: <b>' + esc(kills[0]) + "</b>." : "") +
+    '<p class="sub" style="margin-top:6px"><a href="#" data-go="you" style="color:var(--signal)">The full read-out</a></p>';
+}
+
+function renderYou() {
+  const b = $("you-body");
+  const f = state.facets || {};
+  const anyFacet = Object.keys(f).some((k) => f[k].a);
+  if (!state.runs.length && !anyFacet) {
+    b.innerHTML = "<p>Nothing to show yet. Go down a few floors first.</p>" +
+      '<div class="row"><button class="btn prime" data-act="runStart">Start The Run</button></div>';
+    return;
+  }
+
+  const runs = state.runs.slice(-20);
+  const avgDepth = runs.length ? (runs.reduce((a, r) => a + r.depth, 0) / runs.length).toFixed(1) : "—";
+  const avgHold = runs.length && runs.some((r) => r.hold)
+    ? Math.round(runs.reduce((a, r) => a + (r.hold || 0), 0) / runs.filter((r) => r.hold).length) : null;
+  const kills = Object.keys(state.killers || {}).sort((a, b) => state.killers[b] - state.killers[a]);
+  const d = diagnose(f), inter = interferenceLine();
+
+  const order = ["anchor", "embodied", "object", "position", "colour", "binding", "detail", "rotation", "intrusion"];
+  const bars = order.filter((k) => f[k] && f[k].a).map((k) => {
+    const acc = f[k].r / f[k].a, on = Math.round(acc * 12);
+    const weak = acc < 0.6;
+    return '<div class="facet"><div class="facetrow"><div class="facetname">' + FACET_NAME[k] + "</div>" +
+      '<div class="facetval">' + Math.round(acc * 100) + "% · " + f[k].a + "</div></div>" +
+      '<div class="fbar">' + Array.from({ length: 12 }, (_, i) =>
+        '<i class="' + (i < on ? (weak ? "weak" : "on") : "") + '"></i>').join("") + "</div></div>";
+  }).join("");
+
+  b.innerHTML =
+    '<p class="sub" style="margin-bottom:18px">What the runs have worked out about your imagery. This is a description, not a target — a bad day means you slept badly or the room was loud.</p>' +
+
+    '<div class="grid2">' +
+    '<div class="stat"><span class="k">deepest floor</span><span class="v">' + (state.bestDepth || 0) +
+    '</span><span class="d">over ' + state.runs.length + " run" + (state.runs.length === 1 ? "" : "s") + "</span></div>" +
+    '<div class="stat"><span class="k">average run</span><span class="v">' + avgDepth +
+    '</span><span class="d">floors, over your last few</span></div>' +
+    '<div class="stat"><span class="k">hold per run</span><span class="v">' + (avgHold === null ? "—" : avgHold + "s") +
+    '</span><span class="d">time carrying the picture with nothing on screen</span></div>' +
+    '<div class="stat"><span class="k">floors cleared</span><span class="v">' + (state.floorsCleared || 0) +
+    '</span><span class="d">all runs, all time</span></div>' +
+    "</div>" +
+
+    '<div class="grid2" style="margin-top:10px">' +
+    '<div class="stat"><span class="k">longest single-point hold</span><span class="v">' + (state.anchorBest || 0) +
+    's</span><span class="d">with the anchor still there at the end</span></div>' +
+    '<div class="stat"><span class="k">noticed and returned</span><span class="v">' + (state.drifts || 0) +
+    '</span><span class="d">times you caught the drift and went back — this is the rep, not the error</span></div>' +
+    "</div>" +
+    (d ? '<div class="note" style="margin-top:16px"><b>What holds and what goes.</b> ' + d + "</div>" : "") +
+    (anchorLine() ? '<div class="note"><b>One thing, or all of it.</b> ' + anchorLine() + "</div>" : "") +
+    (inter ? '<div class="note"><b>Under interference.</b> ' + inter + "</div>" : "") +
+    (f.embodied && f.embodied.a >= 6 && f.position && f.position.a >= 6
+      ? '<div class="note"><b>Flat or standing in it.</b> ' +
+        (f.embodied.r / f.embodied.a < f.position.r / f.position.a - 0.12
+          ? "You hold the layout better than the place. You are looking at a picture rather than standing in one — the Sleep Scene and First Person are the way at that."
+          : "You answer from inside the scene about as well as you answer about it from outside, which is the harder half of the two.") + "</div>"
+      : "") +
+
+    (bars ? '<div class="sec"><h3><span>Part by part</span></h3>' +
+      '<p class="sub" style="margin:-4px 0 8px">Share of questions you get right on each, and how many it is based on. Red is under sixty.</p>' +
+      bars + "</div>" : "") +
+
+    (Object.keys(state.anchorKinds || {}).filter((k) => state.anchorKinds[k].a >= 3).length
+      ? '<div class="sec"><h3><span>Easiest things to keep hold of</span></h3>' +
+        '<p class="sub" style="margin:-4px 0 8px">Which objects survive a hold as your anchor. Shape seems to matter more than colour.</p>' +
+        '<div class="tw"><table><tbody>' +
+        Object.keys(state.anchorKinds).filter((k) => state.anchorKinds[k].a >= 3)
+          .sort((a, c) => (state.anchorKinds[c].r / state.anchorKinds[c].a) - (state.anchorKinds[a].r / state.anchorKinds[a].a))
+          .slice(0, 6).map((k) =>
+            "<tr><td>" + esc((OBJECTS.find((o) => o.id === k) || {}).name || k) + '</td><td class="n" style="text-align:right">' +
+            Math.round((state.anchorKinds[k].r / state.anchorKinds[k].a) * 100) + "%</td></tr>").join("") +
+        "</tbody></table></div></div>"
+      : "") +
+
+    (kills.length
+      ? '<div class="sec"><h3><span>What ends your runs</span></h3><div class="tw"><table><tbody>' +
+        kills.slice(0, 6).map((k) =>
+          '<tr><td>' + esc(k) + '</td><td class="n" style="text-align:right">' + state.killers[k] + "</td></tr>").join("") +
+        "</tbody></table></div></div>"
+      : "") +
+
+    (runs.length
+      ? '<div class="sec"><h3><span>Last ' + runs.length + " runs</span></h3>" +
+        '<div class="spark">' + runs.map((r, i) =>
+          '<i class="' + (i === runs.length - 1 ? "last" : "") + '" style="height:' +
+          clamp(Math.round((r.depth / Math.max(4, state.bestDepth || 4)) * 100), 6, 100) + '%"></i>').join("") +
+        "</div><p class=\"sub\" style=\"margin-top:8px\">How deep each one got.</p></div>"
+      : "") +
+
+    '<div class="sec"><h3><span>Practice</span></h3><div id="you-suggest"></div>' +
+    '<div class="row" style="margin-top:12px"><button class="btn prime" data-act="runStart">Start The Run</button>' +
+    '<button class="btn" data-go="home">Back</button></div></div>';
+
+  const sg = $("you-suggest");
+  if (sg) {
+    const hold = $("home-suggest");
+    renderSuggest();
+    if (hold && hold.innerHTML) sg.innerHTML = hold.innerHTML;
+    else sg.innerHTML = '<p class="sub" style="margin:0">Nothing stands out yet — keep going and the weak one will show.</p>';
+  }
+}
+
+/* ---------- boot ---------- */
+ACTS.noop = () => {};
+$("force-update").addEventListener("click", guard(async () => {
+  const btn = $("force-update");
+  btn.textContent = "Updating…";
+  try {
+    if ("serviceWorker" in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+    if (window.caches) { const keys = await caches.keys(); await Promise.all(keys.map((k) => caches.delete(k))); }
+  } catch (e) {}
+  location.reload();
+}));
+$("reset-all").addEventListener("click", guard(() => {
+  const btn = $("reset-all");
+  if (btn.dataset.sure !== "1") {
+    btn.dataset.sure = "1";
+    btn.textContent = "Sure? This clears everything";
+    later(() => { btn.dataset.sure = "0"; btn.textContent = "Start over"; }, 5000);
+    return;
+  }
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  location.reload();
+}));
+
+function boot() {
+  load();
+  save();
+  $("build-id").textContent = typeof window.__BUILD__ === "string"
+    ? "build " + window.__BUILD__
+    : "build unstamped (source copy)";
+  $("build-id").hidden = false;
+  go("home");
+  if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+}
+boot();
+</script>
