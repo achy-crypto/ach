@@ -21,7 +21,7 @@
 </style>
 </head>
 <body>
-<script>window.__BUILD__='24b7944e1d';</script>
+<script>window.__BUILD__='190fbe7c21';</script>
 <title>Afterimage</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -369,7 +369,51 @@ body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
   padding:12px 14px;margin-top:10px;font-size:14px;line-height:1.45}
 .suggest button{margin-top:9px}
 
-@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ---- answers you look at instead of read ---- */
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.pick button{background:#0d1118;border:2px solid #232b36;border-radius:0;cursor:pointer;
+  padding:0;overflow:hidden;position:relative;aspect-ratio:1/1;display:block;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.pick button svg{width:100%;height:100%;display:block}
+.pick button:active{border-color:#c2703c}
+.pick button .cap{position:absolute;left:0;right:0;bottom:0;font-family:"JetBrains Mono",monospace;
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#4e5764;padding:4px 0;background:#070a0e}
+.pick button.right{border-color:#46c26b}
+.pick button.right .cap{color:#46c26b}
+.pick button.wrong{border-color:#e5484d}
+.pick button.wrong .cap{color:#e5484d}
+.pick button:disabled{cursor:default}
+.pick.big button{aspect-ratio:3/2}
+.pick .num{display:flex;align-items:center;justify-content:center;height:100%;
+  font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:44px;font-weight:700;color:#cfd6e0}
+.pick .words{display:flex;align-items:center;justify-content:center;height:100%;padding:12px;
+  font-size:15px;line-height:1.3;color:#cfd6e0;text-align:center}
+
+/* ---- motion ---- */
+@keyframes popin{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
+.stage svg g[data-pop]{animation:popin .26s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes shake{10%,90%{transform:translateX(-3px)}20%,80%{transform:translateX(5px)}
+  30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
+body.hurt{animation:shake .42s both}
+@keyframes flash{0%{box-shadow:inset 0 0 0 0 #46c26b00}35%{box-shadow:inset 0 0 0 5px #46c26b88}
+  100%{box-shadow:inset 0 0 0 0 #46c26b00}}
+body.good .pick{animation:flash .34s both}
+@keyframes slam{from{opacity:0;transform:translateY(-14px) scale(1.06)}to{opacity:1;transform:none}}
+.hazcard{animation:slam .3s cubic-bezier(.2,1.3,.4,1) both}
+@keyframes drain{from{opacity:.25}to{opacity:1}}
+.holds i{transition:background .2s,border-color .2s}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.cue{animation:fadeup .3s both}
+
+.overrow{display:flex;gap:18px;align-items:flex-start}
+.overside{display:flex;flex-direction:column;gap:5px;padding-top:6px}
+.overside .kb{font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:21px;font-weight:700;
+  color:#e0655a;letter-spacing:-.02em;line-height:1.1}
+.overside .pb{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:#c2703c}
+.overside .pb.dim{color:#5d6673}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
 <div class="app">
@@ -1046,7 +1090,8 @@ function drawScene(scene, opts) {
     if (o.anchor && o.anchor === it.kind.id)
       parts.push('<rect x="' + (cx - 52) + '" y="' + (cy - 49) + '" width="104" height="98" ' +
         'fill="none" stroke="#f0a057" stroke-width="2.5" stroke-dasharray="7 5"/>');
-    parts.push('<g transform="translate(' + (cx - 50 * sc) + " " + (cy - 50 * sc) + ") scale(" + sc + ')">' +
+    parts.push('<g data-pop style="animation-delay:' + (parts.length * 45) + 'ms" ' +
+      'transform="translate(' + (cx - 50 * sc) + " " + (cy - 50 * sc) + ") scale(" + sc + ')">' +
       it.kind.draw(paint, it.state[0]) + "</g>");
   }
   return '<svg viewBox="0 0 400 300" role="img" aria-label="' +
@@ -1102,12 +1147,49 @@ const FACET_NAME = {
   intrusion: "Rejecting what was never there",
 };
 
+/* An answer you look at instead of read. This is the whole difference
+   between a quiz about a picture and a game made of pictures: matching
+   image to image also tests the held image far better than matching an
+   image to the word for it. */
+function mini(kindDef, hex, stateId) {
+  return '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="' + INK + '"/>' +
+    '<g transform="translate(9 9) scale(.82)">' + kindDef.draw(hex, stateId) + "</g></svg>";
+}
+function gridIcon(cell) {
+  let g = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="' + INK + '"/>';
+  for (const c of CELLS) {
+    const x = 14 + c.col * 25, y = 14 + c.row * 25;
+    g += '<rect x="' + x + '" y="' + y + '" width="21" height="21" fill="' +
+      (c.i === cell.i ? "#f0a057" : "#232b36") + '"/>';
+  }
+  return g + "</svg>";
+}
+function visFor(text, target) {
+  const col = PALETTE.find((p) => p.name === text);
+  if (col && target) return mini(target.kind, col.hex, target.state[0]);
+  const cell = CELLS.find((c) => c.name === text);
+  if (cell) return gridIcon(cell);
+  if (target) {
+    const st = target.kind.states.find((x) => x[1] === text);
+    if (st) return mini(target.kind, target.colour.hex, st[0]);
+  }
+  const obj = OBJECTS.find((o) => o.name === text);
+  if (obj) return mini(obj, "#9aa4b1", obj.states[0][0]);
+  if (/^\d+$/.test(text)) return '<div class="num">' + text + "</div>";
+  return null;
+}
+function addVis(p, target) {
+  p.vis = p.opts.map((o) => visFor(o, target));
+  if (p.vis.every((v) => v === null)) p.vis = null;
+  return p;
+}
+
 function mkProbe(q, correct, opts, kind, target) {
   const list = opts.slice();
-  return { q, opts: list, answer: list.indexOf(correct), kind,
+  return addVis({ q, opts: list, answer: list.indexOf(correct), kind,
            facet: FACET[kind] || "object", teach: TEACH[kind],
            about: target ? target.kind.id : null,
-           aboutCell: target ? target.cell.i : null };
+           aboutCell: target ? target.cell.i : null }, target);
 }
 
 function probesFor(scene, count, flavour) {
@@ -1286,14 +1368,18 @@ function embodiedProbes(scene, count) {
 function anchorProbe(scene, item) {
   const others = scene.items.filter((x) => x !== item);
   const forms = [
-    () => mkProbe("The anchor. What <b>colour</b> was it?", item.colour.name,
+    () => mkProbe("The anchor \u2014 what colour?", item.colour.name,
       optionsAround(item.colour.name, PALETTE.map((x) => x.name)), "colour", item),
-    () => mkProbe("The anchor. " + item.kind.ask, stateLabel(item),
+    () => mkProbe("The anchor \u2014 " + item.kind.ask.replace(/^Wh/, "wh").replace(/\?$/, "?"), stateLabel(item),
       shuffle(item.kind.states.map((x) => x[1])), "state", item),
-    () => mkProbe("The anchor. <b>Where</b> was it sitting?", item.cell.name,
-      optionsAround(item.cell.name, CELLS.map((c) => c.name)), "place", item),
+    () => {
+      const pr = mkProbe("Where was the anchor?", item.cell.name,
+        optionsAround(item.cell.name, CELLS.map((c) => c.name)), "place", item);
+      pr.subject = mini(item.kind, "#8d96a3", item.kind.states[0][0]);
+      return pr;
+    },
     () => others.length
-      ? mkProbe("What was <b>nearest</b> the anchor?",
+      ? mkProbe("What was nearest the anchor?",
           others.sort((a, b) => (Math.abs(a.cell.col - item.cell.col) + Math.abs(a.cell.row - item.cell.row)) -
             (Math.abs(b.cell.col - item.cell.col) + Math.abs(b.cell.row - item.cell.row)))[0].kind.name,
           optionsAround(others[0].kind.name, others.map((x) => x.kind.name).concat(OBJECTS.map((o) => o.name))), "relation", others[0])
@@ -2160,64 +2246,64 @@ ACTS.walkAgain = () => walkChoose();
    ============================================= */
 
 const HAZARDS = [
-  { id: "rush",   slot: "study",    from: 3,  name: "The Rush",     line: "Half the time to look at it." },
-  { id: "drip",   slot: "study",    from: 3,  name: "The Drip",     line: "They arrive one at a time, then all go at once." },
-  { id: "fade",   slot: "study",    from: 4,  name: "The Fade",     line: "It dies while you watch. Take anchors, not everything." },
-  { id: "blind",  slot: "study",    from: 7,  name: "The Blind",    line: "No picture. Words only. You build it." },
-  { id: "static", slot: "hold",     from: 4,  name: "The Static",   line: "Something else to do, while you hold it." },
-  { id: "mimic",  slot: "scene",    from: 5,  name: "The Mimic",    line: "Two things wear almost the same colour." },
-  { id: "thief",  slot: "question", from: 4,  name: "The Stranger", line: "It returns with something in it that was never yours." },
-  { id: "shift",  slot: "question", from: 5,  name: "The Shift",    line: "Something moves while you are not looking." },
-  { id: "liar",   slot: "question", from: 5,  name: "The Liar",     line: "A claim about it. One of you is wrong." },
-  { id: "turn",   slot: "question", from: 6,  name: "The Turn",     line: "You will be asked about it turned." },
-  { id: "echo",   slot: "question", from: 8,  name: "The Echo",     line: "The question is about the floor before this one." },
+  { id: "rush",   slot: "study",    from: 3,  name: "The Rush",     line: "Half the look." },
+  { id: "drip",   slot: "study",    from: 3,  name: "The Drip",     line: "One at a time. Then gone." },
+  { id: "fade",   slot: "study",    from: 4,  name: "The Fade",     line: "It dies while you watch." },
+  { id: "blind",  slot: "study",    from: 7,  name: "The Blind",    line: "No picture. Build it." },
+  { id: "static", slot: "hold",     from: 4,  name: "The Static",   line: "Something else, while you hold." },
+  { id: "mimic",  slot: "scene",    from: 5,  name: "The Mimic",    line: "Two wear the same colour." },
+  { id: "thief",  slot: "question", from: 4,  name: "The Stranger", line: "It leaves something behind." },
+  { id: "shift",  slot: "question", from: 5,  name: "The Shift",    line: "Something moves in the dark." },
+  { id: "liar",   slot: "question", from: 5,  name: "The Liar",     line: "It tells you something. Maybe." },
+  { id: "turn",   slot: "question", from: 6,  name: "The Turn",     line: "Turn it over in the dark." },
+  { id: "echo",   slot: "question", from: 8,  name: "The Echo",     line: "It asks about the last floor." },
 ];
 const HAZ = (id) => HAZARDS.find((h) => h.id === id);
 
 /* Every fifth floor. Two or three of them at once, and one more question. */
 const BOSSES = [
-  { name: "THE HOLLOW",   line: "Nothing down here is where you left it." },
-  { name: "THE COPY",     line: "You will be shown something almost right." },
-  { name: "THE LONG DARK",line: "It holds you longer than you can hold it." },
-  { name: "THE UNDERTOW", line: "It takes the picture while you look away." },
-  { name: "THE CHORUS",   line: "Everything answers at once." },
+  { name: "THE HOLLOW",   line: "Nothing is where you left it." },
+  { name: "THE COPY",     line: "Almost right is still wrong." },
+  { name: "THE LONG DARK",line: "It holds longer than you do." },
+  { name: "THE UNDERTOW", line: "It takes it while you look away." },
+  { name: "THE CHORUS",   line: "Everything at once." },
 ];
 
 const BOONS = [
   { id: "anchor", t: "Anchor", k: "you choose it",
-    d: "You pick the anchor yourself after the scene instead of being handed one, and questions about it come with a shorter list." },
+    d: "You pick which one to keep. Questions about it get a shorter list." },
   { id: "flame", t: "One-Point Flame", k: "one thing, all the way down",
-    d: "Next floor nothing else is asked about. Every question is the anchor, and they go deep." },
+    d: "Next floor is nothing but the anchor, in depth." },
   { id: "return", t: "Return", k: "the cue when it breaks",
-    d: "When something interrupts the hold, the screen gives you one instruction: return to the anchor." },
+    d: "When something breaks the hold, you get the cue: return." },
   { id: "gaze", t: "Steady Gaze", k: "look longer at one",
-    d: "After the scene goes, the anchor alone comes back for three seconds. Nothing else on the screen." },
+    d: "The anchor alone, three seconds, after the scene goes." },
   { id: "first", t: "First Person", k: "from your own eyes",
-    d: "Scenes arrive as a place you are standing in, and the questions are about what was near you rather than what was where." },
+    d: "Scenes become a place you stand in." },
   { id: "touch", t: "Touch Hook", k: "add a hand",
-    d: "One object arrives with what it would feel like. Touch carries detail that sight alone drops." },
+    d: "One object arrives with what it feels like." },
   { id: "sound", t: "Sound Hook", k: "add an ear",
-    d: "One object arrives with the sound it would make. Sound tends to outlast colour in a hold." },
+    d: "One object arrives with the sound it makes." },
   { id: "already", t: "Already There", k: "before the strain",
-    d: "One line before each hold, written as though it has already gone well. It takes the panic out of the fade." },
+    d: "One steady line before each hold." },
   { id: "loop", t: "Loop Scene", k: "three passes",
-    d: "The picture comes three times, briefly, instead of once. Repetition is what stops an image wobbling." },
+    d: "The picture comes three times instead of once." },
   { id: "embody", t: "Embodied Anchor", k: "hold it with your hand",
-    d: "The anchor comes with what it feels like, and the hold keeps sending you back to touching it." },
+    d: "The anchor comes with weight and texture." },
   { id: "colourbind", t: "Colour-bind", k: "one word, not two",
-    d: "The hold makes you fuse colour to object — “redcup”, said once. Colour and binding questions come easier." },
+    d: "The hold fuses colour to object. Both get easier." },
   { id: "outline", t: "Trace Outline", k: "shape before colour",
-    d: "The picture arrives as flat silhouettes first, so shape has to go in before colour is there to lean on." },
+    d: "Silhouettes first, colour second." },
   { id: "palace", t: "Palace Door", k: "somewhere real",
-    d: "One object gets left at a stop on a route you know, and you get asked for it by the place." },
+    d: "One object is left on a route you know." },
   { id: "freeze", t: "Freeze-frame", k: "longer look",
-    d: "Three and a half more seconds of the picture, every floor from here." },
+    d: "Three and a half more seconds of looking." },
   { id: "corner", t: "Corner Lock", k: "one quarter, deeply",
-    d: "Pick a corner. The hold sends you back to it, and questions about what lives there come easier." },
+    d: "Pick a quarter. The hold keeps going back to it." },
   { id: "detail", t: "Detail Hook", k: "the thing nobody encodes",
-    d: "One small detail is named while you look — a handle, a lid, a flame. Detail questions come easier." },
+    d: "One small detail is named while you look." },
   { id: "refresh", t: "Refresh", k: "one flash, on demand",
-    d: "A charge you spend during a hold to see the picture again for one second. Stacks." },
+    d: "A charge you spend to see it again for a second." },
 ];
 
 /* The State Chamber. Not a mood exercise: you rehearse being the way
@@ -2259,7 +2345,7 @@ function floorSpec(f, boss) {
   return {
     n: clamp(3 + Math.floor((f - 1) / 2) + (boss ? 1 : 0), 3, 8),
     study: Math.max(1500, 5600 - f * 250),
-    hold: Math.min(30000, 3200 + f * 1100),
+    hold: Math.min(14000, 2600 + f * 600),
     probes: clamp(1 + Math.floor(f / 5) + (boss ? 1 : 0), 1, 4),
   };
 }
@@ -2351,7 +2437,7 @@ function stateChamber() {
   $("run-body").innerHTML =
     '<div class="hazcard chamber"><span class="two">floor ' + run.floor + "</span>" +
     '<span class="n">STATE CHAMBER</span>' +
-    '<span class="l">Pick how you are going to be, then go straight down and be it.</span></div>' +
+    '<span class="l">Pick one. Then go down as it.</span></div>' +
     '<div class="opts" style="margin-top:14px">' +
     sample(STATES, 4).map((x) => '<button data-act="pickState" data-arg="' + x.id + '">' + x.name + "</button>").join("") +
     "</div>";
@@ -2364,7 +2450,7 @@ ACTS.pickState = (id) => {
   state.states[st.name] = (state.states[st.name] || 0) + 1;
   $("run-body").innerHTML =
     '<div class="void"><p class="cue warm">' + st.line + '</p>' +
-    '<p class="cuesub">see it from your own eyes · do not force it</p></div>' +
+    '<p class="cuesub">from your own eyes</p></div>' +
     '<div class="row" style="margin-top:14px"><button class="btn prime" data-act="chamberGo">I am. Go down</button></div>';
   later(() => { const b = $("run-body"); if (run && b && b.querySelector(".void")) announceFloor(); }, 6000);
 };
@@ -2411,19 +2497,18 @@ function floorStudy() {
   }
   const a = run.anchor;
   const touchLine = run.kit.touch || run.kit.embody
-    ? '<p class="read"><b>Touch.</b> The ' + esc(a.kind.name) + " is " + esc(a.kind.touch || "cool and solid") + ". Put your hand on it.</p>"
+    ? '<p class="read"><b>Touch.</b> ' + esc(a.kind.name) + " \u2014 " + esc(a.kind.touch || "cool and solid") + "</p>"
     : "";
   const soundLine = run.kit.sound
-    ? '<p class="read"><b>Sound.</b> Knock the ' + esc(a.kind.name) + " and you hear " + esc(a.kind.sound || "a dull knock") + ".</p>"
+    ? '<p class="read"><b>Sound.</b> ' + esc(a.kind.name) + " \u2014 " + esc(a.kind.sound || "a dull knock") + "</p>"
     : "";
   const firstLine = run.embodied
-    ? '<p class="read"><b>You are standing in it.</b> ' + describe1p(run.scene).join(" ") + "</p>"
+    ? '<p class="read"><b>You are standing in it.</b></p>'
     : "";
   const under =
     (run.hookLine ? '<p class="read"><b>Hook.</b> ' + esc(run.hookLine) + "</p>" : "") +
     touchLine + soundLine + firstLine +
-    (run.palaceStop ? '<p class="read"><b>Leave it there.</b> The ' + esc(run.palaceItem.colour.name) + " " +
-      esc(run.palaceItem.kind.name) + " goes at <b>" + esc(run.palaceStop) + "</b>. Watch it land.</p>" : "");
+    (run.palaceStop ? '<p class="read"><b>' + esc(run.palaceItem.kind.name) + " \u2192 " + esc(run.palaceStop) + "</b></p>" : "");
 
   if (ids.indexOf("blind") > -1) {
     $("run-body").innerHTML =
@@ -2484,8 +2569,7 @@ function afterStudy() {
 function pickAnchor() {
   $("run-body").innerHTML =
     '<span class="lab">choose your anchor</span>' +
-    '<h2 class="ask" style="margin:6px 0 4px">Which one are you keeping?</h2>' +
-    '<p class="sub">When the rest goes, this is the one you hold. Everything else can be rebuilt from it.</p>' +
+    '<h2 class="ask" style="margin:6px 0 10px">Which one are you keeping?</h2>' +
     '<div class="opts" style="margin-top:14px">' +
     shuffle(run.scene.items).map((x) =>
       '<button data-act="setAnchor" data-arg="' + x.kind.id + '">' + x.colour.name + " " + x.kind.name + "</button>").join("") +
@@ -2504,7 +2588,7 @@ function steadyGaze() {
   $("run-body").innerHTML =
     '<span class="lab">steady gaze · the anchor alone</span>' +
     '<div class="stage" style="margin-top:6px">' + drawScene({ items: [run.anchor], id: "g" }) + "</div>" +
-    '<p class="sub" style="margin-top:10px">Nothing else. Just this one, until it stops moving.</p>' +
+
     '<div class="bar"><i id="gaze-bar"></i></div>';
   countdown("gaze-bar", 3000, () => { run.phase = null; afterStudy(); });
 }
@@ -2529,7 +2613,7 @@ function floorDrip(total, under) {
       '<span class="lab">one at a time · ' + (i + 1) + " of " + items.length + "</span>" +
       '<div class="stage" style="margin-top:6px">' + drawScene({ items: [items[i]], id: "d" }) + "</div>" +
       (under || "") +
-      '<p class="sub" style="margin-top:12px">Hook it onto what is already in there.</p>';
+      "";
     i++;
     later(show, each);
   };
@@ -2801,29 +2885,30 @@ function askOne() {
   const p = run.probes[run.at];
   if (!p) return floorCleared();
   hud();
+  const v = p.vis;
   $("run-body").innerHTML =
     (p.stage ? '<div class="stage">' + p.stage + "</div>" : "") +
-    '<span class="lab">' + (run.probes.length > 1 ? (run.at + 1) + " of " + run.probes.length : "answer") +
-    (p.eased ? " · shortened" : "") + "</span>" +
     '<p class="qn">' + p.q + "</p>" +
-    (p.tf
-      ? '<div class="tf" id="opts">'
-      : '<div class="opts" id="opts">') +
-    p.opts.map((o, i) => '<button data-act="runAns" data-arg="' + i + '">' + o + "</button>").join("") + "</div>";
+    '<div class="pick' + (v ? "" : " big") + '" id="opts">' +
+    p.opts.map((o, i) =>
+      '<button data-act="runAns" data-arg="' + i + '">' +
+      (v && v[i] ? v[i] : '<div class="words">' + o + "</div>") +
+      '<span class="cap">' + o + "</span></button>").join("") +
+    "</div>";
 }
 
 /* What kind of imagery just failed, said out loud, in one line. */
 function missLine(p) {
   const f = run.floorFacets, other = Object.keys(f).filter((k) => k !== p.facet && f[k].r > 0);
   const underFire = run.hz.some((h) => h.id === "static");
-  if (p.isAnchor && underFire) return "The anchor went under the Static. That is the thing to drill.";
-  if (p.isAnchor) return "The anchor went. That is the one thing that was supposed to stay.";
-  if (!p.isAnchor && run.anchorHeld) return "The anchor held — the rest came apart round it. Build outward from it next floor.";
-  if (p.facet === "embodied") return "You held it like a picture, not a place you were standing in.";
-  if (underFire) return "You lost it under the Static, not on your own.";
-  if (p.facet === "intrusion") return "Something that was never there got in.";
-  if (other.length) return FACET_NAME[other[0]] + " held. " + FACET_NAME[p.facet].toLowerCase() + " did not.";
-  return FACET_NAME[p.facet] + " went first.";
+  if (p.isAnchor && underFire) return "<b>The anchor went under the Static.</b>";
+  if (p.isAnchor) return "<b>You lost the anchor.</b>";
+  if (run.anchorHeld) return "<b>Anchor held. The rest didn\u2019t.</b>";
+  if (p.facet === "embodied") return "<b>You held a picture, not a place.</b>";
+  if (underFire) return "<b>The Static took it.</b>";
+  if (p.facet === "intrusion") return "<b>Something got in.</b>";
+  if (other.length) return "<b>" + FACET_NAME[other[0]] + " held. " + FACET_NAME[p.facet].toLowerCase() + " went.</b>";
+  return "<b>" + FACET_NAME[p.facet] + " went first.</b>";
 }
 
 function tally(facet, ok) {
@@ -2859,24 +2944,26 @@ ACTS.runAns = (ixStr) => {
 
   if (good) {
     blip(880, 80);
-    later(() => { run.locked = false; run.at++; askOne(); }, 430);
+    document.body.classList.add("good");
+    later(() => document.body.classList.remove("good"), 360);
+    later(() => { run.locked = false; run.at++; askOne(); }, 420);
     return;
   }
+  document.body.classList.add("hurt");
+  later(() => document.body.classList.remove("hurt"), 440);
 
   run.holds--;
   run.lastMiss = { q: p.q, gave: p.opts[ix], want: p.opts[p.answer], teach: p.teach, facet: p.facet };
   run.killedBy = run.boss ? run.boss.name : (run.hz.length ? run.hz[0].name : null);
   blip(170, 260);
   hud();
-  $("run-body").insertAdjacentHTML("beforeend",
-    '<div class="hit"><b>' + esc(p.opts[p.answer]) + "</b> — " + missLine(p) + "<br>" +
-    (run.holds > 0 ? "That is a hold. " + run.holds + " left." : "That was the last one.") + "</div>");
+  $("run-body").insertAdjacentHTML("beforeend", '<div class="hit">' + missLine(p) + "</div>");
   later(() => {
     run.locked = false;
     if (run.holds <= 0) return runOver();
     run.at++;
     askOne();
-  }, 1700);
+  }, 1500);
 };
 
 function floorCleared() {
@@ -2889,7 +2976,7 @@ function floorCleared() {
     $("run-body").innerHTML =
       '<span class="lab">it let you past</span>' +
       '<h2 class="ask" style="margin:6px 0 10px;color:#e0913f">' + run.boss.name + " is behind you.</h2>" +
-      "<p>You carry one more hold from here.</p>" +
+      '<p class="sub">+1 hold, for good.</p>' +
       '<div class="row" style="margin-top:16px"><button class="btn prime" data-act="afterBoss">Keep going down</button></div>';
     return;
   }
@@ -2905,14 +2992,13 @@ function offerBoon() {
   const three = sample(usable, Math.min(3, usable.length));
   $("run-body").innerHTML =
     '<span class="lab">floor ' + run.floor + " clear</span>" +
-    '<h2 class="ask" style="margin:6px 0 4px">Take something down with you.</h2>' +
-    '<p class="sub">These are techniques, not cheats. They stay for the rest of the run.</p>' +
+    '<h2 class="ask" style="margin:6px 0 10px">Take one down with you.</h2>' +
     '<div class="boon">' +
     three.map((b) => '<button data-act="takeBoon" data-arg="' + b.id + '">' +
       '<span class="k">' + b.k + '</span><span class="t">' + b.t + '</span><span class="d">' + b.d + "</span></button>").join("") +
     "</div>" +
     '<div class="row" style="margin-top:13px">' +
-    '<button class="btn" data-act="takeBoon" data-arg="push">Take nothing · two hazards next floor, and a hold back</button></div>';
+    '<button class="btn" data-act="takeBoon" data-arg="push">Nothing · two hazards, +1 hold</button></div>';
 }
 
 ACTS.takeBoon = (id) => {
@@ -3015,32 +3101,22 @@ function runOver() {
   state.holdSec = (state.holdSec || 0) + Math.round(run.holdMs / 1000);
   save();
 
-  const m = run.lastMiss, d = diagnose(state.facets), inter = interferenceLine();
+  /* One line, not a report. The full read-out lives on its own screen. */
+  const m = run.lastMiss;
+  const line = m ? FACET_NAME[m.facet] + " went." : "";
   $("run-hud").innerHTML = "";
   $("run-body").innerHTML =
-    '<span class="lab">the run is over</span>' +
-    '<p style="margin:4px 0 0;color:#67707d">You got to</p>' +
-    '<div class="depth">' + depth + "</div>" +
-    '<p style="margin:8px 0 0;font-size:17px;color:#c3cbd5">' +
-    (isBest && depth > 3 ? "Deeper than you have been." : "Your best is " + best + ".") +
-    (run.killedBy ? " " + run.killedBy + " had you." : "") + "</p>" +
-    '<div class="stage" style="margin-top:16px">' + drawScene(run.scene) + "</div>" +
-    '<p class="sub" style="margin-top:9px">The floor you went out on.</p>' +
-    (m
-      ? '<div class="hit" style="margin-top:14px"><b>' + FACET_NAME[m.facet] + "</b> — you said " +
-        esc(m.gave) + ", it was " + esc(m.want) + ".</div>"
-      : "") +
-    (run.drifts
-      ? '<div class="read"><b>Drift.</b> You noticed it going ' + run.drifts + " time" + (run.drifts === 1 ? "" : "s") +
-        " and went back " + run.drifts + " time" + (run.drifts === 1 ? "" : "s") + ". That is the rep. It is not the failure." +
-        "</div>"
-      : "") +
-    (anchorLine() ? '<div class="read"><b>The anchor.</b> ' + anchorLine() + "</div>" : "") +
-    (d ? '<div class="read"><b>What this run says.</b> ' + d + "</div>" : "") +
-    (inter ? '<div class="read"><b>Under fire.</b> ' + inter + "</div>" : "") +
-    (m && m.teach ? '<div class="read">' + m.teach + "</div>" : "") +
+    '<div class="stage" style="margin-bottom:14px">' + drawScene(run.scene) + "</div>" +
+    '<div class="overrow"><div><span class="lab">floor</span><div class="depth">' + depth + "</div></div>" +
+    '<div class="overside">' +
+    (run.killedBy ? '<span class="kb">' + esc(run.killedBy) + "</span>" : "") +
+    (isBest && depth > 3 ? '<span class="pb">deepest yet</span>' : '<span class="pb dim">best ' + best + "</span>") +
+    (line ? '<span class="pb dim">' + line + "</span>" : "") +
+    (run.drifts ? '<span class="pb dim">' + run.drifts + " returns</span>" : "") +
+    "</div></div>" +
     '<div class="row" style="margin-top:18px">' +
-    '<button class="btn prime" data-act="runStart">Go again</button>' +
+    '<button class="btn prime" data-act="runStart">Again</button>' +
+    '<button class="btn" data-go="you">What broke</button>' +
     '<button class="btn" data-act="runQuit">Out</button></div>';
   blip(150, 420);
 }
