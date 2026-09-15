@@ -1,0 +1,15 @@
+{
+  "name": "two-hours-in",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone server for Two Hours In: catalog search over IGDB or RAWG, blind gameplay-feature rating via the Claude API, and file-backed state. Credentials stay here.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs && node --check catalog.mjs && node --check rate.mjs && node --check store.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0"
+  }
+}

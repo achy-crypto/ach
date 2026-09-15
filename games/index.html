@@ -480,21 +480,54 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
    titles is not a catalog search, so it is labelled as what it is.
    ========================================================================== */
 
-const CATALOG = {
-  // Fill in to enable real search. Nothing here is guessed at runtime.
-  connector: null,      // {server:"<claude.ai connector name>", searchTool:"", lookupTool:""}
-  endpoint: null,       // {url:"https://your-proxy.example/igdb", note:"needs a backend; see setup"}
+/* The app runs in two places and the difference is one probe:
+ *   server   — the standalone deployment in ../server. It has a real catalog
+ *              behind it, holds every credential, and rates through the Claude
+ *              API on the server side.
+ *   artifact — published on claude.ai. No network of its own, so titles are
+ *              proposed by the model rather than searched, and that is said
+ *              plainly rather than dressed up as catalog retrieval. */
+const HOST = {
+  mode:"unknown", catalog:false, provider:null, missing:[], rater:false,
+  needsToken:false, token:"", model:null,
 };
-function catalogConnected(){return !!(CATALOG.connector||CATALOG.endpoint)}
 
-function catalogStatus(){
-  return {connected:catalogConnected(),
-    provider:CATALOG.connector?"connector":CATALOG.endpoint?"endpoint":"none"}}
+function hdrs(extra){const h=Object.assign({"Content-Type":"application/json"},extra||{});
+  if(HOST.token)h.Authorization="Bearer "+HOST.token;return h}
 
+async function api(path,opts){
+  const r=await fetch(path,Object.assign({headers:hdrs()},opts||{}));
+  let body=null;try{body=await r.json()}catch(e){}
+  if(!r.ok){const err=new Error((body&&body.error)||`request failed (${r.status})`);
+    err.code=r.status===401?"needs_token":(body&&body.code)||("http_"+r.status);
+    err.missing=body&&body.missing;throw err}
+  return body}
+
+async function detectHost(){
+  try{HOST.token=localStorage.getItem("games:token")||""}catch(e){}
+  try{
+    const h=await api("/api/health");
+    if(h&&h.app==="two-hours-in"){
+      HOST.mode="server";HOST.catalog=!!(h.catalog&&h.catalog.connected);
+      HOST.provider=h.catalog&&h.catalog.provider;HOST.missing=(h.catalog&&h.catalog.missing)||[];
+      HOST.rater=!!(h.rater&&h.rater.configured);HOST.model=h.rater&&h.rater.model;
+      HOST.needsToken=!!h.needsToken&&!h.authed;
+      if(!HOST.rater)HOST.missing=HOST.missing.concat(["ANTHROPIC_API_KEY"]);
+      return}
+  }catch(e){if(e&&e.code==="needs_token"){HOST.mode="server";HOST.needsToken=true;return}}
+  HOST.mode="artifact"}
+
+function catalogConnected(){return HOST.mode==="server"&&HOST.catalog}
+function catalogStatus(){return{connected:catalogConnected(),provider:HOST.provider,mode:HOST.mode}}
+
+/* Where a game's METADATA came from. Gameplay feature ratings are inferred by a
+ * model in every one of these cases — a connected catalog grounds the inference
+ * in real facts, it does not verify it, and nothing here ever says it does. */
 const SOURCE = {
-  catalog:  {label:"catalog", sourced:true},
-  estimate: {label:"unverified estimate", sourced:false},
-  manual:   {label:"entered by you", sourced:false},
+  igdb:     {label:"IGDB", catalog:true},
+  rawg:     {label:"RAWG", catalog:true},
+  estimate: {label:"no catalog", catalog:false},
+  manual:   {label:"entered by you", catalog:false},
 };
 
 // id is stable across sessions and is what feedback, shown-lists and scoring key on.
@@ -528,7 +561,8 @@ function cleanFeatures(raw){const out={};
     const v=num(c.value);
     const cell={value:v===null?null:clamp(v,0,10),
       confidence:clamp(num(c.confidence)??0,0,1),
-      evidence:String(c.evidence||"").slice(0,220)};
+      evidence:String(c.evidence||"").slice(0,220),
+      basis:c.basis==="catalog"||c.basis==="knowledge"?c.basis:""};
     if(cell.confidence<=0.05||!cell.evidence){cell.value=null;cell.confidence=0}
     out[MATCH_KEYS[i]]=cell}
   return out}
@@ -575,10 +609,10 @@ const state={games:{},feedback:[],weights:{},tolerance:3,
 for(const k of MATCH_KEYS)state.weights[k]=1;
 
 let db=null,sample=null,tab="read",ctl=null;
-let readTitle="",readBusy=false,readErr="",readingId=null,readStep="";
+let readTitle="",readBusy=false,readErr="",readingId=null,readStep="",searchResults=[];
 let form="either",company="alone",offlineOnly=false,platform="";
 let findBusy=false,findErr="",findNotes=[],findStep="",pickIds=[];
-let includeRated=false;
+let includeRated=false,findOffset=0;
 let dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
 const saveStatus={},suggested={};
 const DOC="games/profile", LS="games:v2";
@@ -632,6 +666,13 @@ function migrate(d){
     if(num(d.prefs.w[k])!==null)state.weights[k]=Math.max(0,num(d.prefs.w[k]))}
 
 async function loadState(){let got=false;
+  if(HOST.mode==="server"){
+    try{const out=await api("/api/state");if(out&&out.state)got=adopt(thaw(out.state))}
+    catch(e){dbUnavailable=true;dbErr=(e&&e.message)||"server storage unavailable"}
+    try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
+    catch(e){lastSave.local=false}
+    if(!got){try{const raw=localStorage.getItem(LS);if(raw)adopt(JSON.parse(raw))}catch(e){}}
+    state.loaded=true;return render()}
   try{db=await claude.use("db");
     if(!db){dbUnavailable=true;dbErr="not available in this view"}
     else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(thaw(s.data()))}}
@@ -643,6 +684,10 @@ async function loadState(){let got=false;
 
 async function saveState(){const body=payload();let local=false,cloud=false;
   try{localStorage.setItem(LS,JSON.stringify(body));local=true}catch(e){}
+  if(HOST.mode==="server"){
+    try{await api("/api/state",{method:"PUT",body:JSON.stringify(body)});cloud=true;dbErr=""}
+    catch(e){dbErr=(e&&e.message)||"server write failed"}
+    lastSave={cloud,local};return local||cloud}
   if(db){try{await db.doc(DOC).set(body);cloud=true;dbErr=""}catch(e){dbErr=(e&&(e.code||e.message))||"unknown error"}}
   lastSave={cloud,local};return local||cloud}
 
@@ -718,8 +763,36 @@ const COMPACT = `KEEP THE REPLY SHORT OR IT WILL BE CUT OFF. Evidence is at most
 outside the JSON. "f" is the nine features IN THE ORDER LISTED ABOVE, each as
 [value, confidence, "evidence"]. Use [null,0,""] for one you cannot support.`;
 
-async function rateTitles(titles,onProgress){
+/* One entry point. On the server the ratings come back from the Claude API with
+ * a JSON schema enforced and the catalog facts as their basis; in the artifact
+ * they come from the page's own sampling call with no facts to stand on. Either
+ * way the record says method "model-inference" and is never called verified. */
+async function rateGames(games,onProgress){
+  if(HOST.mode==="server"){
+    const out=await api("/api/rate",{method:"POST",body:JSON.stringify({
+      games:games.map(g=>({id:g.id,title:g.title,basis:g.basis||{}}))})});
+    const saved=[];
+    for(const row of out.ratings||[]){
+      const known=getGame(row.id)||{};
+      // The catalog is the authority on the title; the shared rating store only caches
+      // features by id, so its copy of the title must not overwrite this one.
+      saved.push(putGame({id:row.id,title:known.title||row.title,
+        source:(known.meta&&known.meta.source)||"estimate",at:Date.now(),
+        meta:Object.assign({},known.meta,{
+          endless:row.inferred&&row.inferred.endless,
+          needsGroup:row.inferred&&row.inferred.needsGroup,
+          offline:row.inferred?row.inferred.offline!==false:true,
+          frictions:(row.inferred&&row.inferred.frictions)||[]}),
+        ratings:{features:cleanFeatures(row.ratings.features),
+          method:row.ratings.method||"model-inference",
+          groundedIn:row.ratings.groundedIn||null,
+          model:row.ratings.model||null,
+          selfConfidence:selfConfidence(cleanFeatures(row.ratings.features)),
+          at:row.ratings.at||Date.now()}}))}
+    return {saved,missed:out.missed||[],salvaged:false}}
+
   if(!sample)throw{code:"not_granted",message:"no sampling in this view"};
+  const titles=games.map(g=>g.title);
   const prompt=`Rate how each of these games plays, feature by feature.
 
 GAMES, in this order: ${titles.map((t,i)=>`${i+1}. "${t}"`).join("  ")}
@@ -761,7 +834,8 @@ off = playable fully offline.`;
       meta:{ident:String(g.d||g.ident||""),theme:String(g.th||g.theme||""),
         endless:g.e===true,needsGroup:g.o===true,offline:g.off!==false,
         frictions:(Array.isArray(g.fr)?g.fr:[]).slice(0,4).map(String)},
-      ratings:{features,sourced:false,refs:[],selfConfidence:selfConfidence(features),at:Date.now()}}))});
+      ratings:{features,method:"model-inference",groundedIn:null,
+        selfConfidence:selfConfidence(features),at:Date.now()}}))});
   return {saved,missed:titles.filter(t=>!used.has(t)),salvaged}}
 
 // Candidate titles. This is NOT catalog search and never claims to be. It may use which
@@ -807,13 +881,20 @@ Reply with only this JSON: {"titles":["",""]}`;
    ========================================================================== */
 
 function provTags(g,m){
-  const src=SOURCE[g.source]||SOURCE.estimate;
-  const cov=m&&m.ok?Math.round(m.coverage*100):Math.round(knownCount(g.ratings.features)/MATCH_KEYS.length*100);
-  const thin=cov<70;
+  const src=SOURCE[(g.meta&&g.meta.source)||g.source]||SOURCE.estimate;
+  const feats=g.ratings.features;
+  const cov=m&&m.ok?Math.round(m.coverage*100):Math.round(knownCount(feats)/MATCH_KEYS.length*100);
+  const grounded=MATCH_KEYS.filter(k=>{const c=feats[k];
+    return c&&featureValue(feats,k)!==null&&c.basis==="catalog"}).length;
+  const known=knownCount(feats);
   return`<div class="prov">
-    <span class="${src.sourced?"":"est"}">${src.sourced?"sourced ratings":"unverified estimate"}</span>
-    <span class="${thin?"thin":""}">${knownCount(g.ratings.features)}/${MATCH_KEYS.length} features rated · ${cov}% of weight</span>
-    ${src.sourced?"":`<span>model's own certainty ${Math.round((g.ratings.selfConfidence||0)*100)}%</span>`}
+    <span class="${src.catalog?"":"est"}">${src.catalog
+      ? `metadata from ${esc(src.label)}`
+      : "no catalog — title unverified"}</span>
+    <span class="est">gameplay ratings inferred, not verified</span>
+    ${g.ratings.groundedIn||grounded?`<span>${grounded?grounded+" of "+known+" grounded in catalog facts":"grounded in catalog facts"}</span>`:""}
+    <span class="${cov<70?"thin":""}">${known}/${MATCH_KEYS.length} features rated · ${cov}% of weight</span>
+    <span>model's own certainty ${Math.round((g.ratings.selfConfidence||0)*100)}%</span>
   </div>`}
 
 function gapWord(part,invert){
@@ -867,8 +948,10 @@ function workingBlock(g,m){
       m.frictionTriggers.map(t=>esc(FLABEL[t.feature])+" "+Math.round(t.severity*100)+"%").join(", ")}.</p>`}
   h+=`<div class="tw"><table><thead><tr><th>Feature</th><th>This</th><th>Evidence</th></tr></thead><tbody>`;
   for(const f of FEATURES){const c=g.ratings.features[f.key]||{};const v=featureValue(g.ratings.features,f.key);
+    const from=v===null?"":c.basis==="catalog"?" <span class=\"lab\">from catalog facts</span>"
+      :c.basis==="knowledge"?" <span class=\"lab\">from the model's knowledge</span>":"";
     h+=`<tr><td>${esc(f.label)}</td><td class="num">${v===null?"—":v.toFixed(1)}</td>
-      <td style="color:var(--dim);font-size:12.5px">${v===null?"no evidence; left out of the score":esc(c.evidence)}</td></tr>`}
+      <td style="color:var(--dim);font-size:12.5px">${v===null?"no evidence; left out of the score":esc(c.evidence)+from}</td></tr>`}
   h+=`</tbody></table></div>`;
   if(g.meta&&g.meta.frictions&&g.meta.frictions.length)
     h+=`<p class="subtle">Commonly reported friction: ${g.meta.frictions.map(esc).join(" · ")}</p>`;
@@ -892,12 +975,26 @@ function readPanel(){
     <span id="readprog">${esc(readStep||"Thinking")}</span>
     <button class="ghost" data-act="stop" style="min-height:36px;padding:6px 12px">Stop</button></div>`;
   if(readErr)h+=`<div class="err">${esc(readErr)}</div>`;
+  if(HOST.needsToken)h+=catalogNotice();
 
   const prof=buildProfile();
   if(!prof.liked.length)h+=`<div class="caution">
     <span class="lab" style="display:block;margin-bottom:3px">Nothing to compare against yet</span>
     Scores come from games you say you enjoyed, each kept as its own example. Rate one below,
     or add a few under <b>Your games</b>.</div>`;
+
+  if(searchResults.length){
+    h+=`<h2 class="sec">Which one</h2>
+      <p class="subtle">From ${esc(String(HOST.provider||"").toUpperCase())}. Picking one resolves it to that catalog's own id.</p>
+      <div class="sheet">${searchResults.map(id=>{const r=getGame(id);if(!r)return"";
+        const m=r.meta||{};
+        return `<div class="card"><div class="chead"><div>
+          <div class="cname">${esc(r.title)}${m.year?` <span class="cmeta">${m.year}</span>`:""}</div>
+          <div class="cmeta">${esc([(m.developers||[]).join(", "),(m.genres||[]).join(", ")].filter(Boolean).join(" · "))}</div>
+          <div class="cmeta" style="margin-top:4px">${esc(String(m.summary||"").slice(0,140))}</div>
+          </div></div>
+          <div class="seg"><button class="ghost" data-act="pick" data-id="${esc(id)}">Rate this one</button>
+            <span class="tag" style="align-self:center">${esc(id)}</span></div></div>`}).join("")}</div>`}
 
   const g=readingId?getGame(readingId):null;
   if(g&&g.ratings){
@@ -967,19 +1064,53 @@ function updateFeedbackUI(id){
   const sv=document.getElementById("fbsave");if(sv)sv.innerHTML=saveLine("fb:"+id,!!labelOf(fb))}
 
 async function doRead(){
-  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
-  const name=(document.getElementById("q").value||"").trim();readTitle=name;
+  const el=document.getElementById("q");
+  const name=((el&&el.value)||readTitle||"").trim();readTitle=name;
   if(!name){readErr="Type a game first.";return render()}
+  searchResults=[];
+  if(HOST.mode==="server"){
+    if(!HOST.rater){readErr="This server has no ANTHROPIC_API_KEY set, so it cannot rate anything.";return render()}
+    readBusy=true;readErr="";render();
+    try{
+      if(catalogConnected()){
+        readStep="Searching "+HOST.provider.toUpperCase();render();
+        const out=await api("/api/catalog/search?q="+encodeURIComponent(name)+"&limit=10");
+        const hits=(out.results||[]).filter(r=>r&&r.id&&r.title);
+        if(!hits.length){readErr=`Nothing in ${HOST.provider.toUpperCase()} matched "${name}".`;
+          readBusy=false;readStep="";return render()}
+        for(const h of hits)putGame({id:h.id,title:h.title,source:h.meta.source,at:Date.now(),meta:h.meta});
+        if(hits.length>1){searchResults=hits.map(h=>h.id);readBusy=false;readStep="";return render()}
+        await openGame(hits[0].id);
+      } else {
+        readStep="Rating how it plays";render();
+        const {saved}=await rateGames([{id:makeId("est",name),title:name}]);
+        if(!saved.length)throw{code:"empty_completion",message:"nothing came back for that title"};
+        readingId=saved[0].id;
+      }
+      await saveState()}
+    catch(e){readErr=noteError("check",e)}
+    readBusy=false;readStep="";return render()}
+
   const have=findGameByTitle(name);
   if(have&&have.ratings){readingId=have.id;readErr="";saveState();return render()}
+  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
   readBusy=true;readErr="";readStep="Rating how it plays";render();ctl=new AbortController();
-  try{const {saved,missed}=await rateTitles([name]);
+  try{const {saved}=await rateGames([{id:makeId("est",name),title:name}]);
     if(!saved.length)throw{code:"empty_completion",message:"nothing came back for that title"};
     readingId=saved[0].id;
-    if(missed.length)readErr="";
     await saveState()}
   catch(e){if(e&&e.code==="cancelled"){readBusy=false;return render()}
     readErr=noteError("check",e)}
+  readBusy=false;readStep="";render()}
+
+// Resolve a catalog entry to a rated game, using the stored rating when there is one.
+async function openGame(id){
+  const g=getGame(id);if(!g)return;
+  readingId=id;readTitle=g.title;searchResults=[];
+  if(g.ratings)return;
+  readBusy=true;readStep="Rating how it plays";render();
+  try{await rateGames([{id:g.id,title:g.title,basis:g.meta||{}}]);await saveState()}
+  catch(e){readErr=noteError("check",e)}
   readBusy=false;readStep="";render()}
 
 /* ============================================================================
@@ -1025,63 +1156,89 @@ function findPanel(){
   return h}
 
 function catalogNotice(){
-  const st=catalogStatus();
-  if(st.connected)return"";
+  if(HOST.needsToken)return`<div class="setup"><h3>This server is locked</h3>
+    It was started with APP_TOKEN set. Enter it once and it is kept in this browser.
+    <div class="row" style="margin-top:10px"><input type="text" id="tok" placeholder="Access token">
+      <button class="go" data-act="savetok">Unlock</button></div></div>`;
+  if(HOST.mode==="server"&&catalogConnected())
+    return`<details style="margin-top:14px"><summary>Where these come from</summary>
+      <div class="setup"><h3>${esc(HOST.provider.toUpperCase())} is connected</h3>
+        Candidates are retrieved from the ${esc(HOST.provider.toUpperCase())} catalog and carry that
+        catalog's own ids, so the same game is the same record every time. Titles, years, developers,
+        genres and modes are catalog facts.
+        <p style="margin:8px 0 0"><b>The nine gameplay ratings are still inferred by
+        ${esc(HOST.model||"a model")}</b>, from those facts plus what it knows about the game. A connected
+        catalog grounds that inference — it does not verify it, and nothing here will ever call it
+        verified. Each feature says which side it came from.</p></div></details>`;
+  if(HOST.mode==="server")
+    return`<div class="setup"><h3>Server running, catalog not configured</h3>
+      This is the standalone server, but no catalog provider is set, so titles fall back to being
+      proposed by the model. Set ${esc((HOST.missing||[]).join(", ")||"the catalog credentials")} in
+      the server's .env and restart.</div>`;
   return`<details style="margin-top:14px"><summary>Where these come from</summary>
-    <div class="setup"><h3>No catalog is connected</h3>
-      Titles are proposed by Claude and rated by Claude. That is a generated shortlist, not a
-      search of a game database, and every rating here is an <b>unverified estimate</b> — the
-      percentage shown is the model's own certainty, not verified data.
+    <div class="setup"><h3>No catalog here</h3>
+      This is the published artifact. Its network is blocked, so it cannot reach a catalog at all:
+      titles are proposed by Claude and rated by Claude. That is a generated shortlist, not a search,
+      and every rating is an unverified inference.
       <ol>
-        <li>This page cannot reach an API by itself: an artifact's network is blocked, so
-          <code>fetch</code> to IGDB, RAWG or Steam fails with no error.</li>
-        <li>A real catalog needs either a <b>claude.ai connector</b> exposing a game database,
-          or a <b>small backend</b> holding the credentials, with this page calling it from
-          outside the artifact sandbox.</li>
-        <li>Credentials it would need: IGDB wants a Twitch <code>client_id</code> and
-          <code>client_secret</code>; RAWG wants an API key. Neither belongs in this file.</li>
-        <li>Once one exists, fill in <code>CATALOG.connector</code> or
-          <code>CATALOG.endpoint</code> at the top of the script. Search and id resolution
-          route through it, ratings get real sources, and these labels change by themselves.</li>
+        <li>Run the server in <code>server/</code> to get real catalog search, stable ids and a
+          broader candidate pool.</li>
+        <li>It needs an <code>ANTHROPIC_API_KEY</code>, plus either IGDB
+          (<code>IGDB_CLIENT_ID</code> + <code>IGDB_CLIENT_SECRET</code> from dev.twitch.tv) or
+          <code>RAWG_API_KEY</code>.</li>
+        <li>Credentials stay on the server; this page never sees one.</li>
       </ol>
-      Games already rated stay usable either way, under <b>Saved games</b>.</div></details>`}
+      Even connected, gameplay ratings stay inferred — the catalog grounds them, it does not verify
+      them.</div></details>`}
 
 async function doFind(){
-  if(!sample){findErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
+  if(HOST.mode==="server"&&!HOST.rater){findErr="This server has no ANTHROPIC_API_KEY set, so it cannot rate anything.";return render()}
+  if(HOST.mode!=="server"&&!sample){findErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
   const pin=document.getElementById("plat");if(pin)platform=(pin.value||"").trim();
   findBusy=true;findErr="";findNotes=[];pickIds=[];findStep="Gathering candidates";render();
   ctl=new AbortController();
   try{
-    let titles=[];
+    let pool=[],retrieval="";
     if(catalogConnected()){
-      // Routed through the configured provider once one exists.
-      titles=await catalogSearch();
+      retrieval=`${HOST.provider.toUpperCase()} catalog`;
+      const qs=new URLSearchParams({limit:"40",offset:String(findOffset)});
+      if(platform)qs.set("platform",platform);
+      const out=await api("/api/catalog/discover?"+qs.toString());
+      for(const r of (out.results||[])){
+        if(!r||!r.id||!r.title)continue;
+        putGame({id:r.id,title:r.title,source:r.meta.source,at:Date.now(),meta:r.meta});
+        pool.push({id:r.id,title:r.title})}
+      findOffset+=40;
     } else {
-      titles=await proposeTitles(16);
+      retrieval="titles proposed by Claude, not a catalog";
+      const titles=await proposeTitles(16);
+      for(const t of titles)pool.push({id:makeId("est",t),title:t});
     }
+    const proposed=pool.length;
     const drops={};const why=k=>{drops[k]=(drops[k]||0)+1};
     const ratedIds=new Set(state.feedback.map(f=>f.id));
     const shown=new Set(state.shown);
-    const pool=[];
-    for(const t of titles){
-      const id=makeId("est",t);
-      if(!includeRated&&ratedIds.has(id)){why("already rated by you");continue}
-      if(shown.has(id)){why("shown before — reshuffle to see them again");continue}
-      pool.push(t)}
-    if(!pool.length){findErr="Every suggestion was one you've seen. Try Reshuffle.";
+    pool=pool.filter(c=>{
+      if(!includeRated&&ratedIds.has(c.id)){why("already rated by you");return false}
+      if(shown.has(c.id)){why("shown before — reshuffle to see them again");return false}
+      return true});
+    if(!pool.length){findErr="Everything that came back was one you've seen. Try Reshuffle.";
       findBusy=false;return render()}
+    pool=pool.slice(0,catalogConnected()?18:16);
 
     findStep=`Rating ${pool.length} candidates`;render();
-    const need=pool.filter(t=>{const g=getGame(makeId("est",t));return !(g&&g.ratings)});
+    const need=pool.filter(c=>{const g=getGame(c.id);return !(g&&g.ratings)});
     let salvaged=false,missed=[];
-    if(need.length){const r=await rateTitles(need,n=>{const el=document.getElementById("findprog");
+    if(need.length){const r=await rateGames(need.map(c=>{const g=getGame(c.id)||{};
+      return {id:c.id,title:c.title,basis:g.meta&&g.meta.source!=="estimate"?g.meta:{}}}),
+      n=>{const el=document.getElementById("findprog");
       if(el)el.textContent=`${n} of ${need.length} rated`});
       salvaged=r.salvaged;missed=r.missed}
 
     const prof=buildProfile();
     const scored=[];
-    for(const t of pool){
-      const g=getGame(makeId("est",t));
+    for(const c of pool){
+      const g=getGame(c.id);
       if(!g||!g.ratings){why("no rating came back");continue}
       const meta=g.meta||{};
       if(form==="finite"&&meta.endless===true){why("no ending");continue}
@@ -1099,7 +1256,7 @@ async function doFind(){
     const dropped=Object.entries(drops).map(([k,v])=>`${v} ${k}`);
     findNotes=[];
     if(dropped.length)findNotes.push(`Set aside: ${dropped.join(", ")}.`);
-    findNotes.push(`${titles.length} proposed, ${scored.length} scored here against your examples, top ${top.length} shown.`);
+    findNotes.push(`${proposed} retrieved from ${retrieval}, ${scored.length} scored here against your examples, top ${top.length} shown.`);
     if(salvaged)findNotes.push("The ratings reply was cut short; these are the ones that came through whole.");
     if(missed.length)findNotes.push(`No rating came back for: ${missed.join(", ")}.`);
     if(!top.length)findErr="Nothing came through with enough to score. Try again, or Reshuffle.";
@@ -1108,10 +1265,7 @@ async function doFind(){
     findErr=noteError("find",e)}
   findBusy=false;findStep="";render()}
 
-async function catalogSearch(){
-  // Deliberately unimplemented: wiring a connector without having observed one real
-  // request and response would be guessing at its shape.
-  throw{code:"upstream_error",message:"catalog provider configured but not implemented yet"}}
+
 
 /* ============================================================================
    YOUR GAMES
@@ -1209,9 +1363,10 @@ function mePanel(){
   const cloud=db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;
   const local=lastSave.local===true?"working":lastSave.local===false?"blocked":"untested";
   h+=`<details><summary>Storage and diagnostics</summary>
-    <p class="subtle">Claude: <b>${sample?"reachable":"not reachable from this view"}</b><br>
-      Catalog: <b>${catalogStatus().connected?catalogStatus().provider:"not connected"}</b><br>
-      Cloud: <b>${cloud}</b><br>This browser: <b>${local}</b></p>
+    <p class="subtle">Running as: <b>${HOST.mode==="server"?"the standalone server":"a published artifact"}</b><br>
+      Claude: <b>${HOST.mode==="server"?(HOST.rater?"server-side, "+esc(HOST.model||""):"NOT configured on the server"):(sample?"reachable":"not reachable from this view")}</b><br>
+      Catalog: <b>${catalogStatus().connected?esc(catalogStatus().provider):"not connected"}</b><br>
+      ${HOST.mode==="server"?"Server store":"Cloud"}: <b>${cloud}</b><br>This browser: <b>${local}</b></p>
     ${saveLine("prefs",false)}
     <p class="note">The match score is a heuristic distance between how a game plays and how your
       examples play. It is not a probability and not any kind of ADHD assessment. The engine keeps
@@ -1296,8 +1451,13 @@ document.addEventListener("click",ev=>{
   if(act==="company"){company=v;return render()}
   if(act==="offline"){offlineOnly=!offlineOnly;return render()}
   if(act==="incrated"){includeRated=!includeRated;return render()}
-  if(act==="reshuffle"){state.shown=[];void saveState();
+  if(act==="reshuffle"){state.shown=[];findOffset=0;void saveState();
     if(tab==="find")return void doFind();return render()}
+  if(act==="pick")return void openGame(id);
+  if(act==="savetok"){const el=document.getElementById("tok");
+    HOST.token=((el&&el.value)||"").trim();
+    try{localStorage.setItem("games:token",HOST.token)}catch(e){}
+    return void (async()=>{await detectHost();await loadState();render()})()}
   if(act==="open"){const g=getGame(id);
     if(g){readingId=g.id;readTitle=g.title;tab="read"}return render()}
   if(act==="fb")return void setFeedback(id,t.dataset.k,Number(v));
@@ -1335,13 +1495,19 @@ document.addEventListener("keydown",ev=>{
   if(ev.key==="Enter"&&ev.target.id==="addg")addGame();
   if(ev.key==="Enter"&&ev.target.id==="plat"){platform=(ev.target.value||"").trim();doFind()}});
 
-window.__engine={MATCH_KEYS,FEATURES,REASON_RULES,REASON_LABELS,featureValue,featureSimilarity,
+window.__engine={HOST,detectHost,MATCH_KEYS,FEATURES,REASON_RULES,REASON_LABELS,featureValue,featureSimilarity,
   reasonPenalty,scoreGame,suggestReasons,buildProfile,labelOf,cleanFeatures,salvageObjects,
   makeId,catalogStatus,state,render,putGame};
 
 render();
-(async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}
-  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";
-    findErr=readErr;render()}
+(async()=>{
+  await detectHost();
+  if(HOST.mode!=="server"){
+    try{sample=await claude.use("sample")}catch(e){sample=null}
+    if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";
+      findErr=readErr;render()}}
+  else if(HOST.needsToken){readErr="This server needs its access token — enter it under Find one or Your games.";
+    findErr=readErr}
+  render();
   loadState()})();
 </script>
