@@ -94,9 +94,8 @@ button{font:inherit;color:inherit}
 /* ---- the stage: always its own dark ground, in both themes, so the
    colours mean the same thing every time and the picture is the only
    bright thing on the screen ---- */
-.stage{position:relative;width:100%;aspect-ratio:4/3;background:#10131a;border:1px solid var(--rule);
-  display:flex;align-items:center;justify-content:center;overflow:hidden}
-.stage svg{width:100%;height:100%;display:block}
+.stage{position:relative;width:100%;background:#10131a;border:1px solid var(--rule);overflow:hidden}
+.stage svg{width:100%;height:auto;display:block}
 .stage .hold{color:#39404d;font-family:"JetBrains Mono",monospace;font-size:11px;
   letter-spacing:.18em;text-transform:uppercase;text-align:center;padding:0 20px;line-height:1.9}
 .stage .holdbig{color:#5d6675;font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:19px;
@@ -254,8 +253,10 @@ body.inrun .stage{border-color:#1e242d}
 body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
 
 /* the hold: nothing on the screen but the instruction */
-.void{position:relative;width:100%;aspect-ratio:4/3;background:#07090d;border:1px solid #1a1f27;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 22px;text-align:center;gap:10px}
+.void{position:relative;width:100%;min-height:230px;background:#07090d;border:1px solid #1a1f27;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:38px 22px 30px;text-align:center}
+.void > p{margin:0 0 9px}
 .cue{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
   font-size:clamp(21px,5.6vw,29px);font-weight:700;line-height:1.14;letter-spacing:-.02em;
   color:#c7ced8;text-wrap:balance;margin:0}
@@ -348,29 +349,32 @@ body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
 /* ---- answers you look at instead of read ---- */
 .pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .pick button{background:#0d1118;border:2px solid #232b36;border-radius:0;cursor:pointer;
-  padding:0;overflow:hidden;position:relative;aspect-ratio:1/1;display:block;
+  padding:0;overflow:hidden;display:block;width:100%;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation}
-.pick button svg{width:100%;height:100%;display:block}
+.pick button svg{width:100%;height:auto;display:block}
 .pick button:active{border-color:#c2703c}
-.pick button .cap{position:absolute;left:0;right:0;bottom:0;font-family:"JetBrains Mono",monospace;
-  font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#4e5764;padding:4px 0;background:#070a0e}
+.pick button .cap{display:block;font-family:"JetBrains Mono",monospace;
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#4e5764;padding:5px 0;background:#070a0e}
 .pick button.right{border-color:#46c26b}
 .pick button.right .cap{color:#46c26b}
 .pick button.wrong{border-color:#e5484d}
 .pick button.wrong .cap{color:#e5484d}
 .pick button:disabled{cursor:default}
-.pick.big button{aspect-ratio:3/2}
-.pick .num{display:flex;align-items:center;justify-content:center;height:100%;
+.pick .num{display:flex;align-items:center;justify-content:center;min-height:112px;
   font-family:"Bricolage Grotesque",Arial,sans-serif;font-size:44px;font-weight:700;color:#cfd6e0}
-.pick .words{display:flex;align-items:center;justify-content:center;height:100%;padding:12px;
+.pick .words{display:flex;align-items:center;justify-content:center;min-height:92px;padding:12px;
   font-size:15px;line-height:1.3;color:#cfd6e0;text-align:center}
+.qrow{display:flex;gap:12px;align-items:center;margin-top:4px}
+.qrow .qn{margin:0}
+.subj{width:60px;flex:none;border:1px solid #232b36}
+.subj svg{width:100%;height:auto;display:block}
 
 /* ---- motion ---- */
 @keyframes popin{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:scale(1)}}
 .stage svg g[data-pop]{animation:popin .26s cubic-bezier(.2,1.5,.4,1) both}
 @keyframes shake{10%,90%{transform:translateX(-3px)}20%,80%{transform:translateX(5px)}
   30%,50%,70%{transform:translateX(-8px)}40%,60%{transform:translateX(8px)}}
-body.hurt{animation:shake .42s both}
+body.hurt .app{animation:shake .42s both}
 @keyframes flash{0%{box-shadow:inset 0 0 0 0 #46c26b00}35%{box-shadow:inset 0 0 0 5px #46c26b88}
   100%{box-shadow:inset 0 0 0 0 #46c26b00}}
 body.good .pick{animation:flash .34s both}
@@ -1190,8 +1194,10 @@ function probesFor(scene, count, flavour) {
   });
   builders.push(() => {
     const t = pick(it);
-    return mkProbe("Where was the " + t.kind.name + "?", t.cell.name,
+    const pr = mkProbe("Where was this?", t.cell.name,
       optionsAround(t.cell.name, CELLS.map((c) => c.name)), "place", t);
+    pr.subject = mini(t.kind, "#8d96a3", t.kind.states[0][0]);
+    return pr;
   });
   builders.push(() => {
     /* White and yellow turn up as page edges, flames and highlights
@@ -2864,8 +2870,9 @@ function askOne() {
   const v = p.vis;
   $("run-body").innerHTML =
     (p.stage ? '<div class="stage">' + p.stage + "</div>" : "") +
-    '<p class="qn">' + p.q + "</p>" +
-    '<div class="pick' + (v ? "" : " big") + '" id="opts">' +
+    '<div class="qrow">' + (p.subject ? '<div class="subj">' + p.subject + "</div>" : "") +
+    '<p class="qn">' + p.q + "</p></div>" +
+    '<div class="pick" id="opts">' +
     p.opts.map((o, i) =>
       '<button data-act="runAns" data-arg="' + i + '">' +
       (v && v[i] ? v[i] : '<div class="words">' + o + "</div>") +
