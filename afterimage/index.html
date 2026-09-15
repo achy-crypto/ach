@@ -21,8 +21,10 @@
 </style>
 </head>
 <body>
-<script>window.__BUILD__='5340046d1c';</script>
+<script>window.__BUILD__='99e4bd7d43';</script>
 <title>Afterimage</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
 <meta name="theme-color" content="#14171b">
@@ -57,6 +59,15 @@
 }
 
 *{box-sizing:border-box}
+/* An SVG carrying only a viewBox has no intrinsic width. Chromium infers
+   one from the ratio; WebKit falls back to 300px and then uses that as a
+   grid item's minimum, which shoves the board wider than the phone and
+   drops the whole page into the corner. Every generated SVG below is
+   given real width/height attributes, and these two rules make it
+   impossible for any of them to push a container open. */
+svg{max-width:100%;height:auto}
+.opts>*,.pick>*,.tf>*,.grid2>*,.fire>*,.stack>*,.boon>*{min-width:0}
+html,body{max-width:100%;overflow-x:hidden}
 [hidden]{display:none!important}
 
 body{
@@ -128,8 +139,8 @@ button{font:inherit;color:inherit}
 .bar i{display:block;height:100%;background:var(--signal);width:0}
 .bar.go i{background:var(--go)}
 
-.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
-@media (max-width:380px){.opts{grid-template-columns:1fr}}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+@media (max-width:380px){.opts{grid-template-columns:minmax(0,1fr)}}
 .opts button{background:var(--panel);border:1px solid var(--rule);padding:14px 13px;cursor:pointer;
   font-size:15px;text-align:left;min-height:52px;border-radius:0;line-height:1.3}
 .opts button:hover{border-color:var(--ink)}
@@ -158,8 +169,8 @@ button{font:inherit;color:inherit}
 .desc ul{margin:0;padding-left:20px}
 .desc b{font-weight:700}
 
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media (max-width:420px){.grid2{grid-template-columns:1fr}}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:420px){.grid2{grid-template-columns:minmax(0,1fr)}}
 .stat{border:1px solid var(--rule);background:var(--panel);padding:13px 14px}
 .stat .k{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--dim);display:block;margin-bottom:4px}
@@ -197,7 +208,7 @@ button{font:inherit;color:inherit}
 .errbar b{font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--warn);display:block;margin-bottom:4px;font-weight:500}
 
-.fire{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.fire{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
 .fire button{background:var(--panel);border:1px solid var(--rule);padding:17px 8px;cursor:pointer;
   font-family:"JetBrains Mono",monospace;font-size:19px;min-height:60px;border-radius:0}
 .fire button:hover{border-color:var(--ink)}
@@ -249,7 +260,7 @@ button{font:inherit;color:inherit}
 
 .depth{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 88;
   font-size:clamp(56px,17vw,86px);font-weight:700;letter-spacing:-.05em;line-height:.9;color:var(--signal)}
-.tf{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
 .tf button{padding:20px 12px;font-size:17px;font-weight:600;background:var(--panel);
   border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
 .tf button:hover{border-color:var(--ink)}
@@ -341,7 +352,7 @@ body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
 
 .depth{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 86;
   font-size:clamp(62px,19vw,96px);font-weight:700;letter-spacing:-.05em;line-height:.88;color:#e0913f}
-.tf{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}
 .tf button{padding:20px 12px;font-size:17px;font-weight:600;background:var(--panel);
   border:1px solid var(--rule);cursor:pointer;border-radius:0;min-height:62px}
 
@@ -371,7 +382,7 @@ body.inrun .desc{background:#111620;border-color:#232a34;color:#dde1e7}
 .suggest button{margin-top:9px}
 
 /* ---- answers you look at instead of read ---- */
-.pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.pick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
 .pick button{background:#0d1118;border:2px solid #232b36;border-radius:0;cursor:pointer;
   padding:0;overflow:hidden;display:block;width:100%;
   -webkit-tap-highlight-color:transparent;touch-action:manipulation}
@@ -1098,7 +1109,7 @@ function drawScene(scene, opts) {
       'transform="translate(' + (cx - 50 * sc) + " " + (cy - 50 * sc) + ") scale(" + sc + ')">' +
       it.kind.draw(paint, it.state[0]) + "</g>");
   }
-  return '<svg viewBox="0 0 400 300" role="img" aria-label="' +
+  return '<svg width="400" height="300" viewBox="0 0 400 300" style="display:block;width:100%;height:auto" role="img" aria-label="' +
     (o.alt || "a picture to remember") + '">' +
     '<rect width="400" height="300" fill="' + INK + '"/>' + parts.join("") + "</svg>";
 }
@@ -1156,11 +1167,13 @@ const FACET_NAME = {
    image to image also tests the held image far better than matching an
    image to the word for it. */
 function mini(kindDef, hex, stateId) {
-  return '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="' + INK + '"/>' +
+  return '<svg width="100" height="100" viewBox="0 0 100 100" style="display:block;width:100%;height:auto">' +
+    '<rect width="100" height="100" fill="' + INK + '"/>' +
     '<g transform="translate(9 9) scale(.82)">' + kindDef.draw(hex, stateId) + "</g></svg>";
 }
 function gridIcon(cell) {
-  let g = '<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="' + INK + '"/>';
+  let g = '<svg width="100" height="100" viewBox="0 0 100 100" style="display:block;width:100%;height:auto">' +
+    '<rect width="100" height="100" fill="' + INK + '"/>';
   for (const c of CELLS) {
     const x = 14 + c.col * 25, y = 14 + c.row * 25;
     g += '<rect x="' + x + '" y="' + y + '" width="21" height="21" fill="' +
