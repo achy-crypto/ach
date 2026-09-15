@@ -5,7 +5,7 @@
    the network first and fall back to the cache, so an online visit always
    gets the current page instead of whatever was cached first; everything
    else stays cache-first for speed and for no-signal use. */
-const BUILD = "d1034dd40f";
+const BUILD = "b914455fd2";
 const CACHE = "coldstart-" + BUILD;
 const SHELL = ["./", "./index.html", "./spark.js", "./language.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
