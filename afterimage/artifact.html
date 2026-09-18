@@ -1,4 +1,4 @@
-<script>window.__BUILD__='99e4bd7d43';</script>
+<script>window.__BUILD__='23892d505b';</script>
 <title>Afterimage</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
@@ -45,6 +45,28 @@
 svg{max-width:100%;height:auto}
 .opts>*,.pick>*,.tf>*,.grid2>*,.fire>*,.stack>*,.boon>*{min-width:0}
 html,body{max-width:100%;overflow-x:hidden}
+/* ---- the room ---- */
+.glwrap{position:relative;width:100%;background:#05070a;border:1px solid #1c222b;overflow:hidden;
+  touch-action:none}
+#gl{display:block;width:100%;height:auto}
+.glnote{position:absolute;left:0;right:0;bottom:0;background:#05070ad9;color:#7b8593;
+  font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  text-align:center;padding:7px 10px}
+.compass{display:flex;align-items:center;gap:8px;margin:10px 0 0}
+.compass .bar{flex:1;height:4px;background:#161c24;position:relative;overflow:hidden}
+.compass .bar i{position:absolute;top:0;bottom:0;width:4px;background:#c2703c}
+.rprompt{font-family:"Bricolage Grotesque",Arial,sans-serif;font-variation-settings:"wdth" 90;
+  font-size:clamp(20px,5.4vw,27px);font-weight:700;letter-spacing:-.02em;line-height:1.15;
+  color:#dfe4ea;margin:14px 0 0;text-wrap:balance}
+.rprompt b{color:#e0913f}
+.rsub{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.15em;
+  text-transform:uppercase;color:#5d6673;margin:6px 0 0}
+.rscore{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.rscore span{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;border:1px solid #2a323d;color:#7b8593;padding:4px 8px}
+.rscore span.hit{border-color:#46c26b;color:#46c26b}
+.rscore span.near{border-color:#e0913f;color:#e0913f}
+.rscore span.miss{border-color:#e5484d;color:#e5484d}
 [hidden]{display:none!important}
 
 body{
@@ -428,6 +450,12 @@ body.good .pick{animation:flash .34s both}
     <span class="best" id="run-best"></span>
   </button>
 
+  <button class="enter" data-act="roomStart" style="margin-top:10px;border-color:#2f5f6d;background:linear-gradient(160deg,#09141a,#0e1218)">
+    <span class="k" style="color:#5fb6c9">new &middot; actually 3d</span>
+    <span class="t">The Room</span>
+    <span class="d">You stand in the middle of a room with things round you, some behind. Look, then the lights go out &mdash; and you have to turn to where something was and tap it in the dark.</span>
+  </button>
+
   <div id="home-suggest"></div>
 
   <div class="sec">
@@ -500,6 +528,14 @@ body.good .pick{animation:flash .34s both}
       </button>
     </div>
   </div>
+</section>
+
+<!-- ============ THE ROOM (3D) ============ -->
+<section id="s-room" hidden>
+  <button class="back" data-act="roomQuit">&larr; leave the room</button>
+  <div id="room-hud"></div>
+  <div class="glwrap"><canvas id="gl"></canvas><div class="glnote" id="gl-note" hidden></div></div>
+  <div id="room-body"></div>
 </section>
 
 <!-- ============ THE RUN ============ -->
@@ -605,7 +641,7 @@ const LS_KEY = "afterimage:state:v1";
 
 const state = {
   loaded: false,
-  level: { scene: 4, blueprint: 3, fire: 3, turn: 3, stack: 1, point: 3 },
+  level: { scene: 4, blueprint: 3, fire: 3, turn: 3, stack: 1, point: 3, room: 1 },
   recent: {},            /* mode -> array of 0/1, most recent last */
   rounds: [],            /* {mode, at, level, right, asked} */
   drifts: 0,             /* noticed and returned — the rep, not a failure */
@@ -724,7 +760,7 @@ async function keepAwake(on) {
 }
 
 /* ---------- router ---------- */
-const SCREENS = ["home", "run", "play", "walk", "learn", "about", "you"];
+const SCREENS = ["home", "room", "run", "play", "walk", "learn", "about", "you"];
 let screen = "home";
 let stopRound = null;   /* set by whatever round is running, so leaving cleans up */
 
@@ -2228,6 +2264,448 @@ function walkDone() {
     '<button class="btn" data-go="home">That’s enough</button></div>';
 }
 ACTS.walkAgain = () => walkChoose();
+
+/* ================== THE ROOM ==================
+   An actual room, in WebGL, written out longhand because the CDNs are
+   unreachable from where this is built and a library I cannot run here
+   is a library I cannot check before shipping. No dependency also means
+   the offline copy keeps working.
+
+   The point of it: you stand in the middle and look around, the lights
+   go out, and then you are asked to turn to where something was and
+   tap it in the dark. You cannot answer that from a list of words. It
+   is the embodied idea made literal instead of simulated on a grid.
+   ============================================== */
+
+/* ---- just enough matrix maths ---- */
+function m4id() { return new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]); }
+function m4mul(a, b) {
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    let v = 0;
+    for (let k = 0; k < 4; k++) v += a[k * 4 + r] * b[c * 4 + k];
+    o[c * 4 + r] = v;
+  }
+  return o;
+}
+function m4persp(fovy, aspect, near, far) {
+  const f = 1 / Math.tan(fovy / 2), o = new Float32Array(16);
+  o[0] = f / aspect; o[5] = f; o[11] = -1;
+  o[10] = (far + near) / (near - far); o[14] = (2 * far * near) / (near - far);
+  return o;
+}
+function m4trans(x, y, z) { const o = m4id(); o[12] = x; o[13] = y; o[14] = z; return o; }
+function m4scale(x, y, z) { const o = m4id(); o[0] = x; o[5] = y; o[10] = z; return o; }
+function m4rotY(a) { const o = m4id(), c = Math.cos(a), s = Math.sin(a); o[0] = c; o[2] = -s; o[8] = s; o[10] = c; return o; }
+function m4rotX(a) { const o = m4id(), c = Math.cos(a), s = Math.sin(a); o[5] = c; o[6] = s; o[9] = -s; o[10] = c; return o; }
+function m4apply(m, v) {
+  return [m[0]*v[0]+m[4]*v[1]+m[8]*v[2]+m[12], m[1]*v[0]+m[5]*v[1]+m[9]*v[2]+m[13],
+          m[2]*v[0]+m[6]*v[1]+m[10]*v[2]+m[14], m[3]*v[0]+m[7]*v[1]+m[11]*v[2]+m[15]];
+}
+
+/* ---- geometry, built from triangles with normals ---- */
+function meshBox(w, h, d) {
+  const x = w / 2, y = h / 2, z = d / 2, pos = [], norm = [];
+  const face = (a, b, c, dd, n) => {
+    pos.push(...a, ...b, ...c, ...a, ...c, ...dd);
+    for (let i = 0; i < 6; i++) norm.push(...n);
+  };
+  face([-x,-y, z], [ x,-y, z], [ x, y, z], [-x, y, z], [0,0,1]);
+  face([ x,-y,-z], [-x,-y,-z], [-x, y,-z], [ x, y,-z], [0,0,-1]);
+  face([-x,-y,-z], [-x,-y, z], [-x, y, z], [-x, y,-z], [-1,0,0]);
+  face([ x,-y, z], [ x,-y,-z], [ x, y,-z], [ x, y, z], [1,0,0]);
+  face([-x, y, z], [ x, y, z], [ x, y,-z], [-x, y,-z], [0,1,0]);
+  face([-x,-y,-z], [ x,-y,-z], [ x,-y, z], [-x,-y, z], [0,-1,0]);
+  return { pos: pos, norm: norm };
+}
+function meshCyl(r, h, seg, topR) {
+  const pos = [], norm = [], t = topR === undefined ? r : topR;
+  for (let i = 0; i < seg; i++) {
+    const a0 = (i / seg) * Math.PI * 2, a1 = ((i + 1) / seg) * Math.PI * 2;
+    const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+    const b0 = [c0 * r, 0, s0 * r], b1 = [c1 * r, 0, s1 * r];
+    const u0 = [c0 * t, h, s0 * t], u1 = [c1 * t, h, s1 * t];
+    /* side */
+    pos.push(...b0, ...b1, ...u1, ...b0, ...u1, ...u0);
+    norm.push(c0,0.2,s0, c1,0.2,s1, c1,0.2,s1, c0,0.2,s0, c1,0.2,s1, c0,0.2,s0);
+    /* top cap */
+    pos.push(...u0, ...u1, 0, h, 0);
+    norm.push(0,1,0, 0,1,0, 0,1,0);
+    /* bottom cap */
+    pos.push(...b1, ...b0, 0, 0, 0);
+    norm.push(0,-1,0, 0,-1,0, 0,-1,0);
+  }
+  return { pos: pos, norm: norm };
+}
+function meshSphere(r, seg) {
+  const pos = [], norm = [], rings = Math.max(4, Math.round(seg / 2));
+  for (let i = 0; i < rings; i++) for (let j = 0; j < seg; j++) {
+    const p0 = (i / rings) * Math.PI, p1 = ((i + 1) / rings) * Math.PI;
+    const t0 = (j / seg) * Math.PI * 2, t1 = ((j + 1) / seg) * Math.PI * 2;
+    const v = (p, t) => [Math.sin(p) * Math.cos(t), Math.cos(p), Math.sin(p) * Math.sin(t)];
+    const a = v(p0, t0), b = v(p1, t0), c = v(p1, t1), d = v(p0, t1);
+    for (const tri of [[a, b, c], [a, c, d]]) for (const q of tri) {
+      pos.push(q[0] * r, q[1] * r + r, q[2] * r); norm.push(q[0], q[1], q[2]);
+    }
+  }
+  return { pos: pos, norm: norm };
+}
+function meshPlane(w, d, up) {
+  const x = w / 2, z = d / 2, n = up ? [0,1,0] : [0,-1,0];
+  const pos = up ? [-x,0,-z, x,0,-z, x,0,z, -x,0,-z, x,0,z, -x,0,z]
+                 : [-x,0,-z, x,0,z, x,0,-z, -x,0,-z, -x,0,z, x,0,z];
+  const norm = [];
+  for (let i = 0; i < 6; i++) norm.push(...n);
+  return { pos: pos, norm: norm };
+}
+
+/* ---- the things that stand in the room ---- */
+const THINGS = [
+  { id: "cup",    name: "cup",    parts: [[meshCyl(0.17, 0.26, 14), 0, 1], [meshBox(0.05, 0.13, 0.05), 0, 1, [0.20, 0.13, 0]]] },
+  { id: "book",   name: "book",   parts: [[meshBox(0.34, 0.07, 0.26), 0.035, 1], [meshBox(0.30, 0.02, 0.22), 0.075, 0.82]] },
+  { id: "ball",   name: "ball",   parts: [[meshSphere(0.17, 14), 0, 1]] },
+  { id: "crate",  name: "crate",  parts: [[meshBox(0.34, 0.34, 0.34), 0.17, 1], [meshBox(0.36, 0.04, 0.36), 0.34, 0.7]] },
+  { id: "lamp",   name: "lamp",   parts: [[meshCyl(0.14, 0.03, 12), 0, 0.6], [meshCyl(0.025, 0.4, 8), 0.03, 0.6], [meshCyl(0.18, 0.2, 12, 0.1), 0.43, 1]] },
+  { id: "bottle", name: "bottle", parts: [[meshCyl(0.11, 0.3, 12), 0, 1], [meshCyl(0.05, 0.16, 10), 0.3, 1], [meshCyl(0.06, 0.04, 10), 0.46, 0.55]] },
+  { id: "candle", name: "candle", parts: [[meshCyl(0.06, 0.34, 10), 0, 1], [meshCyl(0.02, 0.09, 6, 0.001), 0.34, 2]] },
+  { id: "plant",  name: "plant",  parts: [[meshCyl(0.13, 0.2, 10, 0.16), 0, 0.55], [meshCyl(0.03, 0.22, 6), 0.2, 0.8], [meshCyl(0.16, 0.26, 8, 0.01), 0.36, 1]] },
+  { id: "clock",  name: "clock",  parts: [[meshCyl(0.2, 0.05, 16), 0, 1], [meshBox(0.02, 0.01, 0.14), 0.055, 0.2, [0, 0, 0.07]]] },
+  { id: "chair",  name: "chair",  parts: [[meshBox(0.3, 0.04, 0.3), 0.32, 1], [meshBox(0.3, 0.34, 0.04), 0.5, 1, [0, 0, -0.13]],
+                                          [meshBox(0.04, 0.32, 0.04), 0.16, 0.7, [-0.12, 0, -0.12]], [meshBox(0.04, 0.32, 0.04), 0.16, 0.7, [0.12, 0, -0.12]],
+                                          [meshBox(0.04, 0.32, 0.04), 0.16, 0.7, [-0.12, 0, 0.12]], [meshBox(0.04, 0.32, 0.04), 0.16, 0.7, [0.12, 0, 0.12]]] },
+];
+
+/* ---- GL ---- */
+let GL = null;
+function glInit() {
+  if (GL) return GL;
+  const cv = $("gl");
+  if (!cv) return null;
+  const gl = cv.getContext("webgl", { antialias: true }) || cv.getContext("experimental-webgl");
+  if (!gl) return null;
+  const vs = gl.createShader(gl.VERTEX_SHADER);
+  gl.shaderSource(vs, "attribute vec3 aPos;attribute vec3 aNorm;uniform mat4 uProj,uView,uModel;" +
+    "varying float vL;void main(){vec3 n=normalize(mat3(uModel)*aNorm);" +
+    "vL=0.38+0.62*max(dot(n,normalize(vec3(0.34,0.88,0.33))),0.0);" +
+    "gl_Position=uProj*uView*uModel*vec4(aPos,1.0);}");
+  gl.compileShader(vs);
+  const fs = gl.createShader(gl.FRAGMENT_SHADER);
+  gl.shaderSource(fs, "precision mediump float;uniform vec3 uColor;uniform float uLit;" +
+    "varying float vL;void main(){gl_FragColor=vec4(uColor*vL*uLit,1.0);}");
+  gl.compileShader(fs);
+  const pr = gl.createProgram();
+  gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.linkProgram(pr);
+  if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { showError("3d: " + gl.getProgramInfoLog(pr)); return null; }
+  gl.useProgram(pr);
+  gl.enable(gl.DEPTH_TEST);
+  GL = {
+    gl: gl, pr: pr, cv: cv, buf: new Map(),
+    aPos: gl.getAttribLocation(pr, "aPos"), aNorm: gl.getAttribLocation(pr, "aNorm"),
+    uProj: gl.getUniformLocation(pr, "uProj"), uView: gl.getUniformLocation(pr, "uView"),
+    uModel: gl.getUniformLocation(pr, "uModel"), uColor: gl.getUniformLocation(pr, "uColor"),
+    uLit: gl.getUniformLocation(pr, "uLit"),
+  };
+  gl.enableVertexAttribArray(GL.aPos);
+  gl.enableVertexAttribArray(GL.aNorm);
+  return GL;
+}
+function glMesh(mesh) {
+  const g = GL.gl;
+  if (GL.buf.has(mesh)) return GL.buf.get(mesh);
+  const p = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, p);
+  g.bufferData(g.ARRAY_BUFFER, new Float32Array(mesh.pos), g.STATIC_DRAW);
+  const n = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, n);
+  g.bufferData(g.ARRAY_BUFFER, new Float32Array(mesh.norm), g.STATIC_DRAW);
+  const rec = { p: p, n: n, count: mesh.pos.length / 3 };
+  GL.buf.set(mesh, rec);
+  return rec;
+}
+function glDraw(mesh, model, rgb, lit) {
+  const g = GL.gl, m = glMesh(mesh);
+  g.bindBuffer(g.ARRAY_BUFFER, m.p); g.vertexAttribPointer(GL.aPos, 3, g.FLOAT, false, 0, 0);
+  g.bindBuffer(g.ARRAY_BUFFER, m.n); g.vertexAttribPointer(GL.aNorm, 3, g.FLOAT, false, 0, 0);
+  g.uniformMatrix4fv(GL.uModel, false, model);
+  g.uniform3fv(GL.uColor, rgb);
+  g.uniform1f(GL.uLit, lit);
+  g.drawArrays(mesh.lines ? g.LINES : g.TRIANGLES, 0, m.count);
+}
+const hex2rgb = (h) => [parseInt(h.slice(1, 3), 16) / 255, parseInt(h.slice(3, 5), 16) / 255, parseInt(h.slice(5, 7), 16) / 255];
+function meshGrid(half, step) {
+  const pos = [], norm = [];
+  for (let i = -half; i <= half; i += step) {
+    pos.push(i, 0.002, -half, i, 0.002, half, -half, 0.002, i, half, 0.002, i);
+    for (let k = 0; k < 4; k++) norm.push(0, 1, 0);
+  }
+  return { pos: pos, norm: norm, lines: true };
+}
+const FLOOR = meshPlane(13, 13, true), CEIL = meshPlane(13, 13, false),
+      WALL = meshBox(13, 3.4, 0.2), GRID = meshGrid(6, 0.75);
+
+/* ---- the round ---- */
+let room = null;
+
+const ROOM_LEVELS = [
+  { n: 4, look: 11000, turnsAsked: 2, tol: 26 },
+  { n: 5, look: 10000, turnsAsked: 3, tol: 23 },
+  { n: 6, look: 9000,  turnsAsked: 3, tol: 20 },
+  { n: 7, look: 8000,  turnsAsked: 4, tol: 18 },
+  { n: 8, look: 7000,  turnsAsked: 4, tol: 16 },
+];
+
+function roomSpec() {
+  return ROOM_LEVELS[clamp((state.level.room || 1) - 1, 0, ROOM_LEVELS.length - 1)];
+}
+
+ACTS.roomStart = () => {
+  document.body.classList.add("inrun");
+  go("room");
+  if (!glInit()) {
+    $("room-body").innerHTML =
+      '<div class="note" style="margin-top:14px"><b>No 3D on this browser.</b> ' +
+      "This needs WebGL, which this browser is not giving the page. The flat game still works." +
+      '</div><div class="row"><button class="btn prime" data-act="runStart">Play the flat one</button>' +
+      '<button class="btn" data-act="roomQuit">Back</button></div>';
+    return;
+  }
+  const sp = roomSpec();
+  const kinds = sample(THINGS, sp.n);
+  const cols = [];
+  for (const c of shuffle(PALETTE)) {
+    if (cols.every((q) => !clashes(c.id, q.id))) cols.push(c);
+    if (cols.length >= sp.n) break;
+  }
+  /* Spread them right round you, so some of it is always behind. */
+  const slots = shuffle(Array.from({ length: sp.n }, (_, i) =>
+    (i / sp.n) * Math.PI * 2 + (Math.random() - 0.5) * (Math.PI / sp.n)));
+  room = {
+    spec: sp, yaw: 0, pitch: -0.2, lit: 1, asked: 0, results: [], phase: "look",
+    things: kinds.map((k, i) => {
+      const ang = slots[i], dist = 1.9 + Math.random() * 1.1;
+      return { kind: k, colour: cols[i % cols.length], ang: ang, dist: dist,
+               x: Math.sin(ang) * dist, z: -Math.cos(ang) * dist,
+               rot: Math.random() * Math.PI * 2 };
+    }),
+  };
+  stopRound = () => { clearTimers(); keepAwake(false); room = null; document.body.classList.remove("inrun"); };
+  keepAwake(true);
+  roomResize();
+  roomLoop();
+  roomLook();
+};
+ACTS.roomQuit = () => {
+  clearTimers(); keepAwake(false);
+  room = null;
+  document.body.classList.remove("inrun");
+  go("home");
+};
+
+function roomResize() {
+  const cv = $("gl");
+  if (!cv) return;
+  const w = cv.parentNode.clientWidth || 360;
+  const h = Math.round(Math.min(w * 1.0, Math.max(260, innerHeight * 0.5)));
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.style.height = h + "px";
+  cv.width = Math.round(w * dpr);
+  cv.height = Math.round(h * dpr);
+}
+
+function roomView() {
+  return m4mul(m4mul(m4rotX(-room.pitch), m4rotY(-room.yaw)), m4trans(0, -1.45, 0));
+}
+function roomProj() {
+  const cv = $("gl");
+  return m4persp(1.32, cv.width / cv.height, 0.08, 40);
+}
+
+let roomRAF = null;
+function roomLoop() {
+  if (!room || !GL) { roomRAF = null; return; }
+  const g = GL.gl, cv = $("gl");
+  g.viewport(0, 0, cv.width, cv.height);
+  g.clearColor(0.02, 0.028, 0.04, 1);
+  g.clear(g.COLOR_BUFFER_BIT | g.DEPTH_BUFFER_BIT);
+  const proj = roomProj(), view = roomView();
+  g.uniformMatrix4fv(GL.uProj, false, proj);
+  g.uniformMatrix4fv(GL.uView, false, view);
+
+  const lit = room.lit;
+  glDraw(FLOOR, m4id(), [0.17, 0.195, 0.235], lit);
+  glDraw(GRID, m4id(), [0.34, 0.40, 0.48], lit);
+  glDraw(CEIL, m4trans(0, 3.0, 0), [0.075, 0.085, 0.105], lit);
+  const wallC = [0.125, 0.145, 0.18];
+  glDraw(WALL, m4trans(0, 1.6, -6.4), wallC, lit);
+  glDraw(WALL, m4trans(0, 1.6, 6.4), wallC, lit);
+  glDraw(WALL, m4mul(m4trans(-6.4, 1.6, 0), m4rotY(Math.PI / 2)), wallC, lit);
+  glDraw(WALL, m4mul(m4trans(6.4, 1.6, 0), m4rotY(Math.PI / 2)), wallC, lit);
+
+  for (const t of room.things) {
+    if (t.hidden) continue;
+    const base = m4mul(m4mul(m4trans(t.x, 0, t.z), m4rotY(t.rot)), m4scale(1.35, 1.35, 1.35));
+    const rgb = hex2rgb(t.colour.hex);
+    for (const part of t.kind.parts) {
+      const off = part[3] || [0, 0, 0];
+      const m = m4mul(base, m4trans(off[0], (part[1] || 0) + off[1], off[2]));
+      const shade = part[2] === 2 ? [0.95, 0.78, 0.25] : rgb.map((c) => c * (part[2] === undefined ? 1 : part[2]));
+      glDraw(part[0], m, shade, part[2] === 2 ? Math.max(lit, 0.6) : lit);
+    }
+  }
+  roomRAF = requestAnimationFrame(roomLoop);
+}
+
+/* Where a thing sits on screen right now, or null if it is behind you. */
+function roomScreen(t) {
+  const cv = $("gl"), mvp = m4mul(roomProj(), roomView());
+  const p = m4apply(mvp, [t.x, 0.25, t.z]);
+  if (p[3] <= 0.01) return null;
+  return { x: ((p[0] / p[3]) * 0.5 + 0.5) * cv.clientWidth,
+           y: (0.5 - (p[1] / p[3]) * 0.5) * (cv.clientHeight || cv.height) };
+}
+/* How far off your heading is from a thing, in degrees. */
+function roomOff(t) {
+  let d = (Math.atan2(t.x, -t.z) - room.yaw) * 180 / Math.PI;
+  while (d > 180) d -= 360;
+  while (d < -180) d += 360;
+  return d;
+}
+
+/* ---- look, then dark, then turn and point ---- */
+function roomLook() {
+  room.phase = "look";
+  room.lit = 1;
+  $("room-hud").innerHTML = '<div class="hud"><span class="fl">The Room</span>' +
+    '<span class="hz">' + room.things.length + " things</span></div>";
+  $("gl-note").hidden = false;
+  $("gl-note").textContent = "drag to look around";
+  $("room-body").innerHTML =
+    '<div class="bar"><i id="room-bar"></i></div>' +
+    '<p class="rprompt">Walk your eyes round it.</p>' +
+    '<p class="rsub">some of it is behind you</p>' +
+    '<div class="row" style="margin-top:12px"><button class="btn" data-act="roomDark">Lights out &rarr;</button></div>';
+  countdown("room-bar", room.spec.look, roomDark);
+}
+ACTS.roomDark = () => { clearTimers(); roomDark(); };
+
+function roomDark() {
+  if (room.phase === "dark") return;
+  room.phase = "dark";
+  clearTimers();
+  const t0 = now();
+  const fade = () => {
+    if (!room) return;
+    const k = clamp((now() - t0) / 900, 0, 1);
+    room.lit = 1 - k * 0.985;
+    if (k < 1) later(fade, 30); else roomAsk();
+  };
+  fade();
+  blip(280, 200);
+  $("gl-note").textContent = "keep the room";
+  $("room-body").innerHTML =
+    '<p class="rprompt">Hold the room.</p><p class="rsub">it is all still there</p>';
+}
+
+function roomAsk() {
+  if (!room) return;
+  room.lit = 0.015;
+  const left = room.things.filter((t) => !t.asked);
+  if (!left.length || room.asked >= room.spec.turnsAsked) return roomReveal();
+  const target = pick(left);
+  target.asked = true;
+  room.target = target;
+  room.asked++;
+  $("gl-note").hidden = false;
+  $("gl-note").textContent = "turn, then tap where it was";
+  $("room-hud").innerHTML = '<div class="hud"><span class="fl">' + room.asked + " of " + room.spec.turnsAsked + "</span>" +
+    '<span class="hz">in the dark</span></div>';
+  $("room-body").innerHTML =
+    '<p class="rprompt">Where was the <b>' + target.colour.name + " " + target.kind.name + "</b>?</p>" +
+    '<p class="rsub">turn to it and tap</p>' +
+    '<div class="compass"><span class="rsub" style="margin:0">left</span><div class="bar"><i id="cmp"></i></div>' +
+    '<span class="rsub" style="margin:0">right</span></div>' +
+    (room.results.length ? '<div class="rscore">' + room.results.map((r) =>
+      '<span class="' + r.cls + '">' + r.label + "</span>").join("") + "</div>" : "");
+}
+
+function roomTap(px, py) {
+  if (!room || room.phase !== "dark" || !room.target) return;
+  const t = room.target, off = roomOff(t);
+  const sc = roomScreen(t);
+  const cv = $("gl");
+  let dist = Math.abs(off);
+  if (sc) {
+    const dx = (px - sc.x) / cv.clientWidth;
+    dist = Math.abs(off) + Math.abs(dx) * 40;
+  }
+  const tol = room.spec.tol;
+  const cls = dist <= tol ? "hit" : dist <= tol * 2 ? "near" : "miss";
+  room.results.push({ cls: cls, label: t.kind.name + " " + Math.round(dist) + "°", off: dist, kind: t.kind.id });
+  state.roomShots = (state.roomShots || 0) + 1;
+  if (cls === "hit") state.roomHits = (state.roomHits || 0) + 1;
+  blip(cls === "hit" ? 880 : cls === "near" ? 520 : 190, cls === "miss" ? 220 : 90);
+  if (cls === "miss") { document.body.classList.add("hurt"); later(() => document.body.classList.remove("hurt"), 440); }
+  room.target = null;
+  later(roomAsk, 420);
+}
+
+function roomReveal() {
+  room.phase = "over";
+  room.lit = 1;
+  $("gl-note").hidden = true;
+  const hits = room.results.filter((r) => r.cls === "hit").length;
+  const near = room.results.filter((r) => r.cls === "near").length;
+  const avg = room.results.length
+    ? Math.round(room.results.reduce((a, r) => a + r.off, 0) / room.results.length) : 0;
+  const lvl = state.level.room || 1;
+  state.level.room = clamp(lvl + (hits >= room.results.length - 0 ? 1 : hits <= 1 ? -1 : 0), 1, ROOM_LEVELS.length);
+  state.rounds.push({ mode: "room", at: now(), level: lvl, right: hits, asked: room.results.length });
+  if (avg && (!state.roomBest || avg < state.roomBest)) state.roomBest = avg;
+  save();
+  $("room-hud").innerHTML = "";
+  $("room-body").innerHTML =
+    '<p class="rprompt">' + hits + " dead on" + (near ? ", " + near + " close" : "") + ".</p>" +
+    '<p class="rsub">average ' + avg + "° off · best " + (state.roomBest || avg) + "°</p>" +
+    '<div class="rscore">' + room.results.map((r) =>
+      '<span class="' + r.cls + '">' + r.label + "</span>").join("") + "</div>" +
+    '<p class="sub" style="margin-top:12px">Look round now and see where they actually were.</p>' +
+    '<div class="row" style="margin-top:14px">' +
+    '<button class="btn prime" data-act="roomStart">Again</button>' +
+    '<button class="btn" data-act="roomQuit">Out</button></div>';
+  blip(660, 150);
+}
+
+/* ---- drag to look, tap to point ---- */
+(function roomInput() {
+  let down = false, lx = 0, ly = 0, moved = 0;
+  const cv = () => $("gl");
+  const start = (x, y) => { down = true; lx = x; ly = y; moved = 0; };
+  const move = (x, y) => {
+    if (!down || !room) return;
+    const dx = x - lx, dy = y - ly;
+    lx = x; ly = y; moved += Math.abs(dx) + Math.abs(dy);
+    room.yaw += dx * 0.006;
+    room.pitch = clamp(room.pitch - dy * 0.005, -0.7, 0.55);
+    const c = $("cmp");
+    if (c) {
+      let d = room.yaw % (Math.PI * 2);
+      c.style.left = clamp(((d / (Math.PI * 2)) % 1 + 1) % 1 * 100, 0, 99) + "%";
+    }
+  };
+  const end = (x, y) => {
+    if (!down) return;
+    down = false;
+    if (moved < 9 && room) {
+      const r = cv().getBoundingClientRect();
+      roomTap(x - r.left, y - r.top);
+    }
+  };
+  document.addEventListener("pointerdown", guard((e) => {
+    if (!cv() || !e.target.closest(".glwrap")) return;
+    start(e.clientX, e.clientY);
+  }));
+  document.addEventListener("pointermove", guard((e) => move(e.clientX, e.clientY)));
+  document.addEventListener("pointerup", guard((e) => end(e.clientX, e.clientY)));
+  addEventListener("resize", guard(() => { if (room) roomResize(); }));
+})();
 
 /* ================== THE RUN ==================
    The game. Floors go down, holds are what you have to lose, hazards are

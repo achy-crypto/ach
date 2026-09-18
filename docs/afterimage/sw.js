@@ -4,7 +4,7 @@
    cache and activate drops every older one. Navigations go to the network
    first and fall back to the cache, so an online visit always gets the
    current page rather than whatever was cached first. */
-const BUILD = "99e4bd7d43";
+const BUILD = "23892d505b";
 const CACHE = "afterimage-" + BUILD;
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
