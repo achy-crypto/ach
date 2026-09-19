@@ -421,7 +421,7 @@ function tick() {
   if (L.phase === "rest" && !L.warned && left <= 10 && left > 0) { L.warned = true; clapper(); }
 
   let guard_ = 0;
-  while (left <= 0 && state.live && guard_++ < 200) {
+  while (left <= 0 && state.live && state.live.phase !== "done" && guard_++ < 200) {
     advance(guard_ > 1);
     left = phaseLeft();
     if (!state.live) return;
@@ -431,6 +431,7 @@ function tick() {
 
 function advance(silent) {
   const L = state.live;
+  if (!L || L.phase === "done") return;
   if (L.phase === "work") {
     /* bank the round that just finished */
     while (L.rounds.length <= L.idx) L.rounds.push({ sec: 0 });
@@ -462,6 +463,8 @@ function finishSession() {
   keepAwake(false);
   const L = state.live;
   L.phase = "done";
+  L.phaseEndsAt = now();
+  L.paused = false;
   save();
   renderTrain();
 }
@@ -507,7 +510,10 @@ ACT.rate = (arg) => {
   if (!r) return;
   r[key] = r[key] === +val ? undefined : +val;
   save();
-  renderTrain();
+  /* Repaint only the card while a round is live — rebuilding the whole
+     timer on every tap flickers the clock during the rest minute, which
+     is exactly when the scoring happens. */
+  if (L.phase === "rest") paintCard(); else renderTrain();
 };
 ACT.saveSession = () => {
   const L = state.live;
@@ -681,7 +687,8 @@ function paintClock() {
 function renderFinish(el, L) {
   const kept = L.rounds.filter((r) => r.sec > 0);
   const mins = Math.round(kept.reduce((a, r) => a + r.sec, 0) / 60);
-  const unrated = kept.map((r, i) => [r, i]).filter(([r]) => r.stability === undefined);
+  const unrated = kept.map((r, i) => [r, i])
+    .filter(([r]) => SCALES.some((sc) => r[sc.key] === undefined));
   el.innerHTML =
     '<div class="hero" style="border-top:2px solid var(--work)">' +
     '<div><div class="big">' + mins + '</div><div class="unit">minutes done</div></div>' +
