@@ -10,8 +10,7 @@
  * The call is BLIND: no part of the user's profile, weights or preferred
  * values is ever sent, so a rating cannot drift toward what would score well. */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { betaJSONSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/beta/json-schema";
+import { makeLLM } from "./llm.mjs";
 
 export const FEATURES = [
   ["pace",      "How fast things happen moment to moment. 0 slow, 10 relentless"],
@@ -107,101 +106,24 @@ function basisBlock(g) {
   return `"${g.title}" — catalog facts: ${bits.join("; ")}`;
 }
 
-/* A reply that was cut short still holds whole objects; keep those rather than
- * losing the batch. Only needed on the fallback path — the schema path can't
- * return malformed JSON. */
-function salvage(text, key) {
-  const out = []; const s = String(text || "");
-  let i = s.indexOf(`"${key}"`); if (i < 0) return out;
-  i = s.indexOf("[", i); if (i < 0) return out;
-  let depth = 0, start = -1, inStr = false, esc = false;
-  for (let j = i + 1; j < s.length; j++) {
-    const ch = s[j];
-    if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
-    if (ch === '"') { inStr = true; continue; }
-    if (ch === "{") { if (depth === 0) start = j; depth++; continue; }
-    if (ch === "}") { depth--; if (depth === 0 && start >= 0) { try { out.push(JSON.parse(s.slice(start, j + 1))); } catch {} start = -1; } continue; }
-    if (ch === "]" && depth === 0) break;
-  }
-  return out;
-}
-
-export function makeRater(env) {
-  const key = env.ANTHROPIC_API_KEY;
-  const model = env.ANTHROPIC_MODEL || "claude-opus-5";
-  const fallbackModel = env.ANTHROPIC_FALLBACK_MODEL || "claude-opus-4-8";
-  const effort = env.ANTHROPIC_EFFORT || "high";
-  const betas = (env.ANTHROPIC_BETAS || "structured-outputs-2025-11-13")
-    .split(",").map(s => s.trim()).filter(Boolean);
-  const client = key ? new Anthropic(Object.assign({ apiKey: key },
-    env.ANTHROPIC_BASE_URL ? { baseURL: env.ANTHROPIC_BASE_URL } : {})) : null;
-  let schemaWorks = true;   // flipped off permanently if the API rejects the format
+export function makeRater(env, llm) {
+  const ai = llm || makeLLM(env);
+  const model = ai.defaults.model;
+  const client = ai.client;
 
   function promptFor(games) {
     return `${RULES}\n\nGAMES, in this order:\n${games.map((g, i) => `${i + 1}. ${basisBlock(g)}`).join("\n\n")}\n\nRate every game on the list, in the order given, keeping its exact title.`;
   }
 
-  async function viaSchema(useModel, games) {
-    const res = await client.beta.messages.parse({
-      model: useModel,
-      max_tokens: 16000,
-      betas,
-      output_format: betaJSONSchemaOutputFormat(BATCH_SCHEMA),
-      output_config: { effort },
-      messages: [{ role: "user", content: promptFor(games) }],
-    });
-    return { stop_reason: res.stop_reason, games: res.parsed_output && res.parsed_output.games };
-  }
-
-  /* Used when structured outputs are unavailable on this key, SDK or model.
-   * Same prompt, the shape spelled out, and a tolerant read of the reply. */
-  async function viaText(useModel, games) {
-    const res = await client.messages.create({
-      model: useModel,
-      max_tokens: 16000,
-      messages: [{
-        role: "user",
-        content: `${promptFor(games)}\n\nReply with ONLY this JSON and nothing else:\n`
-          + `{"games":[{"title":"","endless":false,"needsGroup":false,"offline":true,"frictions":[""],`
-          + `"features":{${FEATURE_KEYS.map(k => `"${k}":{"value":0,"confidence":0.8,"evidence":"","basis":"knowledge"}`).join(",")}}}]}`,
-      }],
-    });
-    const text = res.content.filter(b => b.type === "text").map(b => b.text).join("");
-    let parsed = null;
-    try { parsed = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); } catch {}
-    const rows = parsed && Array.isArray(parsed.games) ? parsed.games : salvage(text, "games");
-    return { stop_reason: res.stop_reason, games: rows };
-  }
-
-  async function callOnce(useModel, games) {
-    if (schemaWorks) {
-      try { return await viaSchema(useModel, games); }
-      catch (e) {
-        const msg = String((e && e.message) || e);
-        const shapeProblem = e && (e.status === 400 || e.status === 404)
-          && /output_format|beta|structured|not supported|unexpected/i.test(msg);
-        if (!shapeProblem) throw e;
-        schemaWorks = false;
-        console.warn("[rate] structured outputs unavailable here, falling back to text JSON:", msg);
-      }
-    }
-    return viaText(useModel, games);
-  }
-
   async function rateBatch(games) {
-    if (!client) throw Object.assign(new Error("ANTHROPIC_API_KEY is not set on the server"), { code: "no_api_key" });
-    let res = await callOnce(model, games);
-    // A policy decline is re-run once on the fallback model rather than failing the batch.
-    if (res.stop_reason === "refusal") res = await callOnce(fallbackModel, games);
-    if (res.stop_reason === "refusal")
-      throw Object.assign(new Error("the model declined to rate these titles"), { code: "refused" });
-    if (!Array.isArray(res.games) || !res.games.length)
+    const parsed = await ai.parse(promptFor(games), BATCH_SCHEMA);
+    if (!parsed || !Array.isArray(parsed.games) || !parsed.games.length)
       throw Object.assign(new Error("the rating reply did not parse"), { code: "invalid_output" });
-    return res.games;
+    return parsed.games;
   }
 
   return {
-    configured: () => !!client,
+    configured: () => ai.configured(),
     model,
     schemaVersion: RATING_SCHEMA_VERSION,
     /* games: [{id, title, basis}] — basis is catalog metadata, never user data.

@@ -11,7 +11,9 @@ import path from "node:path";
 export function makeStore(dir) {
   const ratingsPath = path.join(dir, "ratings.json");
   const statePath = path.join(dir, "state.json");
-  let ratings = null, state = null;
+  const screenPath = path.join(dir, "screen-catalog.json");
+  const screenStatePath = path.join(dir, "screen-state.json");
+  let ratings = null, state = null, screen = null, screenState = null;
   let writing = Promise.resolve();
 
   async function readJson(p, fallback) {
@@ -30,6 +32,8 @@ export function makeStore(dir) {
       await fs.mkdir(dir, { recursive: true });
       ratings = await readJson(ratingsPath, { v: 1, games: {} });
       state = await readJson(statePath, null);
+      screen = await readJson(screenPath, { v: 1, titles: {} });
+      screenState = await readJson(screenStatePath, null);
     },
     getRating(id, schema) {
       const r = ratings.games[id];
@@ -42,5 +46,16 @@ export function makeStore(dir) {
     ratingCount() { return Object.keys(ratings.games).length; },
     getState() { return state; },
     putState(next) { state = next; return queue(() => writeJson(statePath, state)); },
+
+    /* Catalog records for shows and films, kept apart from the viewer's scale
+     * for the same reason the games side is: facts are shared, taste is not. */
+    getScreen(id) { return screen.titles[id] || null; },
+    putScreen(rows) {
+      for (const row of rows) screen.titles[row.id] = row;
+      return queue(() => writeJson(screenPath, screen));
+    },
+    screenCount() { return Object.keys(screen.titles).length; },
+    getScreenState() { return screenState; },
+    putScreenState(next) { screenState = next; return queue(() => writeJson(screenStatePath, screenState)); },
   };
 }

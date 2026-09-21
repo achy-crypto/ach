@@ -262,10 +262,42 @@ function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"
 
 /* ---------- state ---------- */
 
-const state={anchors:BASE_ANCHORS.map(x=>({...x})),log:[],seen:[],loaded:false};
+/* Two places, one page. Served by the standalone server in ../server it gets a
+ * real TMDb catalog behind it: runtimes, episode and season counts become facts
+ * instead of things the model remembered. Published as an artifact there is no
+ * catalog at all, and it says so. */
+const HOST={mode:"unknown",screen:false,provider:null,missing:[],rater:false,
+  needsToken:false,token:"",model:null};
+
+function hdrs(){const h={"Content-Type":"application/json"};
+  if(HOST.token)h.Authorization="Bearer "+HOST.token;return h}
+async function api(path,opts){
+  const r=await fetch(path,Object.assign({headers:hdrs()},opts||{}));
+  let body=null;try{body=await r.json()}catch(e){}
+  if(!r.ok){const err=new Error((body&&body.error)||`request failed (${r.status})`);
+    err.code=r.status===401?"needs_token":(body&&body.code)||("http_"+r.status);
+    err.missing=body&&body.missing;throw err}
+  return body}
+async function detectHost(){
+  try{HOST.token=localStorage.getItem("holds:token")||""}catch(e){}
+  try{const h=await api("/api/health");
+    if(h&&h.app==="two-hours-in"){
+      HOST.mode="server";
+      HOST.screen=!!(h.screen&&h.screen.connected);
+      HOST.provider=h.screen&&h.screen.provider;
+      HOST.missing=(h.screen&&h.screen.missing)||[];
+      HOST.rater=!!(h.rater&&h.rater.configured);HOST.model=h.rater&&h.rater.model;
+      HOST.needsToken=!!h.needsToken&&!h.authed;
+      if(!HOST.rater)HOST.missing=HOST.missing.concat(["ANTHROPIC_API_KEY"]);
+      return}}
+  catch(e){if(e&&e.code==="needs_token"){HOST.mode="server";HOST.needsToken=true;return}}
+  HOST.mode="artifact"}
+function catalogOn(){return HOST.mode==="server"&&HOST.screen}
+
+const state={anchors:BASE_ANCHORS.map(x=>({...x})),log:[],seen:[],titles:{},loaded:false};
 let db=null,sample=null,tab="read",ctl=null;
-let readTitle="",readBusy=false,readErr="";
-let mood="normal",form="either",floor=7,findBusy=false,findErr="",picks=[];
+let readTitle="",readBusy=false,readErr="",searchResults=[];
+let mood="normal",form="either",floor=7,findBusy=false,findErr="",picks=[],findOffset=0;
 let setEasy="",setHard="",setDrop="",setErr="";
 let justAdded=null,addErr="",dbUnavailable=false,dbErr="",lastSave={cloud:null,local:null};
 const saveStatus={};
@@ -289,18 +321,28 @@ let reading={name:"The Wire",example:true,
   secondScreen:"no",familiarity:3};
 
 function payload(){return{anchors:state.anchors,log:state.log.slice(-300),seen:state.seen.slice(-300),
-  last:reading&&!reading.example?reading:null,lastPicks:picks.slice(0,8)}}
+  titles:state.titles,last:reading&&!reading.example?reading:null,lastPicks:picks.slice(0,8)}}
 function adopt(d){if(!d)return false;
   if(Array.isArray(d.anchors))state.anchors=d.anchors;
   if(Array.isArray(d.log))state.log=d.log;
   if(Array.isArray(d.seen))state.seen=d.seen;
+  if(d.titles&&typeof d.titles==="object")state.titles=d.titles;
   if(d.last&&d.last.name){reading=d.last;readTitle=d.last.name}
   if(Array.isArray(d.lastPicks))picks=d.lastPicks;return true}
 
+function thaw(v){try{return v==null?v:JSON.parse(JSON.stringify(v))}catch(e){return null}}
+
 async function loadState(){let got=false;
+  if(HOST.mode==="server"){
+    try{const out=await api("/api/screen/state");if(out&&out.state)got=adopt(thaw(out.state))}
+    catch(e){dbUnavailable=true;dbErr=(e&&e.message)||"server storage unavailable"}
+    try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
+    catch(e){lastSave.local=false}
+    if(!got){try{const raw=localStorage.getItem(LS);if(raw)adopt(JSON.parse(raw))}catch(e){}}
+    state.loaded=true;return render()}
   try{db=await claude.use("db");
     if(!db){dbUnavailable=true;dbErr="not available in this view"}
-    else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(s.data())}}
+    else{const s=await db.doc(DOC).get();if(s.exists)got=adopt(thaw(s.data()))}}
   catch(e){db=null;dbUnavailable=true;dbErr=(e&&(e.code||e.message))||"unknown error"}
   try{localStorage.setItem(LS+":probe","1");localStorage.removeItem(LS+":probe");lastSave.local=true}
   catch(e){lastSave.local=false}
@@ -309,6 +351,10 @@ async function loadState(){let got=false;
 
 async function saveState(){const body=payload();let local=false,cloud=false;
   try{localStorage.setItem(LS,JSON.stringify(body));local=true}catch(e){}
+  if(HOST.mode==="server"){
+    try{await api("/api/screen/state",{method:"PUT",body:JSON.stringify(body)});cloud=true;dbErr=""}
+    catch(e){dbErr=(e&&e.message)||"server write failed"}
+    lastSave={cloud,local};return local||cloud}
   if(db){try{await db.doc(DOC).set(body);cloud=true;dbErr=""}catch(e){dbErr=(e&&(e.code||e.message))||"unknown error"}}
   lastSave={cloud,local};return local||cloud}
 
@@ -354,6 +400,58 @@ function saveLine(title,done){const s=saveStatus[title];
   if(s==="ok"||done)return`<div class="saved">${lastSave.cloud?"Saved.":"Saved to this browser."}</div>`;
   return""}
 
+/* The anchors ARE the ruler, so unlike the games side this call is deliberately
+ * not blind — the scale is the input. It is still an inference, never a fact. */
+function scalePayload(){
+  return {
+    anchors:state.anchors.map(a=>({title:a.title,score:a.score,note:a.note||""})),
+    corrections:state.log.filter(e=>Number.isFinite(Number(e.actual)))
+      .slice(-30).map(e=>({title:e.title,said:Number(e.score),actual:Number(e.actual)})),
+    outcomes:state.log.filter(e=>e.verdict).slice(-24).map(e=>({title:e.title,said:Number(e.score),
+      verdict:({finished:"finished it",stuck:"is still watching it",drifted:"drifted off it",
+                bailed:"bailed early"})[e.verdict]||e.verdict})),
+    state:(STATES.find(x=>x[0]===mood)||[])[2]||"",
+  }}
+
+function putTitle(rec){
+  const prev=state.titles[rec.id]||{};
+  state.titles[rec.id]=Object.assign({},prev,rec,{meta:Object.assign({},prev.meta,rec.meta)});
+  const ids=Object.keys(state.titles);
+  if(ids.length>400){ids.sort((a,b)=>((state.titles[a].meta||{}).retrievedAt||0)-((state.titles[b].meta||{}).retrievedAt||0));
+    for(const id of ids.slice(0,ids.length-400))
+      if(!state.log.some(e=>e.id===id))delete state.titles[id]}
+  return state.titles[rec.id]}
+
+/* Turns a server placement into the reading shape the page already renders,
+ * with the catalog's numbers winning over anything inferred. */
+function readingFrom(row,facts){
+  const shape=Object.assign({},row.reading.shape||{});
+  if(facts&&Object.keys(facts).length){
+    if(facts.epMinutes!=null)shape.epMinutes=facts.epMinutes;
+    if(facts.episodes!=null)shape.episodes=facts.episodes;
+    if(facts.seasons!=null)shape.seasons=facts.seasons;
+  }
+  const scores={},notes={};
+  for(const a of AXES){const c=(row.reading.axes||{})[a.key]||{};
+    scores[a.key]=ax05(c.score);notes[a.key]=String(c.note||"")}
+  return {id:row.id,name:row.title,kind:row.kind,example:false,
+    ident:row.reading.ident,placement:row.reading.placement,
+    near:row.reading.placement&&row.reading.placement.near,
+    scores,notes,shape,tactics:row.reading.tactics||[],stopRule:row.reading.stopRule||"",
+    secondScreen:row.reading.secondScreen,familiarity:row.reading.familiarity,
+    source:facts&&facts.source||null,groundedIn:row.reading.groundedIn||null,
+    method:row.reading.method||"model-inference"}}
+
+async function placeTitles(list){
+  const out=await api("/api/screen/place",{method:"POST",body:JSON.stringify({
+    titles:list.map(t=>({id:t.id,title:t.title,kind:t.kind})),scale:scalePayload()})});
+  const readings=[];
+  for(const row of out.placed||[]){
+    const facts=(out.facts||{})[row.id]||{};
+    if(facts&&Object.keys(facts).length)putTitle({id:row.id,title:row.title,kind:row.kind,meta:facts});
+    readings.push(readingFrom(row,facts))}
+  return {readings,missed:out.missed||[]}}
+
 /* ---------- CHECK ONE ---------- */
 
 function readPanel(){
@@ -362,8 +460,26 @@ function readPanel(){
     <input type="text" id="q" placeholder="A show, or a film" value="${esc(readTitle)}" autocomplete="off">
     <button class="go" data-act="read" ${readBusy?"disabled":""}>${readBusy?"Checking":"Check it"}</button>
   </div>`;
-  if(readBusy)h+=`<div class="status"><span class="dot"></span>Working out whether you'd finish it.</div>`;
+  if(readBusy)h+=`<div class="status"><span class="dot"></span>${catalogOn()?"Looking it up, then placing it on your scale.":"Working out whether you'd finish it."}</div>`;
   if(readErr)h+=`<div class="err">${esc(readErr)}</div>`;
+  if(HOST.needsToken)h+=`<div class="wall" style="background:var(--card)">
+    <span class="lab" style="display:block;margin-bottom:3px">This server is locked</span>
+    It was started with APP_TOKEN set. Enter it once and it's kept in this browser.
+    <div class="row" style="margin-top:9px"><input type="text" id="tok" placeholder="Access token">
+      <button class="go" data-act="savetok">Unlock</button></div></div>`;
+  if(searchResults.length){
+    h+=`<h2 class="sec">Which one</h2>
+      <p class="subtle">From TMDb. Picking one pins it to that entry's id, so the runtimes and
+        episode counts below are the catalog's, not a guess.</p>
+      <div class="sheet">${searchResults.map(id=>{const t=state.titles[id];if(!t)return"";
+        const m=t.meta||{};
+        return `<div class="pick"><div class="ptop">
+          <div><div class="pname">${esc(t.title)} ${m.year?`<span>${m.year}</span>`:""}</div>
+            <div class="pident">${esc([t.kind==="film"?"Film":"Series",(m.genres||[]).join(", ")].filter(Boolean).join(" · "))}</div></div>
+          </div>
+          <div class="pwhy" style="font-size:13.5px;color:var(--dim)">${esc(String(m.overview||"").slice(0,150))}</div>
+          <div class="seg"><button data-act="pick" data-id="${esc(id)}">Check this one</button>
+            <span class="tag" style="align-self:center">${esc(id)}</span></div></div>`}).join("")}</div>`}
 
   if(r){
     const score=placedScore(r), sh=r.shape||{};
@@ -376,6 +492,13 @@ function readPanel(){
         </div>
         ${r.placement&&r.placement.anchor?`<div class="dock"><b>As hard to finish as ${esc(r.placement.anchor)}</b>${Number(r.placement.delta)?`, ${Math.abs(Number(r.placement.delta)).toFixed(1)} ${Number(r.placement.delta)>0?"easier":"harder"}`:""}. ${esc(r.near||"")}</div>`:""}
         ${Number(r.familiarity)<=1?`<div class="dock" style="border-left-color:var(--rule);background:none">Claude only knows this by reputation — treat it as a guess.</div>`:""}
+      </div>
+      <div class="tags" style="margin-top:12px">
+        ${r.source==="tmdb"
+          ? `<span class="tag">runtimes and counts from TMDb</span>`
+          : `<span class="tag">no catalog — shape from memory</span>`}
+        <span class="tag">holdability inferred, not verified</span>
+        ${r.id?`<span class="tag">${esc(r.id)}</span>`:""}
       </div>`;
 
     const cells=[];
@@ -424,6 +547,29 @@ function readPanel(){
 async function doRead(){
   const name=(document.getElementById("q").value||"").trim();readTitle=name;
   if(!name){readErr="Type a title first.";return render()}
+  searchResults=[];
+  if(HOST.mode==="server"){
+    if(!HOST.rater){readErr="This server has no ANTHROPIC_API_KEY set, so it can't work anything out.";return render()}
+    readBusy=true;readErr="";render();
+    try{
+      if(catalogOn()){
+        const out=await api("/api/screen/search?q="+encodeURIComponent(name)
+          +"&form="+encodeURIComponent(form)+"&limit=8");
+        const hits=(out.results||[]).filter(r=>r&&r.id&&r.title);
+        if(!hits.length){readErr=`Nothing on TMDb matched "${name}".`;readBusy=false;return render()}
+        for(const h of hits)putTitle({id:h.id,title:h.title,kind:h.kind,meta:h.meta});
+        if(hits.length>1){searchResults=hits.map(h=>h.id);readBusy=false;return render()}
+        await openTitle(hits[0].id);
+      } else {
+        const {readings}=await placeTitles([{id:"est:"+norm(name),title:name,kind:"show"}]);
+        if(!readings.length)throw{code:"empty",message:"nothing came back for that title"};
+        reading=readings[0];
+      }
+      await saveState()}
+    catch(e){readErr=errCopy(e)}
+    readBusy=false;return render()}
+
+  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
   readBusy=true;readErr="";render();ctl=new AbortController();
   const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
   const prompt=`Work out whether this person would actually get through "${name}".
@@ -463,8 +609,24 @@ Reply with only this JSON:
 "shape":{"epMinutes":0,"episodes":0,"seasons":0,"hookMinutes":0,"wall":""},
 "tactics":[""],"secondScreen":"yes|partly|no","familiarity":3}`;
   try{const out=await sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false});
-    reading=Object.assign({name},out,{example:false})}
+    reading=Object.assign({name},out,{example:false,method:"model-inference"})}
   catch(e){if(!(e&&e.code==="cancelled"))readErr=errCopy(e)}
+  readBusy=false;render()}
+
+// A pick from the search list: fetch the full record, then place it.
+async function openTitle(id){
+  const t=state.titles[id];if(!t)return;
+  searchResults=[];readTitle=t.title;
+  readBusy=true;readErr="";render();
+  try{
+    if(!t.meta||t.meta.episodes===undefined){
+      const got=await api("/api/screen/title?id="+encodeURIComponent(id));
+      if(got&&got.title)putTitle(got.title)}
+    const {readings}=await placeTitles([{id,title:t.title,kind:t.kind}]);
+    if(!readings.length)throw{code:"empty",message:"nothing came back for that title"};
+    reading=readings[0];
+    await saveState()}
+  catch(e){readErr=errCopy(e)}
   readBusy=false;render()}
 
 /* ---------- FIND ---------- */
@@ -504,7 +666,38 @@ function findPanel(){
   return h}
 
 async function doFind(){
+  if(HOST.mode==="server"&&!HOST.rater){findErr="This server has no ANTHROPIC_API_KEY set.";return render()}
+  if(HOST.mode!=="server"&&!sample){findErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
   findBusy=true;findErr="";picks=[];render();ctl=new AbortController();
+
+  if(catalogOn()){
+    try{
+      const out=await api("/api/screen/discover?form="+encodeURIComponent(form)
+        +"&offset="+findOffset);
+      findOffset+=20;
+      const seen=new Set(state.seen);
+      const anchored=new Set(state.anchors.map(a=>norm(a.title)));
+      const pool=[];
+      for(const r of (out.results||[])){
+        if(!r||!r.id||!r.title)continue;
+        putTitle({id:r.id,title:r.title,kind:r.kind,meta:r.meta});
+        if(seen.has(r.id))continue;
+        if(anchored.has(norm(r.title)))continue;
+        pool.push({id:r.id,title:r.title,kind:r.kind})}
+      if(!pool.length){findErr="Everything that came back you've already seen. Try again — it pages through.";
+        findBusy=false;return render()}
+      const {readings}=await placeTitles(pool.slice(0,12));
+      const kept=readings.filter(r=>placedScore(r)>=floor)
+        .sort((a,b)=>placedScore(b)-placedScore(a)).slice(0,6);
+      picks=kept.map(r=>Object.assign({title:r.name,year:(state.titles[r.id]||{}).meta&&state.titles[r.id].meta.year},r));
+      const notes=[`${(out.results||[]).length} retrieved from TMDb, ${readings.length} placed on your scale, top ${picks.length} shown.`];
+      if(readings.length-kept.length)notes.push(`${readings.length-kept.length} fell below your ${floor} floor.`);
+      if(!picks.length)notes.push("Nothing cleared it. Lower the floor, or look again.");
+      else{state.seen=state.seen.concat(picks.map(p=>p.id)).slice(-400);await saveState()}
+      findErr=notes.join(" ")}
+    catch(e){findErr=errCopy(e)}
+    findBusy=false;return render()}
+
   const st=(STATES.find(s=>s[0]===mood)||[])[2]||"";
   const rubric=AXES.map(a=>`  ${a.key} — ${a.label}: ${a.hint}`).join("\n");
   const prompt=`Recommend up to 6 ${form==="film"?"feature films":form==="show"?"television series":"things"} this person would actually finish.${form==="film"?"\nEvery pick must be a feature film.":form==="show"?"\nEvery pick must be a series, not a film.":""}
@@ -557,18 +750,20 @@ Reply with only this JSON:
 
 /* ---------- logging ---------- */
 
-async function logVerdict(title,score,verdict){
-  const i=state.log.findIndex(e=>e.title===title);
-  const row=Object.assign({},i>=0?state.log[i]:{},{title,score:Number(score),verdict,at:Date.now()});
+async function logVerdict(title,score,verdict,id){
+  const i=state.log.findIndex(e=>(id&&e.id===id)||e.title===title);
+  const row=Object.assign({},i>=0?state.log[i]:{},{title,id:id||(i>=0?state.log[i].id:null),
+    score:Number(score),verdict,at:Date.now()});
   if(i>=0)state.log[i]=row;else state.log.push(row);
   saveStatus[title]="saving";render();
   const ok=await saveState();saveStatus[title]=ok?"ok":"failed";render()}
 
-async function logCorrection(title,predicted,actual){
+async function logCorrection(title,predicted,actual,id){
   const n=Number(actual);if(!Number.isFinite(n))return;
   const v=clamp(n,1,10);
-  const i=state.log.findIndex(e=>e.title===title);
-  const row=Object.assign({},i>=0?state.log[i]:{},{title,score:Number(predicted),actual:v,at:Date.now()});
+  const i=state.log.findIndex(e=>(id&&e.id===id)||e.title===title);
+  const row=Object.assign({},i>=0?state.log[i]:{},{title,id:id||(i>=0?state.log[i].id:null),
+    score:Number(predicted),actual:v,at:Date.now()});
   if(i>=0)state.log[i]=row;else state.log.push(row);
   const ex=state.anchors.find(a=>norm(a.title)===norm(title));
   if(ex)ex.score=v;else state.anchors.push({title,score:v,note:`Yours, after the app said ${Number(predicted).toFixed(1)}.`});
@@ -643,9 +838,19 @@ function calPanel(){
   return h}
 
 function storageLine(){
-  const cloud=db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;
+  const cloud=HOST.mode==="server"
+    ?(dbErr?`failing (${esc(dbErr)})`:"working")
+    :db?(dbErr?`failing (${esc(dbErr)})`:"working"):`unavailable${dbErr?` (${esc(dbErr)})`:""}`;
   const local=lastSave.local===true?"working":lastSave.local===false?"blocked":"untested";
-  return`<h2 class="sec">Storage</h2><p class="subtle">Cloud: <b>${cloud}</b><br>This browser: <b>${local}</b></p>`}
+  return`<h2 class="sec">Where this is running</h2><p class="subtle">
+    Running as: <b>${HOST.mode==="server"?"the standalone server":"a published artifact"}</b><br>
+    Catalog: <b>${catalogOn()?"TMDb connected":HOST.mode==="server"
+      ?"not configured — set "+esc((HOST.missing||[]).join(", ")||"TMDB_API_KEY")
+      :"none — an artifact can't reach one"}</b><br>
+    ${HOST.mode==="server"?"Server store":"Cloud"}: <b>${cloud}</b><br>This browser: <b>${local}</b></p>
+  <p class="note">${catalogOn()
+    ? "Runtimes, episode and season counts come from TMDb and are facts. The six axes and the placement on your scale are inferred — a catalog grounds them, it doesn't verify them."
+    : "There is no catalog here, so episode counts and runtimes are recalled by the model and do drift. Run the server in <code>server/</code> with a TMDB_API_KEY to make them facts."}</p>`}
 
 /* ---------- plumbing ---------- */
 
@@ -660,6 +865,11 @@ document.addEventListener("click",ev=>{
   if(t.classList.contains("tab")){tab=t.dataset.tab;addErr="";return render()}
   const act=t.dataset.act,v=t.dataset.v;
   if(act==="read")return void doRead();
+  if(act==="pick")return void openTitle(t.dataset.id);
+  if(act==="savetok"){const el=document.getElementById("tok");
+    HOST.token=((el&&el.value)||"").trim();
+    try{localStorage.setItem("holds:token",HOST.token)}catch(e){}
+    return void (async()=>{await detectHost();await loadState();render()})()}
   if(act==="find")return void doFind();
   if(act==="mood"){mood=v;return render()}
   if(act==="form"){form=v;return render()}
@@ -667,11 +877,11 @@ document.addEventListener("click",ev=>{
   if(act==="correct"&&reading&&!reading.example){
     const el=document.getElementById("actual"),raw=(el&&el.value||"").trim();
     if(!raw||!Number.isFinite(Number(raw))){readErr="Give a score from 1 to 10.";return render()}
-    readErr="";return void logCorrection(reading.name,placedScore(reading),Number(raw))}
+    readErr="";return void logCorrection(reading.name,placedScore(reading),Number(raw),reading.id)}
   if(act==="verdict"&&reading&&!reading.example)
-    return void logVerdict(reading.name,placedScore(reading),v);
+    return void logVerdict(reading.name,placedScore(reading),v,reading.id);
   if(act==="pverdict"){const p=picks[Number(t.dataset.i)];
-    if(p)void logVerdict(p.title,placedScore(p),v);return}
+    if(p)void logVerdict(p.title,placedScore(p),v,p.id);return}
   if(act==="dellog"){state.log=state.log.filter(e=>e.title!==t.dataset.t);saveState();return render()}
   if(act==="delanch")return void mutateAnchors(()=>{state.anchors=state.anchors.filter(a=>a.title!==t.dataset.t)});
   if(act==="setscale"){
@@ -709,8 +919,14 @@ document.addEventListener("change",ev=>{
   const v=Number(ev.target.value),a=state.anchors.find(x=>x.title===ev.target.dataset.t);
   if(a&&Number.isFinite(v))void mutateAnchors(()=>{a.score=clamp(v,1,10)})});
 
+window.__h={HOST,state};
 render();
-(async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}
-  if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";findErr=readErr;render()}
+(async()=>{
+  await detectHost();
+  if(HOST.mode!=="server"){
+    try{sample=await claude.use("sample")}catch(e){sample=null}
+    if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";
+      findErr=readErr}}
+  render();
   loadState()})();
 </script>

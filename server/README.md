@@ -1,15 +1,26 @@
 # Two Hours In — standalone server
 
-Runs the app outside the Claude artifact sandbox so it can do three things the
+Runs both apps outside the Claude artifact sandbox so it can do three things the
 published page cannot: search a real game catalog, resolve titles to stable
 catalog ids, and call the Claude API. **Every credential stays in this process.
 The browser is handed results, never a key.**
 
-The same `games/index.html` runs in both places. It probes `/api/health` on
+Two apps are served:
+
+- `/` — **Two Hours In** (games), catalog from IGDB or RAWG.
+- `/holds` — **Will It Hold** (shows and films), catalog from TMDb.
+
+Each page runs in both places. It probes `/api/health` on
 load: if this server answers it uses the catalog and the server-side rater, and
 if nothing answers it falls back to the artifact behaviour and says so on screen.
 
 ## What a rating is, and is not
+
+**One difference between the two apps, on purpose.** The games rater is *blind*:
+it never sees your profile, and the server rejects any request that carries it,
+because there a rating is an estimate of a property of the game. Will It Hold is
+the opposite — your anchor numbers *are* the ruler, so the placement call is
+given your scale by design. Both are inferences; neither is ever called verified.
 
 The catalog supplies **facts**: title, release year, developer, genres, themes,
 game modes, the publisher's summary. Those are attributed to the catalog.
@@ -30,6 +41,7 @@ preference data so the inference cannot be steered toward what would score well.
 | `ANTHROPIC_API_KEY` | **Yes** | <https://console.anthropic.com> → API keys. This is what rates games; without it the server starts but refuses to rate. |
 | `CATALOG_PROVIDER` | Yes | `igdb` or `rawg`. |
 | `IGDB_CLIENT_ID` + `IGDB_CLIENT_SECRET` | If `igdb` | <https://dev.twitch.tv/console/apps> → Register Your Application (any name; OAuth Redirect URL `http://localhost`; category "Application Integration"). Then **Manage** → copy the Client ID → **New Secret** → copy the secret. IGDB is free and is the better of the two: it returns game modes, themes, perspectives and a real summary. The server exchanges these for an app token itself and refreshes it. |
+| `TMDB_API_KEY` *(or `TMDB_READ_TOKEN`)* | For **Will It Hold** at `/holds` | <https://www.themoviedb.org> → sign up → Settings → API → Request an API key → Developer. Free, approved in minutes. Either the v3 key or the v4 read token works. This is what turns runtimes, episode counts and season counts from recalled numbers into facts. |
 | `RAWG_API_KEY` | If `rawg` | <https://rawg.io/apidocs> → sign up; the key appears on your profile. Simpler, one key, 20k requests/month free, but thinner metadata. |
 | `APP_TOKEN` | Strongly recommended | Any string you invent. Without it, anyone who finds the URL can spend your Anthropic credit. The app asks for it once and keeps it in the browser. |
 
@@ -101,6 +113,8 @@ docker run -p 8787:8787 -v two-hours-data:/data --env-file server/.env two-hours
 
 Two files in `DATA_DIR`, deliberately separate:
 
+- `screen-catalog.json` — TMDb records keyed by stable id. Facts, no user data.
+- `screen-state.json` — the Will It Hold scale, log and seen-list.
 - `ratings.json` — gameplay feature records keyed by stable catalog id. Nothing
   about a user is written here. Shared across everyone using the instance, so a
   game is rated once and paid for once. Safe to delete; it rebuilds.
@@ -115,7 +129,11 @@ Two files in `DATA_DIR`, deliberately separate:
 | `GET /api/catalog/game?id=` | One record by stable id. |
 | `GET /api/catalog/discover?limit=&offset=&platform=` | The broad candidate pool for discovery. |
 | `POST /api/rate` | Rates games. Cached per id. **Rejects any payload carrying user preference data.** |
-| `GET/PUT /api/state` | The user's own state. |
+| `GET /api/screen/search?q=&form=` | TMDb title search. Returns stable ids (`tmdb:tv:1396`). |
+| `GET /api/screen/title?id=` | Full TMDb record — runtime, episode and season counts. |
+| `GET /api/screen/discover?form=&offset=` | The candidate pool for Will It Hold. |
+| `POST /api/screen/place` | Places titles on the user's anchor scale. Facts are fetched server-side from TMDb, never taken from the caller. |
+| `GET/PUT /api/state`, `GET/PUT /api/screen/state` | Each app's own state. |
 
 ## Cost
 

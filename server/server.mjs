@@ -11,6 +11,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { makeCatalog } from "./catalog.mjs";
 import { makeRater, FEATURE_KEYS, RATING_SCHEMA_VERSION } from "./rate.mjs";
+import { makeScreenCatalog, makeScreenRater, AXIS_KEYS } from "./screen.mjs";
+import { makeLLM } from "./llm.mjs";
 import { makeStore } from "./store.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -36,8 +38,14 @@ const DATA_DIR = path.resolve(here, env.DATA_DIR || "./data");
 const APP_HTML = path.resolve(here, env.APP_HTML || "../games/index.html");
 const APP_TOKEN = (env.APP_TOKEN || "").trim();
 
-const catalog = makeCatalog(env);
-const rater = makeRater(env);
+const APP_HTML_HOLDS = path.resolve(here, env.APP_HTML_HOLDS || "../holds/index.html");
+
+const llm = makeLLM(env);
+const catalog = makeCatalog(env);                 // games — IGDB / RAWG
+const rater = makeRater(env, llm);
+const screenCatalog = makeScreenCatalog(env);     // shows and films — TMDb
+const screenRater = makeScreenRater(llm.client, llm.defaults.model, llm.defaults.fallbackModel,
+  llm.defaults.effort, llm.defaults.betas, (prompt, schema, o) => llm.parse(prompt, schema, o));
 const store = makeStore(DATA_DIR);
 await store.init();
 
@@ -84,9 +92,11 @@ async function handleApi(req, res, url) {
       needsToken: !!APP_TOKEN,
       authed: authed(req, url),
       catalog: { connected: catalog.connected, provider: catalog.provider, missing: catalog.missing },
-      rater: { configured: rater.configured(), model: rater.model, schema: RATING_SCHEMA_VERSION },
+      screen: { connected: screenCatalog.connected, provider: screenCatalog.provider, missing: screenCatalog.missing },
+      rater: { configured: rater.configured(), model: llm.defaults.model, schema: RATING_SCHEMA_VERSION },
       ratingsCached: store.ratingCount(),
       features: FEATURE_KEYS,
+      axes: AXIS_KEYS,
     });
   }
 
@@ -152,6 +162,86 @@ async function handleApi(req, res, url) {
       missed: need.filter(n => !fresh.some(f => f.id === n.id)).map(n => n.title) });
   }
 
+  /* ---- shows and films ------------------------------------------------- */
+
+  if (route === "/api/screen/search") {
+    const q = (url.searchParams.get("q") || "").trim();
+    if (!q) return fail(res, 400, "Nothing to search for.");
+    if (!screenCatalog.connected) return fail(res, 503, "TMDb is not configured on this server.", { missing: screenCatalog.missing });
+    const results = await screenCatalog.search(q, Number(url.searchParams.get("limit")) || 10,
+      url.searchParams.get("form") || "either");
+    return send(res, 200, { provider: screenCatalog.provider, results });
+  }
+
+  if (route === "/api/screen/title") {
+    const id = (url.searchParams.get("id") || "").trim();
+    if (!id) return fail(res, 400, "No id given.");
+    if (!screenCatalog.connected) return fail(res, 503, "TMDb is not configured on this server.", { missing: screenCatalog.missing });
+    const row = await screenCatalog.byId(id);
+    if (!row) return fail(res, 404, "No title with that id.");
+    await store.putScreen([row]);
+    return send(res, 200, { title: row });
+  }
+
+  if (route === "/api/screen/discover") {
+    if (!screenCatalog.connected) return fail(res, 503, "TMDb is not configured on this server.", { missing: screenCatalog.missing });
+    const results = await screenCatalog.discover({
+      form: url.searchParams.get("form") || "either",
+      offset: Number(url.searchParams.get("offset")) || 0,
+      language: url.searchParams.get("language") || null,
+    });
+    return send(res, 200, { provider: screenCatalog.provider, results });
+  }
+
+  /* Placement against the user's own anchors. Unlike /api/rate this one is
+   * SUPPOSED to see the scale — the anchors are the ruler, that is the whole
+   * design — so there is no blindness guard here, and none is implied. */
+  if (route === "/api/screen/place" && req.method === "POST") {
+    if (!llm.configured()) return fail(res, 503, "ANTHROPIC_API_KEY is not set on this server.", { missing: ["ANTHROPIC_API_KEY"] });
+    const body = await readBody(req);
+    const want = Array.isArray(body && body.titles) ? body.titles.slice(0, 24) : [];
+    const scale = (body && body.scale) || {};
+    if (!want.length) return fail(res, 400, "No titles given.");
+    if (!Array.isArray(scale.anchors) || !scale.anchors.length)
+      return fail(res, 400, "No anchors given; the scale is what a placement is made against.");
+
+    /* Facts come from the catalog here, never from the caller, so a client
+     * cannot pass off invented runtimes as catalog records. */
+    const titles = [];
+    for (const t of want) {
+      const id = String((t && t.id) || "").trim();
+      const title = String((t && t.title) || "").trim();
+      if (!id || !title) continue;
+      let facts = {};
+      if (screenCatalog.connected && /^tmdb:/.test(id)) {
+        const known = store.getScreen(id);
+        if (known) facts = known.meta;
+        else { try { const row = await screenCatalog.byId(id);
+          if (row) { await store.putScreen([row]); facts = row.meta; } } catch (e) {
+          console.warn("[screen] lookup failed for", id, e.message); } }
+      }
+      titles.push({ id, title, kind: (t && t.kind) || (facts && facts.kind) || "show", facts });
+    }
+    if (!titles.length) return fail(res, 400, "Nothing usable in that list.");
+    const placed = await screenRater.place(titles, scale);
+    return send(res, 200, {
+      placed,
+      facts: Object.fromEntries(titles.map(t => [t.id, t.facts])),
+      missed: titles.filter(t => !placed.some(p => p.id === t.id)).map(t => t.title),
+    });
+  }
+
+  if (route === "/api/screen/state") {
+    if (req.method === "GET") return send(res, 200, { state: store.getScreenState() });
+    if (req.method === "PUT") {
+      const body = await readBody(req);
+      if (!body || typeof body !== "object") return fail(res, 400, "State must be an object.");
+      await store.putScreenState(body);
+      return send(res, 200, { ok: true });
+    }
+    return fail(res, 405, "Use GET or PUT.");
+  }
+
   if (route === "/api/state") {
     if (req.method === "GET") return send(res, 200, { state: store.getState() });
     if (req.method === "PUT") {
@@ -174,6 +264,10 @@ const server = http.createServer(async (req, res) => {
       const html = await fs.readFile(APP_HTML, "utf8");
       return send(res, 200, html, "text/html; charset=utf-8");
     }
+    if (url.pathname === "/holds" || url.pathname === "/holds/") {
+      const html = await fs.readFile(APP_HTML_HOLDS, "utf8");
+      return send(res, 200, html, "text/html; charset=utf-8");
+    }
     return fail(res, 404, "Not found.");
   } catch (e) {
     const code = e && e.code === 413 ? 413 : 500;
@@ -185,10 +279,13 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   const line = s => console.log(`  ${s}`);
   console.log(`\nTwo Hours In — http://localhost:${PORT}\n`);
-  line(`catalog   ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
-  line(`ratings   ${rater.configured() ? `${rater.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);
+  console.log(`  games     http://localhost:${PORT}/`);
+  console.log(`  screen    http://localhost:${PORT}/holds\n`);
+  line(`catalog   games: ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
+  line(`          screen: ${screenCatalog.connected ? "tmdb connected" : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
+  line(`ratings   ${llm.configured() ? `${llm.defaults.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);
   line(`data      ${DATA_DIR}`);
-  line(`app       ${APP_HTML}`);
+  line(`apps      ${APP_HTML}\n            ${APP_HTML_HOLDS}`);
   line(`access    ${APP_TOKEN ? "token required (APP_TOKEN is set)" : "OPEN — anyone with the URL can spend your API credit; set APP_TOKEN"}`);
   console.log("");
 });
