@@ -1,0 +1,33 @@
+# One-click deploy config for Render. Everything here is safe to commit —
+# the keys themselves are entered in Render's dashboard, never in this file.
+services:
+  - type: web
+    name: two-hours-in
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: .
+    plan: starter          # a disk is required for the server-side store
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      # Paste the real values in Render → your service → Environment.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: TMDB_API_KEY
+        sync: false
+      - key: APP_TOKEN
+        sync: false
+      # Optional — only if you also want the games app's catalog.
+      - key: CATALOG_PROVIDER
+        value: igdb
+      - key: IGDB_CLIENT_ID
+        sync: false
+      - key: IGDB_CLIENT_SECRET
+        sync: false
+      - key: DATA_DIR
+        value: /data
+      - key: PORT
+        value: "8787"
