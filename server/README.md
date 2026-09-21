@@ -1,4 +1,4 @@
-# Two Hours In — standalone server
+# Standalone server for Will It Hold and Two Hours In
 
 Runs both apps outside the Claude artifact sandbox so it can do three things the
 published page cannot: search a real game catalog, resolve titles to stable
@@ -7,8 +7,11 @@ The browser is handed results, never a key.**
 
 Two apps are served:
 
-- `/` — **Two Hours In** (games), catalog from IGDB or RAWG.
-- `/holds` — **Will It Hold** (shows and films), catalog from TMDb.
+- `/holds` — **Will It Hold**: shows and films, catalog from TMDb.
+- `/games` — **Two Hours In**: games, catalog from IGDB or RAWG.
+
+`/` is a signpost page linking to both and showing which catalogs are connected.
+Neither app is served at the root, so neither looks like "the" app.
 
 Each page runs in both places. It probes `/api/health` on
 load: if this server answers it uses the catalog and the server-side rater, and
@@ -55,7 +58,7 @@ Optional: `PORT` (8787), `DATA_DIR` (`./data`), `ANTHROPIC_MODEL` (`claude-opus-
 cd server
 npm install
 cp .env.example .env      # then fill in the keys above
-npm start                 # http://localhost:8787
+npm start                 # http://localhost:8787 — pick an app from there
 ```
 
 The startup banner states, in order: whether the catalog is connected, whether

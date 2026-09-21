@@ -256,11 +256,56 @@ async function handleApi(req, res, url) {
   return fail(res, 404, "No such endpoint.");
 }
 
+function indexPage() {
+  const card = (href, name, what, cat, ok, missing) => `
+    <a class="card" href="${href}">
+      <h2>${name}</h2>
+      <p>${what}</p>
+      <span class="${ok ? "on" : "off"}">${ok ? `${cat} connected` : `${cat} not connected — set ${missing.join(", ")}`}</span>
+    </a>`;
+  return `<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Two Hours In &amp; Will It Hold</title>
+<style>
+:root{color-scheme:light dark;--ground:#e9ecee;--card:#f7f8f9;--ink:#16191d;--dim:#666d75;--rule:#ccd2d7;--ok:#2f7a55;--bad:#a33227}
+@media (prefers-color-scheme:dark){:root{--ground:#101316;--card:#181c20;--ink:#e7e9ea;--dim:#8b939b;--rule:#2a2f35;--ok:#6db98c;--bad:#e0776a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:40px 18px 60px}
+h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:0 0 22px}
+.card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--rule);
+  border-radius:4px;padding:20px;margin-bottom:14px}
+.card:hover{border-color:var(--ink)}
+.card h2{margin:0;font-size:23px;letter-spacing:.01em}
+.card p{margin:6px 0 0;color:var(--dim);font-size:14.5px}
+.on,.off{display:inline-block;margin-top:12px;font-family:ui-monospace,monospace;font-size:11px;
+  letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--rule);padding:4px 9px;border-radius:3px}
+.on{color:var(--ok);border-color:var(--ok)}
+.off{color:var(--bad);border-color:var(--bad)}
+.note{color:var(--dim);font-size:13px;margin-top:26px}
+</style>
+<div class="wrap">
+  <h1>Two apps on this server</h1>
+  ${card("/holds", "Will It Hold", "Shows and films — whether you'll actually get through one.",
+    "TMDb", screenCatalog.connected, screenCatalog.missing)}
+  ${card("/games", "Two Hours In", "Games — whether one survives its first week with you.",
+    catalog.provider ? catalog.provider.toUpperCase() : "A game catalog", catalog.connected, catalog.missing)}
+  <p class="note">Claude: ${llm.configured() ? `${llm.defaults.model}` : "NOT configured — set ANTHROPIC_API_KEY"}.
+  ${APP_TOKEN ? "Access token required." : "No access token set — anyone with this URL can spend your API credit."}</p>
+</div>`;
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   try {
     if (url.pathname.startsWith("/api/")) return await handleApi(req, res, url);
+    /* The root is a signpost, not one of the apps. Serving one of them here
+     * makes the other look missing, and makes the whole deployment look like
+     * whichever app happened to be at "/". */
     if (url.pathname === "/" || url.pathname === "/index.html") {
+      return send(res, 200, indexPage(), "text/html; charset=utf-8");
+    }
+    if (url.pathname === "/games" || url.pathname === "/games/") {
       const html = await fs.readFile(APP_HTML, "utf8");
       return send(res, 200, html, "text/html; charset=utf-8");
     }
@@ -278,9 +323,9 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   const line = s => console.log(`  ${s}`);
-  console.log(`\nTwo Hours In — http://localhost:${PORT}\n`);
-  console.log(`  games     http://localhost:${PORT}/`);
-  console.log(`  screen    http://localhost:${PORT}/holds\n`);
+  console.log(`\nhttp://localhost:${PORT}\n`);
+  console.log(`  Will It Hold  http://localhost:${PORT}/holds    (shows and films)`);
+  console.log(`  Two Hours In  http://localhost:${PORT}/games    (games)\n`);
   line(`catalog   games: ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
   line(`          screen: ${screenCatalog.connected ? "tmdb connected" : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
   line(`ratings   ${llm.configured() ? `${llm.defaults.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);

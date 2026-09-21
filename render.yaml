@@ -2,7 +2,7 @@
 # the keys themselves are entered in Render's dashboard, never in this file.
 services:
   - type: web
-    name: two-hours-in
+    name: hold-and-play   # serves both apps: /holds and /games
     runtime: docker
     dockerfilePath: ./server/Dockerfile
     dockerContext: .
