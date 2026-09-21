@@ -20,13 +20,10 @@ services:
         sync: false
       - key: APP_TOKEN
         sync: false
-      # Optional — only if you also want the games app's catalog.
-      - key: CATALOG_PROVIDER
-        value: igdb
-      - key: IGDB_CLIENT_ID
-        sync: false
-      - key: IGDB_CLIENT_SECRET
-        sync: false
+      # The games app's catalog (IGDB or RAWG) is deliberately left out: it is
+      # optional, and listing it here makes Render demand a value before it will
+      # deploy. Add CATALOG_PROVIDER and its credentials later in the dashboard
+      # if you want it; TMDb and Will It Hold do not need them.
       - key: DATA_DIR
         value: /data
       - key: PORT
