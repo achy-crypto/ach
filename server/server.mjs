@@ -7,6 +7,7 @@
 
 import http from "node:http";
 import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { makeCatalog } from "./catalog.mjs";
@@ -35,10 +36,16 @@ async function loadEnv() {
 const env = await loadEnv();
 const PORT = Number(env.PORT || 8787);
 const DATA_DIR = path.resolve(here, env.DATA_DIR || "./data");
-const APP_HTML = path.resolve(here, env.APP_HTML || "../games/index.html");
+/* Each app is looked for in every place a build might have put it, so one
+ * missed COPY or env var cannot take a page down on its own. */
+function firstExisting(...candidates) {
+  const list = candidates.filter(Boolean).map(c => path.resolve(here, c));
+  return list.find(p => existsSync(p)) || list[0];
+}
+const APP_HTML = firstExisting(env.APP_HTML, "/app/app/games.html", "../games/index.html", "./games.html");
 const APP_TOKEN = (env.APP_TOKEN || "").trim();
 
-const APP_HTML_HOLDS = path.resolve(here, env.APP_HTML_HOLDS || "../holds/index.html");
+const APP_HTML_HOLDS = firstExisting(env.APP_HTML_HOLDS, "/app/app/holds.html", "../holds/index.html", "./holds.html");
 
 const llm = makeLLM(env);
 const catalog = makeCatalog(env);                 // games — IGDB / RAWG
@@ -256,6 +263,17 @@ async function handleApi(req, res, url) {
   return fail(res, 404, "No such endpoint.");
 }
 
+function missingPage(name, where) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${name} — not in this build</title>
+<body style="font:16px/1.5 system-ui,sans-serif;max-width:540px;margin:40px auto;padding:0 18px">
+<h1 style="font-size:22px">${name} isn't in this build</h1>
+<p>The server is running, but the page file for ${name} wasn't copied into it. This is a
+deploy problem, not a problem with your data — nothing has been lost.</p>
+<p><b>Fix:</b> in Render, open this service and press <b>Manual Deploy → Deploy latest commit</b>.</p>
+<p style="color:#777;font-size:13px">Looked for: <code>${where}</code></p></body>`;
+}
+
 function indexPage() {
   const card = (href, name, what, cat, ok, missing) => `
     <a class="card" href="${href}">
@@ -306,10 +324,12 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, indexPage(), "text/html; charset=utf-8");
     }
     if (url.pathname === "/games" || url.pathname === "/games/") {
+      if (!existsSync(APP_HTML)) return send(res, 500, missingPage("Two Hours In", APP_HTML), "text/html; charset=utf-8");
       const html = await fs.readFile(APP_HTML, "utf8");
       return send(res, 200, html, "text/html; charset=utf-8");
     }
     if (url.pathname === "/holds" || url.pathname === "/holds/") {
+      if (!existsSync(APP_HTML_HOLDS)) return send(res, 500, missingPage("Will It Hold", APP_HTML_HOLDS), "text/html; charset=utf-8");
       const html = await fs.readFile(APP_HTML_HOLDS, "utf8");
       return send(res, 200, html, "text/html; charset=utf-8");
     }
