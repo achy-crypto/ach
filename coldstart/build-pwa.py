@@ -7,11 +7,11 @@ and a service worker that caches the shell for genuine offline use.
 
     python3 build-pwa.py
 """
-import os, re, struct, zlib
+import hashlib, os, re, struct, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT  = os.path.join(os.path.dirname(HERE), "docs")
-CACHE_NAME = "coldstart-v1"
+
 
 INK, AMBER = (0x15, 0x18, 0x1D), (0xF0, 0xA0, 0x57)
 
@@ -66,6 +66,8 @@ HEAD = """<!doctype html>
 <body>
 """
 
+ADDONS = ["spark.js", "language.js"]
+
 REGISTER = """
 <script>
 /* Registered last so a failure here can never stop the app booting. */
@@ -73,13 +75,22 @@ if ("serviceWorker" in navigator) {
   addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
 </script>
+<script src="./spark.js"></script>
+<script src="./language.js"></script>
 </body>
 </html>
 """
 
-SW = """/* Cold Start — cache-first shell so it opens with no signal at all. */
-const CACHE = "%s";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
+SW_TEMPLATE = """/* Cold Start — offline shell.
+
+   The cache name carries the build id, so a new build installs a fresh
+   cache and the activate handler drops every older one. Navigations go to
+   the network first and fall back to the cache, so an online visit always
+   gets the current page instead of whatever was cached first; everything
+   else stays cache-first for speed and for no-signal use. */
+const BUILD = "__BUILD__";
+const CACHE = "coldstart-" + BUILD;
+const SHELL = ["./", "./index.html", "./spark.js", "./language.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -91,25 +102,44 @@ self.addEventListener("activate", (e) => {
     .then(() => self.clients.claim()));
 });
 
+const isPage = (req) =>
+  req.mode === "navigate" || (req.destination === "document") || /\/(index\.html)?$/.test(new URL(req.url).pathname);
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+
+  if (isPage(req)) {
+    /* Fresh when there is a connection, cached when there is not. */
+    /* cache: "reload" so the browser's own HTTP cache cannot hand back the
+       stale page underneath us — that defeats the whole point. */
+    e.respondWith(
+      fetch(new Request(req.url, { cache: "reload", credentials: "same-origin" })).then((res) => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put("./index.html", copy)).catch(() => {});
+        }
+        return res;
+      }).catch(() => caches.match("./index.html", { ignoreSearch: true })
+        .then((hit) => hit || caches.match("./", { ignoreSearch: true })))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(req, { ignoreSearch: true }).then((hit) => {
       if (hit) return hit;
       return fetch(req).then((res) => {
-        /* Cache what comes back, web fonts included — they're opaque
-           cross-origin responses but they replay fine. */
         if (res && (res.ok || res.type === "opaque")) {
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         }
         return res;
-      }).catch(() => (req.mode === "navigate" ? caches.match("./index.html") : Response.error()));
+      }).catch(() => Response.error());
     })
   );
 });
-""" % CACHE_NAME
+"""
 
 MANIFEST = """{
   "name": "Cold Start",
@@ -130,13 +160,31 @@ MANIFEST = """{
 """
 
 
+def build_id():
+    """Short content hash, so every real change busts the cache."""
+    h = hashlib.sha256()
+    for name in ["index.html"] + ADDONS:
+        path = os.path.join(HERE, name)
+        if os.path.exists(path):
+            h.update(open(path, "rb").read())
+    return h.hexdigest()[:10]
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
+    bid = build_id()
     app = open(os.path.join(HERE, "index.html"), encoding="utf-8").read()
-    open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(HEAD + app + REGISTER)
-    open(os.path.join(OUT, "sw.js"), "w", encoding="utf-8").write(SW)
+    stamp = '<script>window.__BUILD__=%r;</script>\n' % bid
+    open(os.path.join(OUT, "index.html"), "w", encoding="utf-8").write(HEAD + stamp + app + REGISTER)
+    open(os.path.join(OUT, "sw.js"), "w", encoding="utf-8").write(SW_TEMPLATE.replace("__BUILD__", bid))
+    print("  build id: %s" % bid)
     open(os.path.join(OUT, "manifest.webmanifest"), "w", encoding="utf-8").write(MANIFEST)
     open(os.path.join(OUT, ".nojekyll"), "w").write("")
+    for name in ADDONS:                      # user-authored, copied verbatim
+        src = os.path.join(HERE, name)
+        if os.path.exists(src):
+            open(os.path.join(OUT, name), "w", encoding="utf-8").write(
+                open(src, encoding="utf-8").read())
     for n in (192, 512):
         png(n, os.path.join(OUT, "icon-%d.png" % n))
     for f in sorted(os.listdir(OUT)):
