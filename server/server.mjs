@@ -214,11 +214,11 @@ async function handleApi(req, res, url) {
 
     /* Facts come from the catalog here, never from the caller, so a client
      * cannot pass off invented runtimes as catalog records. */
-    const titles = [];
-    for (const t of want) {
+    // Looked up side by side: twelve TMDb fetches in a row was needless waiting.
+    const titles = (await Promise.all(want.map(async t => {
       const id = String((t && t.id) || "").trim();
       const title = String((t && t.title) || "").trim();
-      if (!id || !title) continue;
+      if (!id || !title) return null;
       let facts = {};
       if (screenCatalog.connected && /^tmdb:/.test(id)) {
         const known = store.getScreen(id);
@@ -227,8 +227,8 @@ async function handleApi(req, res, url) {
           if (row) { await store.putScreen([row]); facts = row.meta; } } catch (e) {
           console.warn("[screen] lookup failed for", id, e.message); } }
       }
-      titles.push({ id, title, kind: (t && t.kind) || (facts && facts.kind) || "show", facts });
-    }
+      return { id, title, kind: (t && t.kind) || (facts && facts.kind) || "show", facts };
+    }))).filter(Boolean);
     if (!titles.length) return fail(res, 400, "Nothing usable in that list.");
     const placed = await screenRater.place(titles, scale);
     return send(res, 200, {

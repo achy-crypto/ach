@@ -321,8 +321,23 @@ export function makeScreenRater(client, model, fallbackModel, effort, betas, par
     async place(titles, scale, { batchSize = 4 } = {}) {
       const hasFacts = titles.some(t => t.facts && Object.keys(t.facts).length);
       const out = [];
-      for (let i = 0; i < titles.length; i += batchSize) {
-        const slice = titles.slice(i, i + batchSize);
+      const slices = [];
+      for (let i = 0; i < titles.length; i += batchSize) slices.push(titles.slice(i, i + batchSize));
+      /* The batches run side by side rather than one after another: three in a
+       * row at high effort is minutes of waiting, long enough for a phone or a
+       * proxy to give up on the request. And one batch failing costs only that
+       * batch — the others still come back. */
+      const results = await Promise.allSettled(slices.map(slice => placeSlice(slice)));
+      const failures = [];
+      results.forEach((r, i) => {
+        if (r.status === "fulfilled") out.push(...r.value);
+        else { failures.push(r.reason); console.error("[screen] a placement batch failed:", r.reason && (r.reason.stack || r.reason.message || r.reason)); }
+      });
+      if (!out.length && failures.length) throw failures[0];
+      return out;
+
+      async function placeSlice(slice) {
+        const out = [];
         const prompt = `Work out, for each of these, whether this person would actually get through it.
 
 ${DOCTRINE}
@@ -376,8 +391,8 @@ ${slice.map((t, n) => `${n + 1}. ${factsLine(t)}`).join("\n\n")}`;
             },
           });
         });
+        return out;
       }
-      return out;
     },
   };
 }

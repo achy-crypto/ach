@@ -385,14 +385,36 @@ function placedScore(r){if(!r)return 1;const p=r.placement;
   const direct=Number(r.scaleScore);if(Number.isFinite(direct))return clamp(direct,1,10);
   return fallbackComposite(r.scores)}
 
-function errCopy(e){const c=e&&e.code;
+/* Every failure is kept — where, code, message — so a report says what broke
+ * instead of "that didn't go through". Shown under Your scale. */
+let lastError=null;
+function noteError(where,e,ms){
+  lastError={where,at:Date.now(),code:(e&&e.code)||"",
+    message:String((e&&e.message)||e||"").slice(0,300),seconds:ms?Math.round(ms/1000):null};
+  try{localStorage.setItem("holds:lastError",JSON.stringify(lastError))}catch(x){}
+  return errCopy(e,ms)}
+
+function errCopy(e,ms){const c=e&&e.code,msg=String((e&&e.message)||"");
   if(c==="not_granted"||c==="sampling_disabled"||c==="not_declared"||c==="capability_disabled")
     return"This page can't reach Claude. Open it from your Claude account and allow it.";
-  if(c==="rate_limited")return"Too many requests, or you've hit your usage limit. Give it a minute.";
+  if(c==="rate_limited"||/rate.?limit|429|overloaded|529/i.test(msg))
+    return"Too many requests, or the API is busy. Give it a minute and try again.";
   if(c==="session_expired")return"Session expired. Sign in again, then retry.";
-  if(c==="invalid_json")return"The reply came back malformed. Try again.";
+  if(c==="invalid_json"||c==="invalid_output")return"The reply came back malformed. Try again.";
   if(c==="refused")return"Claude declined that one. Try a different title.";
-  return"That didn't go through. Try again."}
+  if(c==="needs_token")return"This server needs its access token again.";
+  if(c==="no_api_key"||/ANTHROPIC_API_KEY/.test(msg))return"The server has no Anthropic key set, so it can't place anything.";
+  if(/credit|billing|balance/i.test(msg))return"The Anthropic account behind this server is out of credit.";
+  if(/authentication|invalid x-api-key|401/i.test(msg))return"The server's Anthropic key was rejected — check it in Render's Environment tab.";
+  if(/TMDb failed \(401\)/.test(msg))return"The server's TMDb key was rejected — check TMDB_API_KEY in Render's Environment tab.";
+  if(/fetch failed|ECONNREFUSED|ENOTFOUND|ETIMEDOUT|socket hang up/i.test(msg))
+    return"The server couldn't reach TMDb or Anthropic just now. Try again in a minute.";
+  // A fetch that dies with no response is the connection, not the server saying no.
+  if(!c&&e instanceof TypeError)
+    return ms&&ms>45000
+      ? `The connection dropped after ${Math.round(ms/1000)} seconds — it took too long. Try again; it's faster now.`
+      : "Couldn't reach the server. Check your connection and try again.";
+  return`That didn't go through${msg?": "+msg.slice(0,160):c?" ("+c+")":""}.`}
 
 function saveLine(title,done){const s=saveStatus[title];
   if(s==="saving")return`<div class="status" style="margin-top:9px"><span class="dot"></span>Saving…</div>`;
@@ -566,7 +588,7 @@ async function doRead(){
         reading=readings[0];
       }
       await saveState()}
-    catch(e){readErr=errCopy(e)}
+    catch(e){readErr=noteError("check",e)}
     readBusy=false;return render()}
 
   if(!sample){readErr="This page can't reach Claude from here. Open it from your Claude account.";return render()}
@@ -626,7 +648,7 @@ async function openTitle(id){
     if(!readings.length)throw{code:"empty",message:"nothing came back for that title"};
     reading=readings[0];
     await saveState()}
-  catch(e){readErr=errCopy(e)}
+  catch(e){readErr=noteError("check",e)}
   readBusy=false;render()}
 
 /* ---------- FIND ---------- */
@@ -642,7 +664,7 @@ function findPanel(){
     <div class="seg" style="margin-top:16px">
       <button class="go" data-act="find" ${findBusy?"disabled":""}>${findBusy?"Looking":"Find something"}</button>
     </div>`;
-  if(findBusy)h+=`<div class="status"><span class="dot"></span>Finding things you'd get through.</div>`;
+  if(findBusy)h+=`<div class="status"><span class="dot"></span>${catalogOn()?"Pulling candidates from TMDb and placing them on your scale — this can take a minute.":"Finding things you'd get through."}</div>`;
   if(findErr)h+=`<div class="err">${esc(findErr)}</div>`;
   if(picks.length){
     h+=`<div class="sheet">`;
@@ -671,6 +693,7 @@ async function doFind(){
   findBusy=true;findErr="";picks=[];render();ctl=new AbortController();
 
   if(catalogOn()){
+    const t0=Date.now();
     try{
       const out=await api("/api/screen/discover?form="+encodeURIComponent(form)
         +"&offset="+findOffset);
@@ -695,7 +718,7 @@ async function doFind(){
       if(!picks.length)notes.push("Nothing cleared it. Lower the floor, or look again.");
       else{state.seen=state.seen.concat(picks.map(p=>p.id)).slice(-400);await saveState()}
       findErr=notes.join(" ")}
-    catch(e){findErr=errCopy(e)}
+    catch(e){findErr=noteError("find",e,Date.now()-t0)}
     findBusy=false;return render()}
 
   const st=(STATES.find(s=>s[0]===mood)||[])[2]||"";
@@ -834,8 +857,23 @@ function calPanel(){
       <button class="go" data-act="addanch">Add</button></div>
     ${addErr?`<div class="err">${esc(addErr)}</div>`:""}
     ${saveStatus.anchors==="ok"&&justAdded?`<div class="saved">Added. It's the ruler now.</div>`:""}
+    ${failureLine()}
     ${storageLine()}`;
   return h}
+
+function failureLine(){
+  if(!lastError)try{lastError=JSON.parse(localStorage.getItem("holds:lastError")||"null")}catch(e){}
+  if(!lastError)return"";
+  const le=lastError;
+  return`<h2 class="sec">Last failure</h2>
+    <p class="subtle">Kept so it can be reported exactly. Nothing is sent anywhere.</p>
+    <div class="tw"><table><tbody>
+      <tr><td>Where</td><td>${esc(le.where)}${le.seconds!=null?` · after ${le.seconds}s`:""}</td></tr>
+      <tr><td>Code</td><td>${esc(le.code||"(none)")}</td></tr>
+      <tr><td>Message</td><td>${esc(le.message||"(none)")}</td></tr>
+      <tr><td>When</td><td>${esc(new Date(le.at).toLocaleString())}</td></tr>
+    </tbody></table></div>
+    <div class="seg"><button data-act="clearerr">Clear it</button></div>`}
 
 function storageLine(){
   const cloud=HOST.mode==="server"
@@ -865,6 +903,7 @@ document.addEventListener("click",ev=>{
   if(t.classList.contains("tab")){tab=t.dataset.tab;addErr="";return render()}
   const act=t.dataset.act,v=t.dataset.v;
   if(act==="read")return void doRead();
+  if(act==="clearerr"){lastError=null;try{localStorage.removeItem("holds:lastError")}catch(e){}return render()}
   if(act==="pick")return void openTitle(t.dataset.id);
   if(act==="savetok"){const el=document.getElementById("tok");
     HOST.token=((el&&el.value)||"").trim();
