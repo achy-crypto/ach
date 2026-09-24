@@ -81,6 +81,28 @@ mark.stock{background:var(--stock-t);border-color:var(--stock)}
 mark.hedge{background:var(--hedge-t);border-color:var(--hedge)}
 mark.tells{background:var(--tells-t);border-color:var(--tells)}
 mark.rhythm{background:transparent;border-bottom:2px dotted var(--rhythm)}
+:root{--loop:var(--economy);--beats:var(--stock);--names:var(--hedge);--openers:var(--clarity);--tags:var(--tells);--shape:var(--rhythm)}
+mark.loop{background:var(--economy-t);border-color:var(--economy)}
+mark.beats{background:var(--stock-t);border-color:var(--stock)}
+mark.names{background:var(--hedge-t);border-color:var(--hedge)}
+mark.openers{background:var(--clarity-t);border-color:var(--clarity)}
+mark.tags{background:var(--tells-t);border-color:var(--tells)}
+mark.shape{background:transparent;border-bottom:2px dotted var(--rhythm)}
+.tabs{flex-wrap:nowrap}
+@media (max-width:430px){.tabs button{padding:10px 11px;font-size:13.5px}}
+select{width:100%;background:var(--sheet);color:var(--ink);border:1px solid var(--rule);border-radius:4px;font:15px var(--sans);padding:10px 12px;min-height:44px}
+.ideas{display:grid;gap:10px;margin-top:10px}
+.idea{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:12px 14px}
+.idea.kept{border-color:var(--good);box-shadow:inset 3px 0 0 var(--good)}
+.idea.passed{opacity:.5}
+.idea .it{font:600 18px/1.3 var(--serif);margin-top:4px}
+.idea .ip{font:16px/1.55 var(--serif);margin-top:4px}
+.idea .why{font-size:13.5px;color:var(--dim);margin-top:6px}
+.iflag{font:11.5px var(--mono);color:var(--bad);margin-top:6px}
+.ghost.sm{min-height:36px;padding:6px 12px;font-size:13.5px}
+.ghost[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.obv{margin:6px 0 0;padding-left:20px}
+.intro code{font:13px var(--mono);background:var(--soft);padding:1px 4px;border-radius:3px}
 mark.quote{background:transparent;outline:1.5px dashed var(--ink);outline-offset:1px;border:0}
 mark.on{box-shadow:0 0 0 2px var(--ink)}
 .legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
@@ -142,11 +164,13 @@ pre{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;paddi
 <div class="wrap">
   <header>
     <div><h1>Galley</h1>
-      <p>Marks up prose and prompts with checks you can trace to a source, then gives a blind critique that has to quote its evidence.</p></div>
+      <p>Marks up prose, prompts and AI-written stories with checks you can trace to a source, then gives a blind critique that has to quote its evidence.</p></div>
   </header>
   <div class="tabs" role="tablist">
     <button role="tab" data-tab="prose" aria-selected="true">Prose</button>
     <button role="tab" data-tab="prompt" aria-selected="false">Prompt</button>
+    <button role="tab" data-tab="story" aria-selected="false">Story</button>
+    <button role="tab" data-tab="ideas" aria-selected="false">Ideas</button>
     <button role="tab" data-tab="build" aria-selected="false">Build</button>
   </div>
   <main id="main"></main>
@@ -173,6 +197,12 @@ const SRC={
   repeat:"Editing practice — a word used three times in a short stretch gets noticed",
   tells:"Patterns overrepresented in model-written prose. A pattern, not proof: people write these too",
   audit:"Anthropic's prompt-audit guidance for current Claude models",
+  degeneration:"Holtzman et al., “The Curious Case of Neural Text Degeneration” (ICLR 2020) — likelihood-driven decoding falls into repetition loops",
+  slop:"Community ban lists for AI fiction (e.g. the Antislop project's phrase lists) — phrases story models overproduce. A pattern, not proof",
+  openers:"Editing practice — sentences that keep starting the same way read as a list; Provost: vary the pattern",
+  shape:"Editing practice — a passage shape repeated every turn becomes a template the reader sees coming",
+  leonard:"Elmore Leonard, 10 Rules of Writing — rule 3: never use a verb other than “said” to carry dialogue; rule 4: never use an adverb to modify “said”",
+  names:"Names that recur across unrelated AI-written stories. A pattern, not proof",
 };
 
 const CAT={
@@ -446,6 +476,223 @@ function dedupe(f){
   return out}
 
 /* ==========================================================================
+   STORY ANALYSIS — where an AI story engine loops. Likelihood-driven decoding
+   drifts back onto phrases it has already produced (Holtzman et al.), so the
+   core check is plain counting: which word runs has this story already used?
+   Everything here is local; nothing is sent anywhere.
+   ========================================================================== */
+
+const SCAT={
+  loop:{name:"Repeats itself",desc:"Word runs the story has already used"},
+  beats:{name:"Stock AI beats",desc:"Reactions and phrases story models overproduce"},
+  openers:{name:"Same openings",desc:"Sentences or passages that keep starting the same way"},
+  shape:{name:"Same shape",desc:"Passages that end the same way; trailing “, her voice …ing” clauses"},
+  tags:{name:"Fancy dialogue tags",desc:"Murmured, purred, breathed — where “said” would disappear"},
+  names:{name:"Default names",desc:"Names story models reach for when nobody chose one"},
+};
+
+const STORY_BEATS=[
+  [/\bshivers? (?:ran |run |running |went |sent )?(?:down|up) (?:\w+ )?spine\b/gi,"Shiver down the spine"],
+  [/\bbreath (?:that )?(?:\w+ )?(?:didn'?t|didn’t|did not|hadn'?t|hadn’t) (?:even )?(?:know|reali[sz]e) (?:\w+ )?(?:was|were|had been) holding\b/gi,"The breath they didn't know they were holding"],
+  [/\b(?:barely|just|little more than) above a whisper\b/gi,"Barely above a whisper"],
+  [/\bthe air (?:was |grew |hung |felt |seemed )?(?:thick|heavy|electric|charged|alive) with\b/gi,"The air thick with…"],
+  [/\ba (?:mix|mixture|blend|cocktail) of \w+ and \w+\b/gi,"A mix of X and Y"],
+  [/\b(?:a )?(?:flicker|glimmer|hint|pang|surge|wave|jolt|spark|twinge) of (?:\w+ )?(?:fear|hope|anger|guilt|excitement|amusement|annoyance|recognition|surprise|curiosity|something|mischief|regret|sadness|pride|relief|doubt|concern|determination|longing|desire|jealousy|unease|panic|emotion)\b/gi,"A flicker of [emotion]"],
+  [/\beyes (?:widened|widening|widen|narrowed|narrowing|sparkl\w*|gleam\w*|glint\w*|twinkl\w*|darken\w*|softened|softening)\b/gi,"Eyes widened / glinted / sparkled"],
+  [/\bsmirk (?:played|playing|tugged|tugging|danced|dancing|spread|spreading|formed|forming) (?:on|at|across)\b/gi,"A smirk playing on the lips"],
+  [/\b(?:her|his|their|my|your) (?:lips|mouth) (?:curl\w*|quirk\w*|twitch\w*|tugg?\w*)\b/gi,"Lips curled / quirked"],
+  [/\bheart (?:pounding|pounded|pounds|raced|racing|races|skipped a beat|skipping a beat|hammer\w*|thudd\w*)\b/gi,"Heart pounding / racing"],
+  [/\bcouldn['’]?t help but\b/gi,"Couldn't help but…"],
+  [/\blittle did (?:he|she|they|I|we|you|\w+) know\b/gi,"Little did they know"],
+  [/\bwhat (?:felt|seemed) like (?:an eternity|hours|forever|a lifetime)\b/gi,"What felt like an eternity"],
+  [/\btime (?:seemed to |itself )?(?:stood still|stand still|stopped|slowed)\b/gi,"Time stood still"],
+  [/\bevery (?:fiber|fibre) of (?:\w+ )?being\b/gi,"Every fibre of their being"],
+  [/\ba testament to\b/gi,"A testament to"],
+  [/\bonly time (?:would|will) tell\b/gi,"Only time would tell"],
+  [/\b(?:adventure|journey|story) (?:had |has )?only just begun\b|\bwas (?:only |just )?the beginning\b/gi,"The adventure had only just begun"],
+  [/\bmaybe,? just maybe\b/gi,"Maybe, just maybe"],
+  [/\b(?:padded|sauntered) (?:over|across|towards?|into)\b/gi,"Padded / sauntered over"],
+  [/\b(?:ministrations|orbs)\b/gi,"Ministrations / orbs"],
+  [/\bknuckles (?:turning |turned |going )?white\b/gi,"White knuckles"],
+  [/\bjaw (?:clench\w*|tighten\w*)\b/gi,"Jaw clenched"],
+  [/\b(?:bit|biting|bites|chewed|chewing) (?:on )?(?:her|his|their|my|your) (?:lower )?lip\b/gi,"Bit their lip"],
+  [/\bsomewhere (?:in the distance|far off|nearby|outside),? (?:a|an) \w+(?: \w+)? (?:barked|howled|cawed|called|hooted|ticked|chimed|tolled|rang)\b/gi,"Somewhere in the distance, a dog barked"],
+  [/\bthe (?:rest of the )?world (?:seemed to )?(?:fade|fall|melt|narrow)\w* away\b/gi,"The world faded away"],
+  [/\b(?:comfortable|companionable|pregnant|deafening|heavy) silence\b/gi,"A heavy / pregnant silence"],
+  [/\b(?:voice|tone|words) (?:dripping|laced|thick|heavy) with\b/gi,"Voice dripping with…"],
+  [/\b(?:electricity|sparks?|a jolt|a current) (?:shot|ran|danced|flew|coursed|surged)\b/gi,"Sparks ran through"],
+  [/\b(?:let|lets|letting) out (?:a|the) (?:breath|shaky breath|sigh)\b/gi,"Let out a breath"],
+  [/\bshadows (?:danced|dancing|played|playing)\b/gi,"Shadows danced"],
+  [/\b(?:can['’]?t|couldn['’]?t) shake the feeling\b/gi,"Couldn't shake the feeling"],
+  [/\b(?:their|our) eyes (?:locked|met)\b|\bgazes? (?:locked|met)\b/gi,"Their eyes met"],
+  [/\b(?:washed|washing|washes) over (?:her|him|them|me|you)\b/gi,"Washed over them"],
+  [/\bmischie(?:f|vous\w*)\b/gi,"Mischief / mischievous"],
+];
+
+const TAG_VERBS="murmured|whispered|breathed|purred|growled|hissed|chuckled|smirked|laughed|sighed|snapped|drawled|quipped|teased|mused|intoned|exclaimed|retorted|stammered|rasped|crooned|cooed|grinned|smiled|husked";
+const DEFAULT_NAMES=["Elara","Lyra","Kael","Seraphina","Thorne","Zephyr","Eldoria","Whisperwood","Aurelia","Cassian","Lysander","Isolde",
+  "Evangeline","Aldric","Eldric","Silas","Elias","Orion","Nyx","Vesper","Rowan","Valeria","Kira","Aria","Ravenwood","Blackwood",
+  "Shadowmere","Willowbrook","Oakhaven","Eryndor","Sarah Chen","Dr. Chen","Marcus Thorne","Lila","Finn","Jaxon"];
+const NOT_ING=new Set(["nothing","something","everything","anything","king","morning","evening","spring","ceiling","building",
+  "thing","ring","wing","sibling","darling","being","string","sting","swing","bring","during","feeling","meaning","ending","beginning"]);
+
+// Split into passages at blank lines (or lines, if there are none). Lines
+// starting with ">" are the player's turns and are left out of the counts.
+function storyPassages(text){
+  const out=[];const blank=/\n[ \t]*\n/.test(text);
+  const re=blank?/\n[ \t]*\n/g:/\n/g;let last=0,m;
+  const push=(s,e)=>{let chunk=text.slice(s,e);if(!chunk.trim())return;
+    let at=s+chunk.search(/\S/);chunk=chunk.trim();
+    while(/^>/.test(chunk)){const nl=chunk.indexOf("\n");const line=nl<0?chunk:chunk.slice(0,nl);
+      out.push({start:at,end:at+line.length,text:line,player:true});
+      if(nl<0)return;const rest=chunk.slice(nl);const skip=rest.search(/\S/);if(skip<0)return;
+      at+=nl+skip;chunk=rest.trim()}
+    out.push({start:at,end:at+chunk.length,text:chunk,player:false})};
+  while((m=re.exec(text))){push(last,m.index);last=m.index+m[0].length}
+  push(last,text.length);return out}
+
+function storyTokens(passages){
+  const toks=[];passages.forEach((p,pi)=>{const re=/[A-Za-z0-9][A-Za-z0-9'’]*/g;let m;
+    while((m=re.exec(p.text)))toks.push({w:m[0].toLowerCase().replace(/’/g,"'"),start:p.start+m.index,end:p.start+m.index+m[0].length,p:pi})});
+  return toks.slice(0,20000)}
+const contentWord=w=>w.length>=3&&!STOP.has(w);
+
+// Every run of 3+ words the story uses more than once, longest first, so a
+// repeated sentence shows as one repeat rather than a pile of overlapping ones.
+function repeatedRuns(T){
+  const claimed=new Uint8Array(T.length);const groups=[];
+  for(let n=10;n>=3;n--){
+    const map=new Map();
+    for(let i=0;i+n<=T.length;i++){if(T[i].p!==T[i+n-1].p)continue;
+      const key=T.slice(i,i+n).map(t=>t.w).join(" ");const a=map.get(key);if(a)a.push(i);else map.set(key,[i])}
+    const need=n>=4?2:3;
+    for(const [key,occ] of map){
+      if(occ.length<need)continue;
+      if(key.split(" ").filter(contentWord).length<(n>=5?1:2))continue;
+      const apart=[];for(const i of occ)if(!apart.length||i>=apart[apart.length-1]+n)apart.push(i);
+      if(apart.length<need)continue;
+      const free=apart.filter(i=>{for(let k=i;k<i+n;k++)if(claimed[k])return false;return true});
+      if(!free.length)continue;
+      for(const i of free)for(let k=i;k<i+n;k++)claimed[k]=1;
+      groups.push({key,n,count:apart.length,occ:free})}}
+  return groups}
+
+// seq-rep-n (Welleck et al.): the share of n-word runs that already appeared earlier.
+function seqRep(T,n){let rep=0,tot=0;const seen=new Set();
+  for(let i=0;i+n<=T.length;i++){if(T[i].p!==T[i+n-1].p)continue;
+    const k=T.slice(i,i+n).map(t=>t.w).join(" ");tot++;if(seen.has(k))rep++;else seen.add(k)}
+  return tot?rep/tot:0}
+function distinctN(T,n){const all=new Set();let tot=0;
+  for(let i=0;i+n<=T.length;i++){if(T[i].p!==T[i+n-1].p)continue;all.add(T.slice(i,i+n).map(t=>t.w).join(" "));tot++}
+  return tot?all.size/tot:1}
+
+// Phrases in `passage` that already appear in `context` (or earlier in the
+// passage itself). Used to check a rewrite, so the model's word isn't needed.
+function repeatsAgainst(context,passage){
+  const tok=s=>(s.match(/[A-Za-z0-9][A-Za-z0-9'’]*/g)||[]).map(w=>w.toLowerCase().replace(/’/g,"'"));
+  const c=tok(context),p=[];const re=/[A-Za-z0-9][A-Za-z0-9'’]*/g;let m;
+  while((m=re.exec(passage)))p.push({w:m[0].toLowerCase().replace(/’/g,"'"),start:m.index,end:m.index+m[0].length});
+  const seen=new Set();for(let i=0;i+4<=c.length;i++)seen.add(c.slice(i,i+4).join(" "));
+  const hit=new Uint8Array(p.length);
+  for(let i=0;i+4<=p.length;i++){const k=p.slice(i,i+4).map(t=>t.w).join(" ");
+    if(seen.has(k))for(let j=i;j<i+4;j++)hit[j]=1;seen.add(k)}
+  const runs=[];for(let i=0;i<p.length;){if(!hit[i]){i++;continue}let j=i;while(j<p.length&&hit[j])j++;
+    const ws=p.slice(i,j).map(t=>t.w);if(ws.filter(contentWord).length>=2)runs.push(passage.slice(p[i].start,p[j-1].end));i=j}
+  return runs}
+function beatsIn(text){const out=[];for(const [re,label] of STORY_BEATS){re.lastIndex=0;let m;while((m=re.exec(text)))out.push({hit:m[0],label})}return out}
+
+function endingType(s){
+  if(/\b(?:what (?:do|will|would|should) you do|what(?:'s| is) your (?:next )?move|how do you respond|what do you (?:say|choose|decide))\b/i.test(s))return"ask the player what to do";
+  if(/\b(?:only just begun|little did|had no idea|about to change|would never be the same|only time would tell|what (?:lay|lies) ahead|was (?:only |just )?the beginning|whatever (?:the future|lay ahead)|something (?:was|is) (?:coming|wrong|about to))\b/i.test(s))return"end on a foreshadowing hook";
+  if(/\?["”’]?$/.test(s))return"end on a question";
+  if(/(?:\.\.\.|…)["”’]?$/.test(s))return"trail off with an ellipsis";
+  if(/^(?:As|And as|For now|In that moment|For the first time)\b/.test(s))return"end on a reflective wrap-up";
+  return""}
+
+function analyzeStory(text){
+  const f=[];const ps=storyPassages(text);const ai=ps.filter(p=>!p.player);
+  const T=storyTokens(ai);
+  const inAI=pos=>ai.some(p=>pos>=p.start&&pos<p.end);
+
+  // 1. the loops
+  const groups=repeatedRuns(T);
+  for(const g of groups){g.occ.forEach((i,k)=>{
+    f.push({start:T[i].start,end:T[i+g.n-1].end,cat:"loop",dup:k>0,group:g.key,
+      msg:`Used ${g.count} times in this story`,
+      fix:"Each time this moment comes back, show it through something new: an action, a detail of the place, what the character says.",
+      src:SRC.degeneration,conf:g.n>=5||g.count>=3?"high":"medium"})})}
+
+  // 2. stock beats
+  for(const [re,label] of STORY_BEATS){re.lastIndex=0;let m;const hits=[];
+    while((m=re.exec(text)))if(inAI(m.index))hits.push(m);
+    hits.forEach((m,k)=>f.push({start:m.index,end:m.index+m[0].length,cat:"beats",dup:k>0,
+      msg:hits.length>1?`${label} — ${hits.length} times`:label,fix:"Replace the stock reaction with one only this character, in this place, would have.",src:SRC.slop,conf:"medium"}))}
+
+  // 3. openings
+  const sents=[];ai.forEach((p,pi)=>{for(const s of sentences(p.text))sents.push({start:p.start+s.start,end:p.start+s.end,text:s.text,p:pi})});
+  const narr=sents.filter(s=>!/^["“]/.test(s.text));
+  const first=s=>{const m=/^[^A-Za-z0-9]*([A-Za-z0-9'’]+)/.exec(s.text);return m?{w:m[1],at:s.start+m.index+m[0].length-m[1].length}:null};
+  const counts={},shown={};for(const s of narr){const o=first(s);if(o){const k=o.w.toLowerCase();counts[k]=(counts[k]||0)+1;shown[k]=shown[k]||o.w}}
+  const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]||["",0];
+  const topShare=narr.length?top[1]/narr.length:0;
+  if(narr.length>=8&&top[1]>=5&&topShare>=.3&&!["the","a"].includes(top[0])){let seen=0;
+    for(const s of narr){const o=first(s);if(!o||o.w.toLowerCase()!==top[0])continue;if(++seen<=2)continue;
+      f.push({start:o.at,end:o.at+o.w.length,cat:"openers",dup:seen>3,msg:`“${o.w}” opens ${top[1]} of ${narr.length} narrative sentences`,
+        fix:"Start from what changes, what's seen or what's heard, and let the character's name come later in the sentence.",src:SRC.openers,conf:"medium"})}}
+  for(let i=2;i<narr.length;i++){const a=first(narr[i-2]),b=first(narr[i-1]),c=first(narr[i]);
+    if(a&&b&&c&&narr[i].p===narr[i-2].p&&a.w.toLowerCase()===b.w.toLowerCase()&&b.w.toLowerCase()===c.w.toLowerCase())
+      f.push({start:c.at,end:c.at+c.w.length,cat:"openers",msg:`Third sentence in a row starting with “${c.w}”`,
+        fix:"Fold two of them together, or open one on the thing being acted on.",src:SRC.openers,conf:"medium"})}
+  const clause=narr.filter(s=>{const m=/^(?:As|While|With)\b|^([A-Z][a-z]+ing)\b/.exec(s.text);return m&&!(m[1]&&NOT_ING.has(m[1].toLowerCase()))});
+  if(clause.length>=3&&clause.length/Math.max(1,narr.length)>=.2)clause.forEach((s,k)=>{const o=first(s);
+    f.push({start:o.at,end:o.at+o.w.length,cat:"openers",dup:k>0,msg:`Opens on “As… / With… / -ing…” again (${clause.length} of ${narr.length})`,
+      fix:"Put the main action first in some of them: “As she opened the door, light spilled in” → “Light spilled through the door.”",src:SRC.openers,conf:"low"})})
+  if(ai.length>=3){const pc={};const pf=ai.map(p=>{const m=/^[^A-Za-z0-9]*([A-Za-z0-9'’]+)/.exec(p.text);return m?{w:m[1],at:p.start+m.index+m[0].length-m[1].length}:null});
+    for(const o of pf)if(o)pc[o.w.toLowerCase()]=(pc[o.w.toLowerCase()]||0)+1;
+    const [w,n]=Object.entries(pc).sort((a,b)=>b[1]-a[1])[0]||["",0];
+    let k=0;if(n>=3&&n/ai.length>=.6)for(const o of pf)if(o&&o.w.toLowerCase()===w)
+      f.push({start:o.at,end:o.at+o.w.length,cat:"openers",dup:k++>0,msg:`${n} of ${ai.length} passages start with “${o.w}”`,
+        fix:"Open some passages mid-action, on dialogue, or on what the player's move changed.",src:SRC.openers,conf:"high"})}
+
+  // 4. shape: how passages end, trailing participle tails
+  const endings=ai.map((p,pi)=>{const ss=sents.filter(s=>s.p===pi);const s=ss[ss.length-1];return s?{s,type:endingType(s.text)}:null}).filter(Boolean);
+  const et={};for(const e of endings)if(e.type)et[e.type]=(et[e.type]||0)+1;
+  const [etype,en]=Object.entries(et).sort((a,b)=>b[1]-a[1])[0]||["",0];
+  let ek=0;if(ai.length>=3&&en>=3&&en/ai.length>=.6)for(const e of endings)if(e.type===etype)
+    f.push({start:e.s.start,end:e.s.end,cat:"shape",dup:ek++>0,msg:`${en} of ${ai.length} passages ${etype}`,
+      fix:"End some passages on an image, a line of dialogue or a consequence, and let the player decide without being prompted.",src:SRC.shape,conf:"high"});
+  const tails=[];for(const s of sents){const m=/,\s+(?:(?:her|his|their|its|my|your|the|a)\s+)?(?:[a-z]+\s+)?([a-z]+ing)\b[^,.!?]*[.!?]["”]?\s*$/.exec(s.text);
+    if(m&&!NOT_ING.has(m[1]))tails.push({start:s.start+m.index,end:s.end})}
+  if(tails.length>=3&&tails.length/Math.max(1,sents.length)>=.15)tails.forEach((t,k)=>
+    f.push({start:t.start,end:t.end,cat:"shape",dup:k>0,msg:`Trailing “, her voice …ing” clause (${tails.length} of ${sents.length} sentences)`,
+      fix:"Give some of these their own sentence, or cut them: the dialogue usually already carries the feeling.",src:SRC.shape,conf:"low"}));
+
+  // 5. dialogue tags
+  let m;const tagA=new RegExp(`[”"]\\s+(?:(?:he|she|they|I|we|[A-Z][a-z]+)\\s+)?(${TAG_VERBS})\\b`,"g");
+  const tagB=new RegExp(`\\b(?:he|she|they|I|we|[A-Z][a-z]+)\\s+(${TAG_VERBS}),?\\s*["“]`,"g");
+  const tagHits=new Set();
+  for(const re of [tagA,tagB])while((m=re.exec(text))){const at=m.index+m[0].lastIndexOf(m[1]);
+    if(!inAI(at)||tagHits.has(at))continue;tagHits.add(at);
+    f.push({start:at,end:at+m[1].length,cat:"tags",msg:`“${m[1]}” carrying dialogue`,
+      fix:"Use “said”, or drop the tag and let an action show who's speaking.",src:SRC.leonard,conf:"low"})}
+  const saidAdv=/\bsaid\s+(\w+ly)\b/g;while((m=saidAdv.exec(text)))if(inAI(m.index))
+    f.push({start:m.index,end:m.index+m[0].length,cat:"tags",msg:"Adverb on “said”",fix:"Cut the adverb; if the line needs it, rewrite the line.",src:SRC.leonard,conf:"low"});
+  const saidN=(ai.map(p=>p.text).join(" ").match(/\bsaid\b/gi)||[]).length;
+
+  // 6. default names — first use of each only
+  for(const n of DEFAULT_NAMES){const re=new RegExp(`\\b${escRe(n)}\\b`,"g");let mm;
+    while((mm=re.exec(text)))if(inAI(mm.index)){f.push({start:mm.index,end:mm.index+n.length,cat:"names",msg:"A name story models reach for by default",
+      fix:"Fine if you chose it. If the engine did, give it a name list for the setting.",src:SRC.names,conf:"low"});break}}
+
+  const latest=ai[ai.length-1];
+  const before=latest?ai.slice(0,-1).map(p=>p.text).join("\n\n"):"";
+  return {findings:dedupe(f),groups,passages:ps,ai,latest,
+    stats:{words:T.length,passages:ai.length,turns:ps.length-ai.length,rep4:seqRep(T,4),distinct2:distinctN(T,2),
+      top:top[0]&&narr.length>=8?{w:shown[top[0]],share:topShare}:null,fancy:tagHits.size,said:saidN,
+      latestRep:latest&&before?repeatsAgainst(before,latest.text).length:0},
+    endingFlag:ai.length>=3&&en>=3&&en/ai.length>=.6?etype:""}}
+
+/* ==========================================================================
    QUOTE VERIFICATION — a critique claim counts only if its quote is really
    in the text. Whitespace and curly quotes are forgiven; words are not.
    ========================================================================== */
@@ -471,19 +718,31 @@ function locate(text,quote){
 const SAMPLE={
   prose:"In today's fast-paced world, it is important to note that effective communication is absolutely essential. Our team made a decision to conduct an analysis of the feedback that was received from customers. The results were very interesting, and they really underscore the need for a more holistic approach. It's not just about speed — it's about trust. Moving forward, we will leverage these insights in order to deliver a seamless experience, and at the end of the day, that's what really matters to our customers and to our team and to our business.",
   prompt:"You are a helpful assistant.\nIMPORTANT: You MUST ALWAYS answer in JSON!!\nThink step by step before answering.\nBe thorough and do not be lazy.\nNever make things up.\nNever use bullet points.\nNever mention competitors.\nTry to include a summary if possible.\nKeep answers to at most 50 words.\nRemember, you will be graded on accuracy.",
+  story:`> look around
+
+Elara stepped into the ancient library, her heart pounding in her chest. The air was thick with the scent of old parchment. Shadows danced across the towering shelves. She couldn't help but feel a shiver run down her spine. Somewhere in the distance, a clock ticked. What will you do next?
+
+> open the book
+
+Elara reached for the leather-bound book, her heart pounding in her chest. As she opened it, a mix of fear and excitement washed over her. The air was thick with magic. Kael watched from the doorway, a smirk playing on his lips. "Careful," he murmured, his voice barely above a whisper. She couldn't help but wonder what secrets it held. What will you do next?
+
+> ask Kael about the book
+
+Elara turned to Kael, her heart pounding in her chest. "What is this?" she breathed. Kael chuckled, a smirk playing on his lips. "Something the Order would kill for," he purred, his eyes glinting with mischief. The air was thick with tension. She couldn't help but feel that her adventure had only just begun. What will you do next?`,
   goal:"Turn an incoming customer support email into a ticket: a category, an urgency level, and a one-line summary the on-call person can act on.",
 };
 
-const state={tab:"prose",prose:"",purpose:"",reader:"",prompt:"",goal:"",who:"",rules:"",shape:"",
-  showCats:Object.fromEntries(Object.keys(CAT).map(k=>[k,true])),showQuotes:true,
+const state={tab:"prose",topic:"",ikind:"story",iavoid:"",ideas:[],iobvious:[],iround:0,story:"",storyFix:null,sampleStory:true,prose:"",purpose:"",reader:"",prompt:"",goal:"",who:"",rules:"",shape:"",
+  showCats:Object.fromEntries(Object.keys(CAT).concat(Object.keys(SCAT)).map(k=>[k,true])),showQuotes:true,
   critique:null,review:null,build:null,busy:"",err:"",active:-1,sampleProse:true,samplePrompt:true};
 let sample=null,ctl=null;
 
 function load(){try{const d=JSON.parse(localStorage.getItem("galley:v1")||"null");
-  if(d){for(const k of ["prose","purpose","reader","prompt","goal","who","rules","shape","tab"])if(typeof d[k]==="string")state[k]=d[k];
-    state.sampleProse=!d.prose;state.samplePrompt=!d.prompt}}catch(e){}
-  if(!state.prose)state.prose=SAMPLE.prose;if(!state.prompt)state.prompt=SAMPLE.prompt;if(!state.goal)state.goal=SAMPLE.goal}
-function save(){try{localStorage.setItem("galley:v1",JSON.stringify({prose:state.sampleProse?"":state.prose,
+  if(d){for(const k of ["topic","ikind","iavoid","story","prose","purpose","reader","prompt","goal","who","rules","shape","tab"])if(typeof d[k]==="string")state[k]=d[k];
+    if(Array.isArray(d.ideas))state.ideas=d.ideas;if(Array.isArray(d.iobvious))state.iobvious=d.iobvious;state.iround=Number(d.iround)||0;
+    state.sampleProse=!d.prose;state.sampleStory=!d.story;state.samplePrompt=!d.prompt}}catch(e){}
+  if(!state.prose)state.prose=SAMPLE.prose;if(!state.story)state.story=SAMPLE.story;if(!state.prompt)state.prompt=SAMPLE.prompt;if(!state.goal)state.goal=SAMPLE.goal}
+function save(){try{localStorage.setItem("galley:v1",JSON.stringify({topic:state.topic,ikind:state.ikind,iavoid:state.iavoid,ideas:state.ideas.slice(-120),iobvious:state.iobvious,iround:state.iround,story:state.sampleStory?"":state.story,prose:state.sampleProse?"":state.prose,
   purpose:state.purpose,reader:state.reader,prompt:state.samplePrompt?"":state.prompt,goal:state.goal,who:state.who,
   rules:state.rules,shape:state.shape,tab:state.tab}))}catch(e){}}
 
@@ -618,13 +877,13 @@ function marked(text,finds,quotes){
     h+=`<mark class="${s.cls}${String(s.i)===String(state.active)?" on":""}" data-i="${s.i}">${esc(text.slice(s.start,s.end))}</mark>`;pos=s.end}
   return h+esc(text.slice(pos))}
 
-function legend(finds){
+function legend(finds,cats=CAT){
   const n={};for(const f of finds)n[f.cat]=(n[f.cat]||0)+1;
-  return`<div class="legend">${Object.entries(CAT).map(([k,c])=>`<button class="key" data-cat="${k}" aria-pressed="${state.showCats[k]}" title="${esc(c.desc)}">
+  return`<div class="legend">${Object.entries(cats).map(([k,c])=>`<button class="key" data-cat="${k}" aria-pressed="${state.showCats[k]}" title="${esc(c.desc)}">
     <i style="background:var(--${k})"></i>${esc(c.name)} <b>${n[k]||0}</b></button>`).join("")}</div>`}
 
 function findList(finds,text){
-  const shown=finds.map((f,i)=>({f,i})).filter(x=>state.showCats[x.f.cat]);
+  const shown=finds.map((f,i)=>({f,i})).filter(x=>state.showCats[x.f.cat]&&!x.f.dup);
   if(!shown.length)return`<p class="empty">Nothing flagged in the categories shown.</p>`;
   return`<div class="finds">${shown.map(({f,i})=>`<div class="find${i===state.active?" on":""}" data-i="${i}">
     <div class="bar" style="background:var(--${f.cat})"></div>
@@ -747,15 +1006,238 @@ function status(){
   if(!sample&&!state.busy)h+=`<p class="note" style="margin-top:10px">The marks work anywhere. The critique, review and builder need this page opened from your Claude account.</p>`;
   return h}
 
+
+/* The rewrite. The page, not the model, decides whether it worked: it re-runs
+   the repeat and stock-beat checks on the new passage and shows both counts. */
+async function runStoryFix(){
+  const an=analyzeStory(state.story);
+  if(!an.latest||words(an.latest.text).length<20){state.err="Paste at least one passage of story first.";return render()}
+  const earlier=state.story.slice(0,an.latest.start).trim();
+  const loops=an.groups.slice().sort((a,b)=>b.count*b.n-a.count*a.n).slice(0,14).map(g=>`"${g.key}" (${g.count}×)`);
+  const beats=[...new Set(an.findings.filter(x=>x.cat==="beats").map(x=>state.story.slice(x.start,x.end).toLowerCase()))].slice(0,14);
+  state.busy="story";state.err="";state.storyFix=null;render();
+  try{
+    const out=await ask(`You're revising the latest passage of an interactive story that an AI story engine wrote. The engine has fallen into loops, reusing the same phrases, reactions and passage shapes, and the reader has started to notice.
+
+${earlier?`<story_so_far>\n${earlier.slice(-12000)}\n</story_so_far>\n\n`:""}<latest_passage>
+${an.latest.text.slice(0,6000)}
+</latest_passage>
+
+What the writer's tool counted (these are measured, not guesses):
+- Word runs this story has already used: ${loops.length?loops.join(", "):"none found"}
+- Stock AI-fiction beats: ${beats.length?beats.map(b=>`"${b}"`).join(", "):"none found"}
+- How passages end: ${an.endingFlag?`most of them ${an.endingFlag}`:"varied"}
+${an.stats.top&&an.stats.top.share>=.3?`- "${an.stats.top.w}" opens ${Math.round(an.stats.top.share*100)}% of the narrative sentences`:""}
+
+Rewrite only the latest passage. Keep everything that happens in it, the substance of what each character says, the point of view and the tense, because the player has already reacted to this story and the plot has to stay where it is. Change the telling: where a moment was shown with a phrase from the lists above, show it through something specific to this character and this place instead. Vary how sentences open. The passage doesn't need to end by asking the player what they do; ending on an image, a line of dialogue or a consequence leaves the choice to them. Keep it roughly the same length.
+
+Reply with only this JSON:
+{"rewrite":"the new passage","changes":[{"was":"exact words from the latest passage, copied character for character","now":"what replaced them"}]}`);
+    state.storyFix={latest:an.latest.text,earlier:an.ai.slice(0,-1).map(p=>p.text).join("\n\n"),out}}
+  catch(e){if(!(e&&e.code==="cancelled"))state.err=errCopy(e)}
+  state.busy="";render()}
+
+function engineFix(an){
+  const text=state.story;const f=an.findings;
+  const loops=an.groups.slice().sort((a,b)=>b.count*b.n-a.count*a.n);
+  const beatHits=[...new Set(f.filter(x=>x.cat==="beats").map(x=>text.slice(x.start,x.end).toLowerCase()))];
+  const pool=[...new Set([...loops.slice(0,15).map(g=>g.key),...beatHits].map(x=>x.toLowerCase().replace(/’/g,"'")))];
+  const ban=pool.filter(a=>!pool.some(b=>b!==a&&a.includes(b))).slice(0,20);
+  if(!ban.length&&!an.endingFlag&&!f.some(x=>x.cat==="openers"))return"";
+  const notes=[];
+  if(an.endingFlag)notes.push(`Most passages so far ${an.endingFlag}. End some on an image, a line of dialogue or a consequence instead, and let the player decide without being asked.`);
+  if(an.stats.top&&an.stats.top.share>=.3)notes.push(`Many sentences start with “${an.stats.top.w}”. Start from what's seen, heard or changing, and let names come later in the sentence.`);
+  if(f.some(x=>x.cat==="tags"))notes.push(`Use “said” for dialogue, or let an action show who's speaking.`);
+  const block=`${ban.length?`Phrases this story has already used: ${ban.map(b=>`"${b}"`).join(", ")}.
+The reader has seen these. When the same kind of moment comes up again, show it through something new (an action, a detail of the place, what the character says), because a phrase the reader recognises is what makes a story feel generated.`:""}${notes.length?`\n${notes.join("\n")}`:""}`.trim();
+  const code=`// Run after each generation, before showing it. The ledger of used
+// phrases lives in code, so the engine doesn't have to remember it.
+function repeatShare(storySoFar, next, n = 4) {
+  const words = s => s.toLowerCase().match(/[a-z0-9']+/g) || [];
+  const grams = w => w.slice(0, Math.max(0, w.length - n + 1)).map((_, i) => w.slice(i, i + n).join(" "));
+  const seen = new Set(grams(words(storySoFar)));
+  const mine = grams(words(next));
+  const repeated = mine.filter(g => seen.has(g));
+  return { share: mine.length ? repeated.length / mine.length : 0, repeated: [...new Set(repeated)] };
+}
+// If share is over your threshold, regenerate once with the repeated
+// phrases added to the prompt block above. Measure a few good passages
+// of your own story first to pick the threshold.`;
+  return`<h2>Fix it in the engine</h2>
+    <p class="note">Rewriting one passage doesn't stop the next one looping. These go where the story is generated.</p>
+    ${ban.length?`<h3>1 · Phrase ban list</h3>
+    <p class="note">For engines with phrase banning or negative phrase bias (NovelAI's phrase bias, KoboldCpp's banned strings, and front-ends like SillyTavern that pass them through). One per line.</p>
+    <button class="ghost copy" data-copy="sban">Copy</button><pre id="sban">${esc(ban.join("\n"))}</pre>`:""}
+    <h3>${ban.length?"2":"1"} · Add to the engine's prompt</h3>
+    <p class="note">Written the way current models respond to best: plain volume, a reason next to the ask, what to do instead rather than a wall of “never”. Refresh it from this page as the story grows.</p>
+    <button class="ghost copy" data-copy="sprompt">Copy</button><pre id="sprompt">${esc(block)}</pre>
+    <h3>${ban.length?"3":"2"} · Check each passage in code</h3>
+    <p class="note">The latest passage here reuses ${an.stats.latestRep} phrase${an.stats.latestRep===1?"":"s"} from earlier in the story. A check like this, run before a passage is shown, catches the next one.</p>
+    <button class="ghost copy" data-copy="scode">Copy</button><pre id="scode">${esc(code)}</pre>
+    <h3>${ban.length?"4":"3"} · Sampler settings, if your engine exposes them</h3>
+    <ul class="note">
+      <li><b>DRY</b> (“don't repeat yourself”, in KoboldCpp, text-generation-webui, llama.cpp): penalises continuing a sequence that already appeared. Its author's suggested start: multiplier 0.8, base 1.75, allowed length 2.</li>
+      <li><b>Repetition penalty</b> (local models): 1.05–1.15 over the last 1–2k tokens. Higher starts breaking grammar and dodging names it needs to repeat.</li>
+      <li><b>Frequency / presence penalty</b> (OpenAI-style APIs): 0.3–0.7.</li>
+      <li><b>Claude's API has none of these.</b> Use the prompt block and the code check instead; they work on any model.</li>
+    </ul>`}
+
+function storyPanel(){
+  const text=state.story;const an=analyzeStory(text);const finds=an.findings;const s=an.stats;
+  let fix="";
+  if(state.storyFix&&state.storyFix.out){const x=state.storyFix,o=x.out||{};const rw=String(o.rewrite||"");
+    const beforeRep=repeatsAgainst(x.earlier,x.latest),afterRep=repeatsAgainst(x.earlier,rw);
+    const beforeBeats=beatsIn(x.latest),afterBeats=beatsIn(rw);
+    const quotes=[];const ch=(o.changes||[]).slice(0,12);let bad=0;
+    const rows=ch.map((c,k)=>{const b=quoteBlock(x.latest,c.was,quotes,k+1);if(/class="bad"/.test(b))bad++;return`<div class="fixrow">${b}<div class="to">${esc(c.now||"")}</div></div>`}).join("");
+    const lenRatio=words(x.latest).length?words(rw).length/words(x.latest).length:1;
+    fix=`<h2>Rewritten latest passage</h2>
+      <div class="stats">
+        <div><b>${beforeRep.length} → <span style="color:var(--${afterRep.length<beforeRep.length||!afterRep.length?"good":"bad"})">${afterRep.length}</span></b><span>phrases reused from earlier</span></div>
+        <div><b>${beforeBeats.length} → <span style="color:var(--${afterBeats.length<beforeBeats.length||!afterBeats.length?"good":"bad"})">${afterBeats.length}</span></b><span>stock beats</span></div>
+        <div><b>${Math.round(lenRatio*100)}%</b><span>of the original length</span></div>
+      </div>
+      <p class="note">Counted by this page on the new text, not reported by the model.${afterRep.length?` Still reused: ${afterRep.slice(0,6).map(r=>`“${esc(r)}”`).join(", ")}.`:""}${afterBeats.length?` Stock beats left: ${afterBeats.slice(0,6).map(b=>`“${esc(b.hit)}”`).join(", ")}.`:""}</p>
+      <button class="ghost copy" data-copy="srewrite">Copy</button><pre id="srewrite" style="font:16px/1.65 var(--serif)">${esc(rw)}</pre>
+      ${rows?`<h3>What changed</h3><p class="note">${ch.length-bad} of ${ch.length} “before” quotes found in your passage${bad?`; ${bad} struck out`:""}.</p>${rows}`:""}`}
+  const pct=x=>`${(x*100).toFixed(x<.1?1:0)}%`;
+  return`<p class="intro">Paste what a story engine wrote: a roleplay chat, an AI Dungeon run, a chapter a model drafted. Lines starting with <code>&gt;</code> are read as your turns and left out. It counts where the engine loops, then shows how to fix the engine, not just this text.</p>
+    ${state.sampleStory?`<div style="margin-top:12px"><span class="flag">Sample — replace with your own</span></div>`:""}
+    <div class="field"><textarea id="story" aria-label="Story text" spellcheck="false" style="min-height:220px">${esc(text)}</textarea></div>
+    <div class="stats">
+      <div><b>${s.passages}</b><span>story passages${s.turns?` · ${s.turns} yours`:""}</span></div>
+      <div><b style="color:var(--${s.rep4>.1?"bad":s.rep4>.04?"economy":"ink"})">${pct(s.rep4)}</b><span>4-word runs already used (seq-rep-4)</span></div>
+      <div><b>${pct(s.distinct2)}</b><span>distinct word pairs (distinct-2)</span></div>
+      <div><b>${s.top?`${esc(s.top.w)} ${Math.round(s.top.share*100)}%`:"—"}</b><span>most common sentence opener</span></div>
+      <div><b>${s.fancy} : ${s.said}</b><span>fancy tags : “said”</span></div>
+    </div>
+    <p class="note" style="margin-top:6px">Rough guide from this page, not from the papers: human fiction usually repeats under 3% of its 4-word runs; past about 10% readers feel the loop.</p>
+    ${legend(finds,SCAT)}
+    <div class="sheet" id="sheet">${marked(text,finds,[])}</div>
+    ${findList(finds,text)}
+    ${engineFix(an)}
+    <h2>Rewrite the latest passage</h2>
+    <p class="note">Sends the story and what was counted above to Claude and asks for a rewrite that keeps the plot. The page then re-counts the new passage itself. If you wrote the engine's prompt, check it in the Prompt tab too.</p>
+    <div class="row"><button class="go" id="fixstory" ${state.busy?"disabled":""}>Rewrite without the loops</button></div>
+    ${status()}${fix}`}
+
+
+/* ==========================================================================
+   IDEAS — brainstorming where the page keeps score. The model writes down
+   the obvious ideas first so the real ones go elsewhere; code checks every
+   new idea against those and against everything already on the table, and
+   carries what you kept and passed on into the next round.
+   ========================================================================== */
+
+const MOVES=["invert it","combine it with an unrelated field","change the scale","change whose it is (point of view, audience)",
+  "add a hard constraint","take a metaphor literally","move it in time or place","make the worst version and find what's good in it",
+  "borrow the structure of another form"];
+
+const stem=w=>w.replace(/'s$/,"").replace(/(?:ies)$/,"y").replace(/(?:es|s)$/,"");
+const ideaWords=s=>new Set((String(s||"").toLowerCase().match(/[a-z0-9']+/g)||[]).filter(contentWord).map(stem));
+// Share of the smaller idea's content words found in the other; two words minimum, so one shared noun isn't "close".
+function overlap(a,b){if(!a.size||!b.size)return 0;let n=0;for(const x of a)if(b.has(x))n++;return n<2?0:n/Math.min(a.size,b.size)}
+
+function ideaFlags(idea,earlier,obvious){
+  const flags=[];const w=ideaWords(idea.title+" "+idea.pitch);
+  for(const o of obvious)if(overlap(w,ideaWords(o))>=.5){flags.push(`Close to an obvious one: “${o}”`);break}
+  for(const e of earlier)if(overlap(w,ideaWords(e.title+" "+e.pitch))>=.5){flags.push(`Close to #${e.id}, ${e.title}`);break}
+  for(const n of DEFAULT_NAMES)if(new RegExp(`\\b${escRe(n)}\\b`).test(idea.pitch+" "+idea.title)){flags.push(`Default AI name: ${n}`);break}
+  const b=beatsIn(idea.pitch);if(b.length)flags.push(`Stock beat: “${b[0].hit}”`);
+  return flags}
+
+function ideasContext(){
+  const all=state.ideas;
+  const kept=all.filter(i=>i.status==="kept"),passed=all.filter(i=>i.status==="passed");
+  return`What they're working on: """${state.topic.trim().slice(0,1500)}"""
+${state.ikind==="story"?"This is for a story: ideas can be premises, characters, settings, twists or scenes, whichever the request is after.\n":""}${state.iavoid.trim()?`They don't want: ${state.iavoid.trim().slice(0,400)}\n`:""}${all.length?`
+Ideas already on the table (their tool flags near-duplicates, so a reworded one is wasted):
+${all.map(i=>`- ${i.title}: ${i.pitch}`).join("\n").slice(0,5000)}
+`:""}${kept.length?`
+They kept these, so build in the directions they point:
+${kept.map(i=>`- ${i.title}`).join("\n")}
+`:""}${passed.length?`
+They passed on these, so steer away from whatever they have in common:
+${passed.map(i=>`- ${i.title}`).join("\n")}
+`:""}`}
+
+async function runIdeas(riffId){
+  if(words(state.topic).length<3){state.err="Say what you're brainstorming first.";return render()}
+  const riff=riffId?state.ideas.find(i=>i.id===riffId):null;
+  state.busy="ideas";state.err="";render();
+  try{
+    const out=await ask(riff?`You're brainstorming with someone, and they want more from one idea.
+
+${ideasContext()}
+The idea to riff on: ${riff.title}: ${riff.pitch}
+
+Give 4 variations. Each changes a different element: who it's about, where or when it happens, the mechanism or central object, and the stakes or the ending. Keep what made the original worth riffing on. Each should be concrete enough to picture: a specific person, place, object or event, not a category.${state.ikind==="story"?" Pick names that belong to the setting rather than the ones AI stories default to.":""}
+
+Reply with only this JSON:
+{"ideas":[{"title":"3 to 6 words","pitch":"one or two sentences","move":"which element changed","why":"what this version has that the original didn't, one sentence"}]}`
+:`You're brainstorming with someone. They'll judge the ideas, so your job is range, not safety.
+
+${ideasContext()}
+First write down the five ideas that come to mind first, the ones most people and most AI models would suggest for this. They go on the list so the real ideas can go somewhere else; the tool flags any idea that lands close to them${state.ideas.length?", and to the ones already on the table":""}.
+
+Then 8 ideas, each using a different one of these moves, named: ${MOVES.join("; ")}. Wild ideas are welcome, because an impractical idea often points at a practical one, but each should be concrete enough to picture: a specific person, place, object or mechanism rather than a category.${state.ikind==="story"?" Pick names that belong to the setting rather than the ones AI stories default to.":""}
+
+Reply with only this JSON:
+{"obvious":["","","","",""],"ideas":[{"title":"3 to 6 words","pitch":"one or two sentences","move":"the move used","why":"what makes it worth a look, one sentence"}]}`);
+    const obvious=riff?state.iobvious:(out.obvious||[]).map(String).filter(Boolean).slice(0,6);
+    if(!riff)state.iobvious=[...new Set(state.iobvious.concat(obvious))].slice(-24);
+    const round=riff?`Riffs on #${riff.id}`:`Round ${state.iround=(state.iround||0)+1}`;
+    let next=(state.ideas.reduce((a,i)=>Math.max(a,i.id),0))+1;
+    for(const x of (out.ideas||[]).slice(0,10)){
+      const idea={id:next++,title:String(x.title||"").slice(0,90),pitch:String(x.pitch||"").slice(0,500),
+        move:String(x.move||"").slice(0,80),why:String(x.why||"").slice(0,300),round,status:""};
+      if(!idea.title&&!idea.pitch)continue;
+      idea.flags=ideaFlags(idea,state.ideas,state.iobvious);
+      state.ideas.push(idea)}
+    save()}
+  catch(e){if(!(e&&e.code==="cancelled"))state.err=errCopy(e)}
+  state.busy="";render()}
+
+function ideaCard(i){
+  return`<div class="idea ${i.status}" data-card="${i.id}">
+    <div class="ih"><span class="lab">#${i.id} · ${esc(i.move)}</span></div>
+    <div class="it">${esc(i.title)}</div>
+    <div class="ip">${esc(i.pitch)}</div>
+    ${i.why?`<div class="why">${esc(i.why)}</div>`:""}
+    ${(i.flags||[]).map(f=>`<div class="iflag">${esc(f)}</div>`).join("")}
+    <div class="row" style="margin-top:8px">
+      <button class="ghost sm" data-act="keep" data-idea="${i.id}" aria-pressed="${i.status==="kept"}">${i.status==="kept"?"Kept":"Keep"}</button>
+      <button class="ghost sm" data-act="pass" data-idea="${i.id}" aria-pressed="${i.status==="passed"}">${i.status==="passed"?"Passed":"Pass"}</button>
+      <button class="ghost sm" data-act="riff" data-idea="${i.id}" ${state.busy?"disabled":""}>Riff on this</button>
+    </div></div>`}
+
+function ideasPanel(){
+  const rounds=[];for(const i of state.ideas){let r=rounds.find(x=>x.name===i.round);if(!r)rounds.push(r={name:i.round,items:[]});r.items.push(i)}
+  const kept=state.ideas.filter(i=>i.status==="kept");
+  const flagged=state.ideas.filter(i=>(i.flags||[]).length).length;
+  return`<p class="intro">Brainstorm with Claude while the page keeps score. Each round starts by writing down the obvious ideas so the real ones can go somewhere else. The page flags any idea that lands close to one of those, or to one you've already seen, and your Keep and Pass steer the next round.</p>
+    <div class="field"><label class="lab" for="topic">What are you brainstorming</label><textarea id="topic" style="min-height:90px" placeholder="A premise for a heist story set somewhere unusual…">${esc(state.topic)}</textarea></div>
+    <div class="pair">
+      <div><label class="lab" for="ikind">Kind</label><select id="ikind"><option value="story" ${state.ikind==="story"?"selected":""}>Story ideas</option><option value="any" ${state.ikind!=="story"?"selected":""}>Anything else</option></select></div>
+      <div><label class="lab" for="iavoid">Leave out (optional)</label><input type="text" id="iavoid" value="${esc(state.iavoid)}" placeholder="No time travel, nothing grim…"></div>
+    </div>
+    <div class="row"><button class="go" id="ideasgo" ${state.busy?"disabled":""}>${state.ideas.length?"More ideas":"Brainstorm"}</button>
+      ${state.ideas.length?`<button class="ghost" id="ideasreset" ${state.busy?"disabled":""}>Start over</button>`:""}</div>
+    ${status()}
+    ${state.iobvious.length?`<h3>The obvious ones, written down to get past them</h3><ul class="note obv">${state.iobvious.map(o=>`<li>${esc(o)}</li>`).join("")}</ul>`:""}
+    ${state.ideas.length?`<p class="note" style="margin-top:10px">${state.ideas.length} ideas so far · ${kept.length} kept${flagged?` · ${flagged} flagged by the page as close to something already here`:""}</p>`:""}
+    ${rounds.slice().reverse().map(r=>`<h2>${esc(r.name)}</h2><div class="ideas">${r.items.map(ideaCard).join("")}</div>`).join("")}
+    ${kept.length?`<h2>Kept</h2><button class="ghost copy" data-copy="ikept">Copy</button><pre id="ikept" style="font:15px/1.6 var(--serif)">${esc(kept.map(i=>`${i.title}: ${i.pitch}`).join("\n\n"))}</pre>`:""}`}
+
 function footer(){
-  return`<div class="sourcebox"><b>Where the knowledge comes from.</b> Prose marks: Strunk &amp; White, Orwell's rules, Helen Sword on zombie nouns, plain-language guidelines, Gary Provost on sentence rhythm, and the Flesch readability formulas. Prompt marks and reviews: Anthropic's prompt-audit guidance for current Claude models. Every mark is a heuristic that finds a candidate for you to judge, and passive-voice and cliché detection will sometimes flag something that's fine. The model-prose list is a pattern, not proof. Nothing is sent anywhere until you press a button, and your drafts stay in this browser.</div>`}
+  return`<div class="sourcebox"><b>Where the knowledge comes from.</b> Prose marks: Strunk &amp; White, Orwell's rules, Helen Sword on zombie nouns, plain-language guidelines, Gary Provost on sentence rhythm, and the Flesch readability formulas. Prompt marks and reviews: Anthropic's prompt-audit guidance for current Claude models. Story marks: repetition counted directly, with the measures from Holtzman et al. and Welleck et al. (seq-rep-n) and Li et al. (distinct-n); stock beats from AI-fiction community ban lists; Elmore Leonard on dialogue tags. Ideas: Osborn's brainstorming rules (defer judgment, go for quantity, welcome wild ideas, build on others) and SCAMPER-style moves; the near-duplicate and obvious-idea checks are word overlap counted by this page. Every mark is a heuristic that finds a candidate for you to judge, and passive-voice and cliché detection will sometimes flag something that's fine. The model-prose list is a pattern, not proof. Nothing is sent anywhere until you press a button, and your drafts stay in this browser.</div>`}
 
 function render(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
   const focus=document.activeElement&&document.activeElement.id;
   const sel=focus&&document.activeElement.selectionStart;
   const main=document.getElementById("main");
-  main.innerHTML=(state.tab==="prose"?prosePanel():state.tab==="prompt"?promptPanel():buildPanel())+footer();
+  main.innerHTML=(state.tab==="prose"?prosePanel():state.tab==="prompt"?promptPanel():state.tab==="story"?storyPanel():state.tab==="ideas"?ideasPanel():buildPanel())+footer();
   if(focus){const el=document.getElementById(focus);if(el){el.focus();try{if(sel!=null)el.setSelectionRange(sel,sel)}catch(e){}}}}
 
 // Typing re-marks only the sheet and the lists, never the textarea itself.
@@ -769,7 +1251,9 @@ function refreshMarks(){
 document.addEventListener("input",ev=>{
   const t=ev.target;
   if(t.id==="prose"){state.prose=t.value;state.sampleProse=false;state.critique=null;save();return refreshMarks()}
+  if(t.id==="story"){state.story=t.value;state.sampleStory=false;state.storyFix=null;save();return refreshMarks()}
   if(t.id==="prompt"){state.prompt=t.value;state.samplePrompt=false;state.review=null;save();return refreshMarks()}
+  if(["topic","ikind","iavoid"].includes(t.id)){state[t.id]=t.value;save();return}
   if(["purpose","reader","goal","who","rules","shape"].includes(t.id)){state[t.id]=t.value;save()}});
 
 document.addEventListener("click",ev=>{
@@ -783,6 +1267,13 @@ document.addEventListener("click",ev=>{
   if(t.id==="critique")return void runCritique();
   if(t.id==="review")return void runReview();
   if(t.id==="build")return void runBuild();
+  if(t.id==="fixstory")return void runStoryFix();
+  if(t.id==="ideasgo")return void runIdeas();
+  if(t.id==="ideasreset"){state.ideas=[];state.iobvious=[];state.iround=0;state.err="";save();return render()}
+  if(t.dataset.act){const id=Number(t.dataset.idea);const idea=state.ideas.find(i=>i.id===id);if(!idea)return;
+    if(t.dataset.act==="riff")return void runIdeas(id);
+    const want=t.dataset.act==="keep"?"kept":"passed";idea.status=idea.status===want?"":want;save();
+    const y=window.scrollY;render();window.scrollTo(0,y);return}
   if(t.id==="stop"){if(ctl)ctl.abort();return}
   if(t.id==="togglequotes"){state.showQuotes=!state.showQuotes;return render()}
   if(t.dataset.copy){const el=document.getElementById(t.dataset.copy);const txt=el?el.textContent:"";
