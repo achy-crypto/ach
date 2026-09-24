@@ -15,6 +15,7 @@ import { makeRater, FEATURE_KEYS, RATING_SCHEMA_VERSION } from "./rate.mjs";
 import { makeScreenCatalog, makeScreenRater, AXIS_KEYS } from "./screen.mjs";
 import { makeLLM } from "./llm.mjs";
 import { makeVibe } from "./vibe.mjs";
+import { makeGameVibe } from "./gamevibe.mjs";
 import { makeStore } from "./store.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -48,6 +49,7 @@ const APP_TOKEN = (env.APP_TOKEN || "").trim();
 
 const APP_HTML_HOLDS = firstExisting(env.APP_HTML_HOLDS, "/app/app/holds.html", "../holds/index.html", "./holds.html");
 const APP_HTML_VIBE = firstExisting(env.APP_HTML_VIBE, "/app/app/wavelength.html", "../wavelength/index.html", "./wavelength.html");
+const APP_HTML_RUMBLE = firstExisting(env.APP_HTML_RUMBLE, "/app/app/rumble.html", "../rumble/index.html", "./rumble.html");
 
 const llm = makeLLM(env);
 const catalog = makeCatalog(env);                 // games — IGDB / RAWG
@@ -58,6 +60,7 @@ const screenRater = makeScreenRater(llm.client, llm.defaults.model, llm.defaults
 const store = makeStore(DATA_DIR);
 await store.init();
 const vibe = makeVibe({ screenCatalog, store, llm });
+const gameVibe = makeGameVibe({ catalog, llm });
 
 /* ------------------------------------------------------------- helpers --- */
 
@@ -265,6 +268,30 @@ async function handleApi(req, res, url) {
     return send(res, 200, { ranked });
   }
 
+  /* ---- Rumble: Wavelength for games ----------------------------------- */
+  /* Works without a game catalog too, but then says so: the pool is Claude's
+   * suggestions, marked source "memory", and the page labels them that way. */
+
+  if (route === "/api/gvibe/pool" && req.method === "POST") {
+    if (!llm.configured()) return fail(res, 503, "ANTHROPIC_API_KEY is not set on this server.", { missing: ["ANTHROPIC_API_KEY"] });
+    const body = await readBody(req);
+    const text = String((body && body.vibe) || "").trim();
+    if (text.length < 3) return fail(res, 400, "Describe what you feel like playing.");
+    const out = await gameVibe.pool(text, String((body && body.platform) || "any"));
+    return send(res, 200, out);
+  }
+
+  if (route === "/api/gvibe/rank" && req.method === "POST") {
+    if (!llm.configured()) return fail(res, 503, "ANTHROPIC_API_KEY is not set on this server.", { missing: ["ANTHROPIC_API_KEY"] });
+    const body = await readBody(req);
+    const text = String((body && body.vibe) || "").trim();
+    const ids = Array.isArray(body && body.ids)
+      ? body.ids.map(String).filter(id => /^(?:igdb|rawg):\d+$|^est:[a-z0-9-]{1,80}$/.test(id)) : [];
+    if (!text || !ids.length) return fail(res, 400, "Nothing to score.");
+    const ranked = await gameVibe.rank(text, (body && body.reading) || {}, ids);
+    return send(res, 200, { ranked });
+  }
+
   if (route === "/api/screen/state") {
     if (req.method === "GET") return send(res, 200, { state: store.getScreenState() });
     if (req.method === "PUT") {
@@ -324,7 +351,7 @@ function indexPage() {
     </a>`;
   return `<!doctype html><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Two Hours In &amp; Will It Hold</title>
+<title>Your apps</title>
 <style>
 :root{color-scheme:light dark;--ground:#e9ecee;--card:#f7f8f9;--ink:#16191d;--dim:#666d75;--rule:#ccd2d7;--ok:#2f7a55;--bad:#a33227}
 @media (prefers-color-scheme:dark){:root{--ground:#101316;--card:#181c20;--ink:#e7e9ea;--dim:#8b939b;--rule:#2a2f35;--ok:#6db98c;--bad:#e0776a}}
@@ -344,9 +371,12 @@ h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
 .note{color:var(--dim);font-size:13px;margin-top:26px}
 </style>
 <div class="wrap">
-  <h1>Three apps on this server</h1>
+  <h1>Four apps on this server</h1>
   ${card("/wavelength", "Wavelength", "Shows and films — describe a feeling, get titles that match it.",
     "TMDb", screenCatalog.connected, screenCatalog.missing)}
+  ${card("/rumble", "Rumble", "Games — describe a feeling, get games that match it.",
+    catalog.provider ? catalog.provider.toUpperCase() : "A game catalog", catalog.connected,
+    ["RAWG_API_KEY (or IGDB) — until then, games come from Claude's memory and are labelled that way"])}
   ${card("/holds", "Will It Hold", "Shows and films — whether you'll actually get through one.",
     "TMDb", screenCatalog.connected, screenCatalog.missing)}
   ${card("/games", "Two Hours In", "Games — whether one survives its first week with you.",
@@ -376,6 +406,11 @@ const server = http.createServer(async (req, res) => {
       const html = await fs.readFile(APP_HTML_VIBE, "utf8");
       return send(res, 200, asDocument(html), "text/html; charset=utf-8");
     }
+    if (url.pathname === "/rumble" || url.pathname === "/rumble/") {
+      if (!existsSync(APP_HTML_RUMBLE)) return send(res, 500, missingPage("Rumble", APP_HTML_RUMBLE), "text/html; charset=utf-8");
+      const html = await fs.readFile(APP_HTML_RUMBLE, "utf8");
+      return send(res, 200, asDocument(html), "text/html; charset=utf-8");
+    }
     if (url.pathname === "/holds" || url.pathname === "/holds/") {
       if (!existsSync(APP_HTML_HOLDS)) return send(res, 500, missingPage("Will It Hold", APP_HTML_HOLDS), "text/html; charset=utf-8");
       const html = await fs.readFile(APP_HTML_HOLDS, "utf8");
@@ -393,13 +428,14 @@ server.listen(PORT, () => {
   const line = s => console.log(`  ${s}`);
   console.log(`\nhttp://localhost:${PORT}\n`);
   console.log(`  Wavelength   http://localhost:${PORT}/wavelength  (find by feeling)`);
+  console.log(`  Rumble        http://localhost:${PORT}/rumble   (games by feeling)`);
   console.log(`  Will It Hold  http://localhost:${PORT}/holds    (shows and films)`);
   console.log(`  Two Hours In  http://localhost:${PORT}/games    (games)\n`);
   line(`catalog   games: ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
   line(`          screen: ${screenCatalog.connected ? `tmdb configured, using the ${screenCatalog.credentialKind}` : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
   line(`ratings   ${llm.configured() ? `${llm.defaults.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);
   line(`data      ${DATA_DIR}`);
-  line(`apps      ${APP_HTML}\n            ${APP_HTML_HOLDS}\n            ${APP_HTML_VIBE}`);
+  line(`apps      ${APP_HTML}\n            ${APP_HTML_HOLDS}\n            ${APP_HTML_VIBE}\n            ${APP_HTML_RUMBLE}`);
   line(`access    ${APP_TOKEN ? "token required (APP_TOKEN is set)" : "OPEN — anyone with the URL can spend your API credit; set APP_TOKEN"}`);
   console.log("");
 });

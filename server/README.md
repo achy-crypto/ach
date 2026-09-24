@@ -1,17 +1,18 @@
-# Standalone server for Wavelength, Will It Hold and Two Hours In
+# Standalone server for Wavelength, Rumble, Will It Hold and Two Hours In
 
 Runs both apps outside the Claude artifact sandbox so it can do three things the
 published page cannot: search a real game catalog, resolve titles to stable
 catalog ids, and call the Claude API. **Every credential stays in this process.
 The browser is handed results, never a key.**
 
-Two apps are served:
+Four apps are served:
 
 - `/wavelength` — **Wavelength**: describe a feeling, get shows and films that match it. TMDb.
+- `/rumble` — **Rumble**: Wavelength for games. Describe a feeling, get games that match it. IGDB or RAWG; without either, Claude's suggestions, labelled as such.
 - `/holds` — **Will It Hold**: shows and films, catalog from TMDb.
 - `/games` — **Two Hours In**: games, catalog from IGDB or RAWG.
 
-`/` is a signpost page linking to all three and showing which catalogs are connected.
+`/` is a signpost page linking to all four and showing which catalogs are connected.
 Neither app is served at the root, so neither looks like "the" app.
 
 Each page runs in both places. It probes `/api/health` on
@@ -48,6 +49,17 @@ facts or the model's own knowledge. Nothing in this system will call a gameplay
 rating verified, and the server refuses any rating request carrying user
 preference data so the inference cannot be steered toward what would score well.
 
+## Rumble, in one paragraph
+
+The same three steps as Wavelength, for games. Claude reads what you wrote into genres, concrete
+tags ("roguelike", "base building", "cozy"), who's playing, a length and a handful of games that
+fit. The game catalog does the retrieval; a suggested game the catalog doesn't have is dropped,
+and avoided genres/themes/tags and the wrong platform are filtered out in code. Claude then scores
+each game against what you wrote from the catalog's summary and tags, and says when it doesn't know
+a game well. With **no** game catalog configured it still works, but the games are Claude's
+suggestions from memory and the page says so. The quickest fix for that is `RAWG_API_KEY`
+(one key, free); `IGDB_CLIENT_ID` + `IGDB_CLIENT_SECRET` gives richer data.
+
 ## Credentials you need to supply
 
 | Variable | Required | Where to get it |
@@ -61,7 +73,7 @@ preference data so the inference cannot be steered toward what would score well.
 
 Optional: `PORT` (8787), `DATA_DIR` (`./data`), `ANTHROPIC_MODEL` (`claude-opus-5`),
 `ANTHROPIC_FALLBACK_MODEL` (`claude-opus-4-8`, used once if a rating is declined),
-`ANTHROPIC_EFFORT` (`high`), `ANTHROPIC_BETAS`, `APP_HTML`.
+`ANTHROPIC_EFFORT` (`high`), `ANTHROPIC_BETAS`, `APP_HTML`, `APP_HTML_RUMBLE`.
 
 ## Run it locally
 
@@ -148,6 +160,8 @@ Two files in `DATA_DIR`, deliberately separate:
 | `GET /api/screen/discover?form=&offset=` | The candidate pool for Will It Hold. |
 | `POST /api/screen/place` | Places titles on the user's anchor scale. Facts are fetched server-side from TMDb, never taken from the caller. |
 | `POST /api/vibe/pool` | Wavelength step 1–2: reads the vibe into TMDb genres and tags, retrieves real titles, drops suggestions TMDb doesn't have. |
+| `POST /api/gvibe/pool` | Rumble step 1–2: reads the request into genres, tags, players and length; retrieves games from IGDB/RAWG; drops suggestions the catalog doesn't have; filters avoided themes and platform in code. |
+| `POST /api/gvibe/rank` | Rumble step 3: scores each game against the request from the catalog's summary and tags, with a `known` flag when Claude doesn't know the game well. |
 | `POST /api/vibe/rank` | Wavelength step 3: scores each title against the vibe from TMDb's own synopsis and tags. Facts are re-read server-side by id. |
 | `GET/PUT /api/state`, `GET/PUT /api/screen/state` | Each app's own state. |
 

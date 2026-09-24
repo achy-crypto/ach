@@ -1,0 +1,347 @@
+<title>Rumble</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#EFEAE3;--surface:#F9F6F1;--ink:#211A14;--dim:#6F665C;--rule:#DDD4C8;--soft:#E7DFD4;
+  --signal:#B0501B;--signal-wash:#B0501B17;--off:#3F6B9E;--warn:#A33A2A;
+  --display:"Young Serif",Georgia,"Times New Roman",serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"Martian Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --ground:#15120F;--surface:#1E1A16;--ink:#F0EAE2;--dim:#A39A8E;--rule:#332D27;--soft:#29241F;
+  --signal:#F09A5B;--signal-wash:#F09A5B22;--off:#8DB3E6;--warn:#EE8A7A}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --ground:#15120F;--surface:#1E1A16;--ink:#F0EAE2;--dim:#A39A8E;--rule:#332D27;--soft:#29241F;
+  --signal:#F09A5B;--signal-wash:#F09A5B22;--off:#8DB3E6;--warn:#EE8A7A}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:680px;margin:0 auto;padding-inline:18px;padding-block:28px 90px}
+.mark{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+
+/* the question is the page */
+.ask h1{font-family:var(--display);font-weight:400;font-size:clamp(30px,7vw,44px);line-height:1.08;
+  margin:10px 0 14px;text-wrap:balance;letter-spacing:-.01em}
+.box{background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:4px}
+.box:focus-within{border-color:var(--signal)}
+textarea{display:block;width:100%;min-height:96px;resize:vertical;border:0;background:transparent;color:var(--ink);
+  font-family:var(--body);font-size:18px;line-height:1.5;padding:12px 13px;outline:none}
+textarea::placeholder{color:var(--dim)}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:5px;overflow:hidden}
+.seg button{appearance:none;border:0;background:transparent;color:var(--dim);font-family:var(--body);font-size:14px;
+  font-weight:500;padding:10px 14px;min-height:44px;cursor:pointer;touch-action:manipulation}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+select{appearance:none;-webkit-appearance:none;border:1px solid var(--rule);border-radius:5px;background:var(--surface);color:var(--ink);
+  font-family:var(--body);font-size:15px;font-weight:500;padding:10px 34px 10px 13px;min-height:44px;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
+  background-position:calc(100% - 17px) 19px,calc(100% - 12px) 19px;background-size:5px 5px;background-repeat:no-repeat}
+select:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+.go{appearance:none;border:0;border-radius:5px;background:var(--signal);color:var(--ground);font-family:var(--body);
+  font-weight:600;font-size:16px;padding:11px 22px;min-height:46px;cursor:pointer;margin-left:auto;touch-action:manipulation}
+.go[disabled]{opacity:.5;cursor:default}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+
+.tries{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px}
+.try{appearance:none;background:transparent;border:1px dashed var(--rule);border-radius:999px;color:var(--dim);
+  font-family:var(--body);font-size:13.5px;padding:7px 12px;min-height:36px;cursor:pointer;text-align:left}
+.try:hover{color:var(--ink);border-color:var(--dim)}
+
+.status{margin-top:18px;display:flex;align-items:center;gap:10px;color:var(--dim);font-size:14.5px}
+.pulse{display:inline-flex;gap:3px;align-items:flex-end;height:14px}
+.pulse i{width:3px;background:var(--signal);border-radius:1px;animation:tune 1s ease-in-out infinite}
+.pulse i:nth-child(2){animation-delay:.15s}.pulse i:nth-child(3){animation-delay:.3s}.pulse i:nth-child(4){animation-delay:.45s}
+@keyframes tune{0%,100%{height:3px}50%{height:14px}}
+@media (prefers-reduced-motion:reduce){.pulse i{animation:none;height:10px}}
+.stop{appearance:none;background:none;border:1px solid var(--rule);border-radius:4px;color:var(--dim);
+  font:inherit;font-size:13px;padding:5px 10px;cursor:pointer;margin-left:auto}
+.err{margin-top:18px;border-left:3px solid var(--warn);background:var(--surface);padding:10px 14px;font-size:14.5px;border-radius:0 5px 5px 0}
+
+/* how it heard you */
+.heard{margin-top:30px;padding-top:16px;border-top:1px solid var(--rule)}
+.heard .line{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline;margin-top:8px}
+.heard .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  min-width:78px}
+.pill{font-size:13.5px;border-radius:999px;padding:3px 11px;background:var(--soft);color:var(--ink)}
+.pill.tag{font-family:var(--mono);font-size:11.5px;background:transparent;border:1px solid var(--rule);color:var(--dim)}
+.pill.avoid{background:transparent;border:1px solid var(--off);color:var(--off)}
+.flag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  border:1px solid var(--rule);color:var(--dim);padding:3px 8px;border-radius:3px;margin-bottom:6px}
+
+/* results */
+.results{margin-top:22px}
+.row{display:grid;grid-template-columns:62px 1fr;gap:14px;padding:16px 0;border-top:1px solid var(--rule)}
+.row.noposter{grid-template-columns:1fr}
+.poster.wide{aspect-ratio:1}
+.poster{width:62px;aspect-ratio:3/4;max-width:100%;border-radius:3px;background:var(--soft);object-fit:cover;display:block}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.name{font-family:var(--display);font-size:20px;line-height:1.2;text-wrap:balance}
+.meta{color:var(--dim);font-size:13.5px;margin-top:2px}
+.score{text-align:right;flex:none}
+.num{font-family:var(--mono);font-weight:500;font-size:22px;color:var(--signal);font-variant-numeric:tabular-nums;line-height:1}
+.num small{font-size:11px;color:var(--dim)}
+.bar{display:flex;gap:2px;margin-top:7px;width:84px}
+.bar i{flex:1;height:8px;background:var(--soft);border-radius:1px}
+.bar i.on{background:var(--signal)}
+.why{margin-top:8px;font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-size:12.5px;border-radius:999px;padding:2px 10px;background:var(--signal-wash);color:var(--ink)}
+.chip.fact{font-family:var(--mono);font-size:11px;background:transparent;border:1px solid var(--rule);color:var(--dim)}
+.miss{margin-top:6px;font-size:13.5px;color:var(--dim)}
+.miss b{color:var(--off);font-weight:500}
+.links{margin-top:8px;font-size:13px}
+.links a{color:var(--dim)}
+.unsure{margin-top:6px;font-size:12.5px;color:var(--dim);font-style:italic}
+details.weak{margin-top:8px;border-top:1px solid var(--rule);padding-top:10px}
+details.weak>summary{cursor:pointer;color:var(--dim);font-size:14px;padding:6px 0;list-style:none}
+details.weak>summary::-webkit-details-marker{display:none}
+.source{margin-top:26px;font-size:13px;color:var(--dim);max-width:60ch}
+.lock{margin-top:18px;border:1px solid var(--rule);background:var(--surface);border-radius:6px;padding:14px}
+.lock .r{display:flex;gap:8px;margin-top:10px}
+.lock input{flex:1;min-width:0;border:1px solid var(--rule);background:var(--ground);color:var(--ink);border-radius:4px;
+  font:inherit;padding:10px 12px}
+.lock button{appearance:none;border:0;border-radius:4px;background:var(--ink);color:var(--ground);font:inherit;font-weight:600;padding:10px 16px}
+</style>
+
+<div class="wrap">
+  <section class="ask">
+    <div class="mark">Rumble</div>
+    <h1>What do you feel like playing?</h1>
+    <div class="box"><textarea id="vibe" placeholder="A feeling, a mood, the kind of evening you want. As loose as you like."></textarea></div>
+    <div class="controls">
+      <select id="platform" aria-label="Platform">
+        <option value="any">Any platform</option><option value="pc">PC</option><option value="playstation">PlayStation</option>
+        <option value="xbox">Xbox</option><option value="switch">Switch</option><option value="mobile">Phone</option>
+      </select>
+      <button class="go" id="go">Find games</button>
+    </div>
+    <div class="tries" id="tries"></div>
+  </section>
+  <div id="out"></div>
+</div>
+
+<script>
+"use strict";
+
+const EXAMPLES=[
+  "Something cosy to wind down with after work. No timers, no stress.",
+  "A game that makes me feel small in a huge, lonely world",
+  "Chaotic co-op with friends where everything goes wrong",
+  "Hard but fair, where I get a little better every run",
+  "A story that'll wreck me emotionally, under 15 hours",
+  "I just want to build something and watch it run",
+];
+
+// Shown until the first real search, clearly marked. Games from memory, not a result.
+const EXAMPLE={
+  vibe:EXAMPLES[0],
+  reading:{heard:["low pressure","gentle routine","something to potter at"],tags:["cozy","relaxing","exploration"],avoid:["horror","time pressure"]},
+  results:[
+    {title:"A Short Hike",meta:{year:2019,developers:["adamgryu"]},match:93,
+     reason:"Climb a small island mountain at your own pace, chatting to hikers; nothing chases you and it ends in an evening.",
+     matchedOn:["no stress","wind down"],misses:"",overlap:["Exploration"]},
+    {title:"Unpacking",meta:{year:2021,developers:["Witch Beam"]},match:88,
+     reason:"Unpack boxes into rooms across one person's life; quiet, tidy satisfaction with a story told through objects.",
+     matchedOn:["cosy","no timers"],misses:"Short: a few evenings at most.",overlap:["Puzzle"]},
+    {title:"Dorfromantik",meta:{year:2022,developers:["Toukana Interactive"]},match:84,
+     reason:"Lay hex tiles to grow a pastoral landscape; calm, but it does keep a score.",
+     matchedOn:["wind down"],misses:"There's a soft score to chase.",overlap:["Strategy"]},
+  ],
+};
+
+const HOST={mode:"unknown",catalog:false,provider:null,rater:false,needsToken:false,token:"",missing:[]};
+let sample=null,platform="any",busy=false,step="",err="",ctl=null;
+let last={...EXAMPLE,example:true,source:"example"};
+
+const $=s=>document.querySelector(s);
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||"null");
+  localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+
+/* ---- where are we running ---- */
+
+function hdrs(){const h={"Content-Type":"application/json"};if(HOST.token)h.Authorization="Bearer "+HOST.token;return h}
+async function api(path,body){
+  const r=await fetch(path,{method:body?"POST":"GET",headers:hdrs(),body:body?JSON.stringify(body):undefined,
+    signal:ctl&&ctl.signal});
+  let j=null;try{j=await r.json()}catch(e){}
+  if(!r.ok){const e=new Error((j&&j.error)||`request failed (${r.status})`);
+    e.code=r.status===401?"needs_token":(j&&j.code)||("http_"+r.status);throw e}
+  return j}
+async function detectHost(){
+  for(const k of ["rumble:token","wavelength:token","holds:token","games:token"]){
+    try{const t=localStorage.getItem(k);if(t){HOST.token=t;break}}catch(e){}}
+  try{const h=await api("/api/health");
+    if(h&&h.app==="two-hours-in"){HOST.mode="server";
+      HOST.catalog=!!(h.catalog&&h.catalog.connected);HOST.provider=h.catalog&&h.catalog.provider;
+      HOST.rater=!!(h.rater&&h.rater.configured);
+      HOST.needsToken=!!h.needsToken&&!h.authed;
+      HOST.missing=HOST.rater?[]:["ANTHROPIC_API_KEY"];return}}
+  catch(e){if(e&&e.code==="needs_token"){HOST.mode="server";HOST.needsToken=true;return}}
+  HOST.mode="artifact"}
+
+/* ---- errors that say what happened ---- */
+
+function errCopy(e){const c=e&&e.code,m=String((e&&e.message)||"");
+  if(c==="not_granted"||c==="sampling_disabled"||c==="capability_disabled")return"This page can't reach Claude. Open it from your Claude account and allow it.";
+  if(c==="needs_token")return"This server needs its access token.";
+  if(c==="rate_limited"||/rate.?limit|overloaded|529/i.test(m))return"Claude is busy or you've hit a usage limit. Give it a minute.";
+  if(/credit|billing|balance/i.test(m))return"The Anthropic account behind this server is out of credit.";
+  if(/IGDB auth failed|IGDB rejected/.test(m))return"IGDB rejected the server's credentials. Check IGDB_CLIENT_ID and IGDB_CLIENT_SECRET in Render's Environment tab.";
+  if(/RAWG failed \((?:401|403)\)/.test(m))return"RAWG rejected the server's key. Check RAWG_API_KEY in Render's Environment tab.";
+  if(/x-api-key|authentication/i.test(m))return"Anthropic rejected the server's key. Check ANTHROPIC_API_KEY in Render's Environment tab.";
+  if(/fetch failed|ECONNREFUSED|ETIMEDOUT/i.test(m))return"The server couldn't reach the game catalog or Anthropic just now. Try again in a minute.";
+  if(c==="invalid_json"||c==="invalid_output")return"The reply came back garbled. Try again.";
+  if(!c&&e instanceof TypeError)return"Couldn't reach the server. Check your connection and try again.";
+  return`That didn't work${m?": "+m.slice(0,160):""}.`}
+
+/* ---- the search ---- */
+
+async function tune(){
+  const vibe=($("#vibe").value||"").trim();
+  if(vibe.length<3){err="Say a bit about what you're after first.";return render()}
+  if(busy)return;
+  busy=true;err="";ctl=new AbortController();
+  const recent=(store("rumble:recent")||[]).filter(v=>v!==vibe);store("rumble:recent",[vibe].concat(recent).slice(0,5));
+  try{
+    if(HOST.mode==="server"){
+      if(!HOST.rater)throw new Error("This server is missing ANTHROPIC_API_KEY.");
+      step="Reading what you said";render();
+      const pool=await api("/api/gvibe/pool",{vibe,platform});
+      if(!pool.pool.length)throw new Error(pool.source==="memory"?"Nothing came back. Try describing it differently."
+        :"The catalog had nothing matching that reading. Try describing it differently, or pick Any platform.");
+      step=pool.source==="memory"?`Scoring ${pool.pool.length} games Claude suggested`
+        :`Scoring ${pool.pool.length} games from ${pool.source.toUpperCase()} against what you said`;render();
+      const out=await api("/api/gvibe/rank",{vibe,reading:pool.reading,ids:pool.pool.map(p=>p.id)});
+      last={vibe,reading:pool.reading,results:out.ranked,source:pool.source,dropped:pool.seedsDropped||[]};
+    } else {
+      if(!sample)throw{code:"not_granted"};
+      step="Thinking of games";render();
+      last=await fromMemory(vibe);
+    }
+  }catch(e){if(!(e&&e.name==="AbortError"))err=errCopy(e)}
+  busy=false;step="";render();
+  const o=$("#out");if(o&&!err&&o.scrollIntoView)o.scrollIntoView({block:"start",behavior:"smooth"})}
+
+// With no catalog there is nothing to retrieve from, so games come from Claude's memory.
+async function fromMemory(vibe){
+  const out=await sample.json(`Someone wants a game to play and described it in their own words:
+"""${vibe.slice(0,600)}"""
+${platform!=="any"?`They play on ${platform==="pc"?"PC":platform==="mobile"?"their phone":platform}; only suggest games available there.`:""}
+
+First say in 3-6 short plain phrases how you read the feeling. Then name 10 real games that fit
+the FEELING, from what you know of how each one actually plays: the loop, the pace, the pressure.
+Spread them: indie and big, old and new. Score each 0-100 for fit (90+ almost exactly it, 75-89
+strong with one thing off, 55-74 partly, below 55 weak); quality and popularity don't count.
+Only name games you are confident exist.
+
+Reply with only this JSON:
+{"heard":[""],"results":[{"title":"","year":0,"developer":"","match":0,
+"reason":"under 22 words, concrete to this game","matchedOn":[""],"misses":""}]}`,
+    {modelTier:"default",signal:ctl.signal,cache:false});
+  const results=(out.results||[]).filter(r=>r&&r.title).map(r=>({title:r.title,
+    meta:{year:r.year||null,developers:r.developer?[r.developer]:[]},match:Math.max(0,Math.min(100,Math.round(Number(r.match)||0))),
+    reason:r.reason||"",matchedOn:(r.matchedOn||[]).slice(0,3),misses:r.misses||"",overlap:[]}))
+    .sort((a,b)=>b.match-a.match);
+  return {vibe,reading:{heard:out.heard||[],tags:[],avoid:[]},results,source:"memory"}}
+
+/* ---- drawing ---- */
+
+function bar(n){const on=Math.round(n/10);
+  return`<div class="bar" aria-hidden="true">${Array.from({length:10},(_,i)=>`<i class="${i<on?"on":""}"></i>`).join("")}</div>`}
+
+const PLAT_SHORT=[[/PC|Windows/i,"PC"],[/PlayStation 5/i,"PS5"],[/PlayStation 4/i,"PS4"],[/Xbox Series/i,"Xbox Series"],
+  [/Xbox One/i,"Xbox One"],[/Switch/i,"Switch"],[/iOS/i,"iOS"],[/Android/i,"Android"],[/Mac/i,"Mac"]];
+function metaLine(r){const m=r.meta||{},bits=[];
+  if(m.year)bits.push(m.year);
+  if(m.developers&&m.developers.length)bits.push(m.developers[0]);
+  const plats=[];for(const p of m.platforms||[])for(const [re,n] of PLAT_SHORT)if(re.test(p)&&!plats.includes(n)){plats.push(n);break}
+  if(plats.length)bits.push(plats.slice(0,4).join(", ")+(plats.length>4?"…":""));
+  if(m.medianPlaytimeHours)bits.push(`~${m.medianPlaytimeHours}h typical`);
+  return bits.join(" · ")}
+
+function row(r){
+  const m=r.meta||{},img=(last.source==="igdb"||last.source==="rawg")&&m.cover;
+  const facts=r.overlap||[];const catName=last.source==="rawg"?"RAWG":"IGDB";
+  return`<article class="row${img?"":" noposter"}">
+    ${img?`<img class="poster${last.source==="rawg"?" wide":""}" src="${esc(m.cover)}" alt="" loading="lazy">`:""}
+    <div>
+      <div class="top">
+        <div><div class="name">${esc(r.title)}</div><div class="meta">${esc(metaLine(r))}</div></div>
+        <div class="score"><div class="num">${r.match}<small>%</small></div>${bar(r.match)}</div>
+      </div>
+      <div class="why">${esc(r.reason)}</div>
+      ${(r.matchedOn&&r.matchedOn.length)||facts.length?`<div class="chips">
+        ${(r.matchedOn||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join("")}
+        ${facts.map(x=>`<span class="chip fact" title="A tag ${catName} itself gives this game">${esc(x)}</span>`).join("")}
+      </div>`:""}
+      ${r.misses?`<div class="miss"><b>Off:</b> ${esc(r.misses)}</div>`:""}
+      ${r.known===false?`<div class="unsure">${last.source==="memory"?"Claude isn't sure about this one. Check it exists before you buy it.":"Claude doesn't know this one well; scored from the catalog's description."}</div>`:""}
+      ${m.sourceUrl?`<div class="links"><a href="${esc(m.sourceUrl)}" target="_blank" rel="noopener">On ${catName}</a></div>`:""}
+    </div></article>`}
+
+function render(){
+  $("#platform").value=platform;
+  $("#go").disabled=busy;$("#go").textContent=busy?"Looking…":"Find games";
+  const recent=store("rumble:recent")||[];
+  const tries=recent.length?recent:EXAMPLES;
+  $("#tries").innerHTML=(recent.length?`<span class="mark" style="align-self:center">Recent</span>`:"")+
+    tries.slice(0,5).map(t=>`<button class="try" data-try="${esc(t)}">${esc(t)}</button>`).join("");
+
+  let h="";
+  if(HOST.needsToken)h+=`<div class="lock"><b>This server is locked.</b> Enter the access token it was set up with.
+    <div class="r"><input id="tok" type="password" placeholder="Access token" autocomplete="off"><button id="savetok">Unlock</button></div></div>`;
+  if(busy)h+=`<div class="status"><span class="pulse"><i></i><i></i><i></i><i></i></span><span>${esc(step)}…</span>
+    <button class="stop" id="stop">Stop</button></div>`;
+  if(err)h+=`<div class="err">${esc(err)}</div>`;
+
+  if(last&&last.results){
+    const rd=last.reading||{};
+    const strong=last.results.filter(r=>r.match>=50),weak=last.results.filter(r=>r.match<50);
+    h+=`<section class="heard">
+      ${last.example?`<span class="flag">Example — try your own above</span>`:""}
+      <div class="mark">${last.example?"For":"You said"}</div>
+      <div style="font-family:var(--display);font-size:19px;margin-top:4px">“${esc(last.vibe)}”</div>
+      ${rd.heard&&rd.heard.length?`<div class="line"><span class="k">Heard</span>${rd.heard.map(x=>`<span class="pill">${esc(x)}</span>`).join("")}</div>`:""}
+      ${rd.tags&&rd.tags.length?`<div class="line"><span class="k">${last.source==="memory"?"Tags":"Searched"}</span>${rd.tags.map(k=>`<span class="pill tag">${esc(k)}</span>`).join("")}</div>`:""}
+      ${(rd.players&&rd.players!=="any")||(rd.length&&rd.length!=="any")?`<div class="line"><span class="k">Playing</span>${
+        [rd.players&&rd.players!=="any"?{solo:"solo",coop:"co-op",multiplayer:"multiplayer"}[rd.players]:"",
+         rd.length&&rd.length!=="any"?{short:"short",medium:"medium length",long:"long",endless:"one to keep coming back to"}[rd.length]:""]
+        .filter(Boolean).map(x=>`<span class="pill">${esc(x)}</span>`).join("")}</div>`:""}
+      ${rd.avoid&&rd.avoid.length?`<div class="line"><span class="k">Avoided</span>${rd.avoid.map(x=>`<span class="pill avoid">${esc(x)}</span>`).join("")}</div>`:""}
+    </section>
+    <section class="results">
+      ${strong.length?strong.map(row).join(""):`<p class="meta">Nothing came through as a strong match. Try saying it another way.</p>`}
+      ${weak.length?`<details class="weak"><summary>${weak.length} weaker match${weak.length===1?"":"es"}</summary>${weak.map(row).join("")}</details>`:""}
+    </section>
+    <p class="source">${last.source==="igdb"||last.source==="rawg"
+      ?`Games, covers, platforms and tags come from ${last.source==="rawg"?`<a href="https://rawg.io" target="_blank" rel="noopener">RAWG</a>`:"IGDB"}. The match is Claude's judgment of how well each fits what you wrote. It isn't a rating, and quality doesn't count toward it. Outlined tags are ones the catalog itself gives the game.`
+      :last.source==="memory"
+      ?`No game catalog is connected, so these games come from Claude's memory, and years, developers or platforms can be wrong. ${HOST.mode==="server"?"Add RAWG_API_KEY (free at rawg.io/apidocs) in Render's Environment tab and every game becomes a real catalog record.":"Opened from your own server with a game catalog key, every game is a real catalog record."}`
+      :"An example of what a search returns."}
+      ${last.dropped&&last.dropped.length?` ${last.dropped.length} suggestion${last.dropped.length===1?" wasn't":"s weren't"} in the catalog and ${last.dropped.length===1?"was":"were"} left out.`:""}</p>`}
+  $("#out").innerHTML=h}
+
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("button,[data-try]");if(!t)return;
+  if(t.dataset.try){$("#vibe").value=t.dataset.try;$("#vibe").focus();return}
+  if(t.id==="go")return void tune();
+  if(t.id==="stop"){if(ctl)ctl.abort();return}
+  if(t.id==="savetok"){HOST.token=($("#tok").value||"").trim();
+    try{localStorage.setItem("rumble:token",HOST.token)}catch(e){}
+    return void detectHost().then(render)}});
+document.addEventListener("change",ev=>{if(ev.target.id==="platform")platform=ev.target.value});
+document.addEventListener("keydown",ev=>{
+  if(ev.target.id==="vibe"&&ev.key==="Enter"&&(ev.metaKey||ev.ctrlKey)){ev.preventDefault();tune()}});
+
+render();
+(async()=>{
+  await detectHost();
+  if(HOST.mode!=="server"){try{sample=await claude.use("sample")}catch(e){sample=null}}
+  render()})();
+</script>

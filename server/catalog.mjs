@@ -12,6 +12,7 @@ const IGDB_FIELDS = [
   "platforms.name", "platforms.abbreviation",
   "involved_companies.developer", "involved_companies.publisher",
   "involved_companies.company.name",
+  "cover.image_id", "keywords.name",
 ].join(",");
 
 function clean(s, n = 1200) {
@@ -80,6 +81,9 @@ class Igdb {
         perspectives: names(g.player_perspectives),
         platforms: names(g.platforms),
         summary: clean(g.summary),
+        keywords: names(g.keywords).slice(0, 24),
+        cover: g.cover && g.cover.image_id
+          ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${g.cover.image_id}.jpg` : null,
         ratingCount: g.total_rating_count || 0,
         retrievedAt: Date.now(),
       },
@@ -121,6 +125,26 @@ class Igdb {
       + ` sort total_rating_count desc; limit ${limit}; offset ${offset};`);
     return rows.map(g => this.shape(g));
   }
+
+  /* Retrieval for a described feeling: anything carrying one of the wanted
+   * genres, themes or keywords, filtered by mode, platform and era. */
+  async discoverVibe(o = {}) {
+    const q = a => a.map(x => `"${String(x).replace(/"/g, "")}"`).join(",");
+    const any = [];
+    if (o.genres && o.genres.length) any.push(`genres.name = (${q(o.genres)})`);
+    if (o.themes && o.themes.length) any.push(`themes.name = (${q(o.themes)})`);
+    if (o.keywords && o.keywords.length) any.push(`keywords.name = (${q(o.keywords)})`);
+    if (!any.length) return [];
+    // No category filter: IGDB is moving that field to game_type, and the rating floor already keeps DLC out.
+    const where = ["version_parent = null", "total_rating_count > 8", `(${any.join(" | ")})`];
+    if (o.modes && o.modes.length) where.push(`game_modes.name = (${q(o.modes)})`);
+    if (o.platform) where.push(`(${o.platform.map(p => `platforms.name ~ *"${p.replace(/"/g, "")}"*`).join(" | ")})`);
+    if (o.from) where.push(`first_release_date >= ${Math.floor(Date.UTC(o.from, 0, 1) / 1000)}`);
+    if (o.to) where.push(`first_release_date < ${Math.floor(Date.UTC(o.to + 1, 0, 1) / 1000)}`);
+    const rows = await this.query(`fields ${IGDB_FIELDS}; where ${where.join(" & ")};`
+      + ` sort total_rating_count desc; limit ${Math.min(50, o.limit || 30)};`);
+    return rows.map(g => this.shape(g));
+  }
 }
 
 /* ---------------------------------------------------------------- RAWG ---- */
@@ -155,6 +179,8 @@ class Rawg {
         perspectives: [],
         platforms: names((g.platforms || []).map(p => p.platform)),
         summary: clean(detail && detail.description_raw),
+        keywords: (g.tags || []).filter(t => !t.language || t.language === "eng").map(t => t.name).filter(Boolean).slice(0, 24),
+        cover: g.background_image || null,
         medianPlaytimeHours: g.playtime || null,
         ratingCount: g.ratings_count || 0,
         retrievedAt: Date.now(),
@@ -185,6 +211,19 @@ class Rawg {
     });
     return (j.results || []).map(g => this.shape(g, null));
   }
+
+  async discoverVibe(o = {}) {
+    const base = { page_size: Math.min(40, o.limit || 20), ordering: "-added",
+      parent_platforms: o.rawgPlatforms || null,
+      dates: o.from || o.to ? `${o.from || 1970}-01-01,${o.to || new Date().getUTCFullYear()}-12-31` : null };
+    const runs = [];
+    if (o.tags && o.tags.length) runs.push(this.get("games", Object.assign({ tags: o.tags.join(",") }, base)));
+    if (o.genres && o.genres.length) runs.push(this.get("games", Object.assign({ genres: o.genres.join(",") }, base)));
+    const out = [];
+    for (const r of await Promise.allSettled(runs))
+      if (r.status === "fulfilled") out.push(...(r.value.results || []).map(g => this.shape(g, null)));
+    return out;
+  }
 }
 
 /* ------------------------------------------------------------- factory ---- */
@@ -212,5 +251,6 @@ export function makeCatalog(env) {
     search: (q, n) => chosen ? chosen.search(q, n) : Promise.reject(new Error("no catalog configured")),
     byId: id => chosen ? chosen.byId(id) : Promise.reject(new Error("no catalog configured")),
     discover: o => chosen ? chosen.discover(o) : Promise.reject(new Error("no catalog configured")),
+    discoverVibe: o => chosen ? chosen.discoverVibe(o) : Promise.resolve([]),
   };
 }

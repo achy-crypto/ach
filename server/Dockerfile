@@ -11,9 +11,11 @@ COPY server/ ./
 COPY games/index.html /app/app/games.html
 COPY holds/index.html /app/app/holds.html
 COPY wavelength/index.html /app/app/wavelength.html
+COPY rumble/index.html /app/app/rumble.html
 ENV APP_HTML=/app/app/games.html
 ENV APP_HTML_HOLDS=/app/app/holds.html
 ENV APP_HTML_VIBE=/app/app/wavelength.html
+ENV APP_HTML_RUMBLE=/app/app/rumble.html
 ENV DATA_DIR=/data
 ENV PORT=8787
 VOLUME ["/data"]
