@@ -99,12 +99,16 @@ async function handleApi(req, res, url) {
   const route = url.pathname;
 
   if (route === "/api/health") {
+    // ?check=catalog makes one small real request, so the page can tell a
+    // missing key from a rejected one.
+    const catalogCheck = url.searchParams.get("check") === "catalog" ? await catalog.check() : null;
     return send(res, 200, {
       ok: true,
       app: "two-hours-in",
       needsToken: !!APP_TOKEN,
       authed: authed(req, url),
-      catalog: { connected: catalog.connected, provider: catalog.provider, missing: catalog.missing },
+      catalog: { connected: catalog.connected, provider: catalog.provider, missing: catalog.missing, note: catalog.note,
+        check: catalogCheck && { ok: catalogCheck.ok, error: catalogCheck.error || null } },
       screen: { connected: screenCatalog.connected, provider: screenCatalog.provider, missing: screenCatalog.missing,
         credential: screenCatalog.credentialKind },
       rater: { configured: rater.configured(), model: llm.defaults.model, schema: RATING_SCHEMA_VERSION },
@@ -342,12 +346,12 @@ deploy problem, not a problem with your data — nothing has been lost.</p>
 <p style="color:#777;font-size:13px">Looked for: <code>${where}</code></p></body>`;
 }
 
-function indexPage() {
-  const card = (href, name, what, cat, ok, missing) => `
+function indexPage(gameCheck) {
+  const card = (href, name, what, cat, ok, missing, offText) => `
     <a class="card" href="${href}">
       <h2>${name}</h2>
       <p>${what}</p>
-      <span class="${ok ? "on" : "off"}">${ok ? `${cat} connected` : `${cat} not connected — set ${missing.join(", ")}`}</span>
+      <span class="${ok ? "on" : "off"}">${ok ? `${cat} connected` : offText || `${cat} not connected — set ${missing.join(", ")}`}</span>
     </a>`;
   return `<!doctype html><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -375,12 +379,18 @@ h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
   ${card("/wavelength", "Wavelength", "Shows and films — describe a feeling, get titles that match it.",
     "TMDb", screenCatalog.connected, screenCatalog.missing)}
   ${card("/rumble", "Rumble", "Games — describe a feeling, get games that match it.",
-    catalog.provider ? catalog.provider.toUpperCase() : "A game catalog", catalog.connected,
-    ["RAWG_API_KEY (or IGDB) — until then, games come from Claude's memory and are labelled that way"])}
+    catalog.provider ? catalog.provider.toUpperCase() : "A game catalog",
+    catalog.connected && !!(gameCheck && gameCheck.ok),
+    ["RAWG_API_KEY (or IGDB) — until then, games come from Claude's memory and are labelled that way"],
+    catalog.connected && gameCheck && !gameCheck.ok
+      ? `${catalog.provider.toUpperCase()} key is set but was rejected: ${String(gameCheck.error || "").replace(/[<>&]/g, "")}` : "")}
+  ${catalog.note ? `<p class="note" style="margin-top:-6px">${catalog.note.replace(/[<>&]/g, "")}</p>` : ""}
   ${card("/holds", "Will It Hold", "Shows and films — whether you'll actually get through one.",
     "TMDb", screenCatalog.connected, screenCatalog.missing)}
   ${card("/games", "Two Hours In", "Games — whether one survives its first week with you.",
-    catalog.provider ? catalog.provider.toUpperCase() : "A game catalog", catalog.connected, catalog.missing)}
+    catalog.provider ? catalog.provider.toUpperCase() : "A game catalog",
+    catalog.connected && !!(gameCheck && gameCheck.ok), catalog.missing,
+    catalog.connected && gameCheck && !gameCheck.ok ? `${catalog.provider.toUpperCase()} key is set but was rejected` : "")}
   <p class="note">Claude: ${llm.configured() ? `${llm.defaults.model}` : "NOT configured — set ANTHROPIC_API_KEY"}.
   ${APP_TOKEN ? "Access token required." : "No access token set — anyone with this URL can spend your API credit."}</p>
 </div>`;
@@ -394,7 +404,7 @@ const server = http.createServer(async (req, res) => {
      * makes the other look missing, and makes the whole deployment look like
      * whichever app happened to be at "/". */
     if (url.pathname === "/" || url.pathname === "/index.html") {
-      return send(res, 200, indexPage(), "text/html; charset=utf-8");
+      return send(res, 200, indexPage(catalog.connected ? await catalog.check() : null), "text/html; charset=utf-8");
     }
     if (url.pathname === "/games" || url.pathname === "/games/") {
       if (!existsSync(APP_HTML)) return send(res, 500, missingPage("Two Hours In", APP_HTML), "text/html; charset=utf-8");
@@ -431,7 +441,7 @@ server.listen(PORT, () => {
   console.log(`  Rumble        http://localhost:${PORT}/rumble   (games by feeling)`);
   console.log(`  Will It Hold  http://localhost:${PORT}/holds    (shows and films)`);
   console.log(`  Two Hours In  http://localhost:${PORT}/games    (games)\n`);
-  line(`catalog   games: ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
+  line(`catalog   games: ${catalog.connected ? `${catalog.provider} configured` : `NOT connected — set ${catalog.missing.join(", ")}`}${catalog.note ? ` (${catalog.note})` : ""}`);
   line(`          screen: ${screenCatalog.connected ? `tmdb configured, using the ${screenCatalog.credentialKind}` : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
   line(`ratings   ${llm.configured() ? `${llm.defaults.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);
   line(`data      ${DATA_DIR}`);

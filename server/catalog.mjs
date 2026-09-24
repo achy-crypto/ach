@@ -228,26 +228,61 @@ class Rawg {
 
 /* ------------------------------------------------------------- factory ---- */
 
+/* Pasted keys arrive with quotes, spaces or a slightly different name more
+ * often than not. Read them forgivingly, and say which name was used. */
+const tidy = v => String(v == null ? "" : v).trim().replace(/^["'`]+|["'`]+$/g, "").trim();
+function envValue(env, preferred, pattern) {
+  for (const n of preferred) { const v = tidy(env[n]); if (v) return { name: n, value: v }; }
+  const other = Object.keys(env).find(k => pattern.test(k.trim()) && tidy(env[k]));
+  return other ? { name: other, value: tidy(env[other]) } : { name: null, value: "" };
+}
+
 export function makeCatalog(env) {
-  const want = String(env.CATALOG_PROVIDER || "").toLowerCase();
-  const igdb = new Igdb({ clientId: env.IGDB_CLIENT_ID, clientSecret: env.IGDB_CLIENT_SECRET,
+  const want = tidy(env.CATALOG_PROVIDER).toLowerCase();
+  const rawgKey = envValue(env, ["RAWG_API_KEY", "RAWG_KEY", "RAWG_API", "RAWG_TOKEN", "RAWG"],
+    /^rawg[_-]?(?:api)?[_-]?(?:key|token)?$/i);
+  const igdbId = envValue(env, ["IGDB_CLIENT_ID", "TWITCH_CLIENT_ID"], /^(?:igdb|twitch)[_-]?client[_-]?id$/i);
+  const igdbSecret = envValue(env, ["IGDB_CLIENT_SECRET", "TWITCH_CLIENT_SECRET"], /^(?:igdb|twitch)[_-]?client[_-]?secret$/i);
+  const igdb = new Igdb({ clientId: igdbId.value, clientSecret: igdbSecret.value,
     apiBase: env.IGDB_API_BASE, authBase: env.TWITCH_AUTH_BASE });
-  const rawg = new Rawg({ apiKey: env.RAWG_API_KEY, apiBase: env.RAWG_API_BASE });
-  let chosen = null;
+  const rawg = new Rawg({ apiKey: rawgKey.value, apiBase: env.RAWG_API_BASE });
+
+  // CATALOG_PROVIDER picks between two configured catalogs. It never switches
+  // off the only one that is configured — that was the "key set, still not
+  // connected" trap.
+  let chosen = null, note = "";
   if (want === "igdb" && igdb.configured()) chosen = igdb;
   else if (want === "rawg" && rawg.configured()) chosen = rawg;
-  else if (!want) chosen = igdb.configured() ? igdb : rawg.configured() ? rawg : null;
+  else chosen = igdb.configured() ? igdb : rawg.configured() ? rawg : null;
+  if (chosen && want && want !== chosen.name)
+    note = `CATALOG_PROVIDER says "${want}", but only ${chosen.name.toUpperCase()} has credentials, so ${chosen.name.toUpperCase()} is used.`;
+  if (chosen === rawg && rawgKey.name && rawgKey.name !== "RAWG_API_KEY")
+    note = (note ? note + " " : "") + `Read the RAWG key from ${rawgKey.name}.`;
+  if (igdbId.value && !igdbSecret.value) note = (note ? note + " " : "") + "IGDB_CLIENT_ID is set but IGDB_CLIENT_SECRET isn't.";
+  if (!igdbId.value && igdbSecret.value) note = (note ? note + " " : "") + "IGDB_CLIENT_SECRET is set but IGDB_CLIENT_ID isn't.";
 
-  const missing = [];
-  if (!chosen) {
-    if (want === "igdb") missing.push("IGDB_CLIENT_ID", "IGDB_CLIENT_SECRET");
-    else if (want === "rawg") missing.push("RAWG_API_KEY");
-    else missing.push("CATALOG_PROVIDER plus either IGDB_CLIENT_ID+IGDB_CLIENT_SECRET or RAWG_API_KEY");
+  const missing = chosen ? [] : ["RAWG_API_KEY (or IGDB_CLIENT_ID + IGDB_CLIENT_SECRET)"];
+
+  // A real, tiny request, so "connected" means the key works, not just that
+  // something is in the box. Cached so a page load doesn't spend requests.
+  let lastCheck = null;
+  async function check() {
+    if (!chosen) return { ok: false, error: "no catalog credentials" };
+    if (lastCheck && Date.now() - lastCheck.at < (lastCheck.ok ? 10 * 60_000 : 30_000)) return lastCheck;
+    try {
+      if (chosen === rawg) await rawg.get("games", { page_size: 1 });
+      else await igdb.query("fields name; limit 1;");
+      lastCheck = { ok: true, at: Date.now() };
+    } catch (e) { lastCheck = { ok: false, error: String((e && e.message) || e).slice(0, 200), at: Date.now() }; }
+    return lastCheck;
   }
+
   return {
     provider: chosen ? chosen.name : null,
     connected: !!chosen,
     missing,
+    note,
+    check,
     search: (q, n) => chosen ? chosen.search(q, n) : Promise.reject(new Error("no catalog configured")),
     byId: id => chosen ? chosen.byId(id) : Promise.reject(new Error("no catalog configured")),
     discover: o => chosen ? chosen.discover(o) : Promise.reject(new Error("no catalog configured")),

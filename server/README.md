@@ -65,7 +65,7 @@ suggestions from memory and the page says so. The quickest fix for that is `RAWG
 | Variable | Required | Where to get it |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | **Yes** | <https://console.anthropic.com> → API keys. This is what rates games; without it the server starts but refuses to rate. |
-| `CATALOG_PROVIDER` | Yes | `igdb` or `rawg`. |
+| `CATALOG_PROVIDER` | Optional | `igdb` or `rawg`, only needed to choose when both are set. If it names one that has no credentials, the other is used and the home page says so. |
 | `IGDB_CLIENT_ID` + `IGDB_CLIENT_SECRET` | If `igdb` | <https://dev.twitch.tv/console/apps> → Register Your Application (any name; OAuth Redirect URL `http://localhost`; category "Application Integration"). Then **Manage** → copy the Client ID → **New Secret** → copy the secret. IGDB is free and is the better of the two: it returns game modes, themes, perspectives and a real summary. The server exchanges these for an app token itself and refreshes it. |
 | `TMDB_API_KEY` *(or `TMDB_READ_TOKEN`)* | For **Will It Hold** at `/holds` | <https://www.themoviedb.org> → sign up → Settings → API → Request an API key → Developer. Free, approved in minutes. Either the v3 key or the v4 read token works. This is what turns runtimes, episode counts and season counts from recalled numbers into facts. |
 | `RAWG_API_KEY` | If `rawg` | <https://rawg.io/apidocs> → sign up; the key appears on your profile. Simpler, one key, 20k requests/month free, but thinner metadata. |

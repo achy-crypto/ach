@@ -95,6 +95,10 @@ button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px soli
 .miss b{color:var(--off);font-weight:500}
 .links{margin-top:8px;font-size:13px}
 .links a{color:var(--dim)}
+.keyline{margin-top:18px;font-size:14px;border-left:3px solid var(--rule);background:var(--surface);padding:10px 13px;border-radius:0 5px 5px 0}
+.keyline.on{border-left-color:var(--signal)}
+.keyline.off{border-left-color:var(--warn)}
+.keyline code{font-family:var(--mono);font-size:12px}
 .unsure{margin-top:6px;font-size:12.5px;color:var(--dim);font-style:italic}
 details.weak{margin-top:8px;border-top:1px solid var(--rule);padding-top:10px}
 details.weak>summary{cursor:pointer;color:var(--dim);font-size:14px;padding:6px 0;list-style:none}
@@ -153,7 +157,7 @@ const EXAMPLE={
   ],
 };
 
-const HOST={mode:"unknown",catalog:false,provider:null,rater:false,needsToken:false,token:"",missing:[]};
+const HOST={mode:"unknown",catalog:false,provider:null,check:null,note:"",rater:false,needsToken:false,token:"",missing:[]};
 let sample=null,platform="any",busy=false,step="",err="",ctl=null;
 let last={...EXAMPLE,example:true,source:"example"};
 
@@ -176,9 +180,10 @@ async function api(path,body){
 async function detectHost(){
   for(const k of ["rumble:token","wavelength:token","holds:token","games:token"]){
     try{const t=localStorage.getItem(k);if(t){HOST.token=t;break}}catch(e){}}
-  try{const h=await api("/api/health");
+  try{const h=await api("/api/health?check=catalog");
     if(h&&h.app==="two-hours-in"){HOST.mode="server";
       HOST.catalog=!!(h.catalog&&h.catalog.connected);HOST.provider=h.catalog&&h.catalog.provider;
+      HOST.check=(h.catalog&&h.catalog.check)||null;HOST.note=(h.catalog&&h.catalog.note)||"";
       HOST.rater=!!(h.rater&&h.rater.configured);
       HOST.needsToken=!!h.needsToken&&!h.authed;
       HOST.missing=HOST.rater?[]:["ANTHROPIC_API_KEY"];return}}
@@ -285,6 +290,16 @@ function row(r){
       ${m.sourceUrl?`<div class="links"><a href="${esc(m.sourceUrl)}" target="_blank" rel="noopener">On ${catName}</a></div>`:""}
     </div></article>`}
 
+/* Where the game catalog stands, said plainly, before anyone searches. */
+function catalogLine(){
+  if(HOST.mode==="unknown")return"";
+  if(HOST.mode==="artifact")return`<div class="keyline off"><b>No game catalog here.</b> This copy runs inside Claude, which can't reach the keys on your Render server, so games come from Claude's memory. For real catalog games, open Rumble on your Render site: its address followed by <code>/rumble</code>.</div>`;
+  if(HOST.needsToken)return"";
+  const P=(HOST.provider||"").toUpperCase();
+  if(!HOST.catalog)return`<div class="keyline off"><b>No game catalog key on this server.</b> In Render, open the service → Environment, add <code>RAWG_API_KEY</code> with your key from rawg.io/apidocs, and save. Render redeploys by itself; reload this page after a minute or two. Until then, games come from Claude's memory.</div>`;
+  if(HOST.check&&!HOST.check.ok)return`<div class="keyline off"><b>${P} key found, but ${P} rejected it.</b> ${esc(/\((40[13])\)/.test(HOST.check.error||"")?"The key is wrong or not activated yet. Copy it again from your "+(P==="RAWG"?"rawg.io profile":"Twitch developer console")+" and replace it in Render → Environment.":HOST.check.error||"")}${HOST.note?" "+esc(HOST.note):""}</div>`;
+  return`<div class="keyline on"><b>${P} connected.</b> Every game is a real ${P} record.${HOST.note?" "+esc(HOST.note):""}</div>`}
+
 function render(){
   $("#platform").value=platform;
   $("#go").disabled=busy;$("#go").textContent=busy?"Looking…":"Find games";
@@ -293,7 +308,7 @@ function render(){
   $("#tries").innerHTML=(recent.length?`<span class="mark" style="align-self:center">Recent</span>`:"")+
     tries.slice(0,5).map(t=>`<button class="try" data-try="${esc(t)}">${esc(t)}</button>`).join("");
 
-  let h="";
+  let h=catalogLine();
   if(HOST.needsToken)h+=`<div class="lock"><b>This server is locked.</b> Enter the access token it was set up with.
     <div class="r"><input id="tok" type="password" placeholder="Access token" autocomplete="off"><button id="savetok">Unlock</button></div></div>`;
   if(busy)h+=`<div class="status"><span class="pulse"><i></i><i></i><i></i><i></i></span><span>${esc(step)}…</span>
