@@ -1,0 +1,956 @@
+<title>Dharana Rounds</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+
+<style>
+/* A timer on a gym wall commits to one look. Everything is painted
+   explicitly so it holds on any host ground. */
+:root{
+  --ground:#0a0b0d; --panel:#121418; --panel-2:#171a1f;
+  --line:#22262c; --hair:#191d22;
+  --ink:#e8e9ea; --ink-2:#b9bdc3; --dim:#767c85;
+  --work:#d94a3d; --work-dim:#8e2f26; --work-wash:#d94a3d1a;
+  --rest:#4f96a5; --rest-dim:#2c5e6a; --rest-wash:#4f96a51a;
+  --record:#c9a227; --good:#5c9e6b;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{background:var(--ground)}
+body{
+  margin:0;color:var(--ink);
+  font-family:"Barlow","Helvetica Neue",Arial,sans-serif;
+  font-size:15.5px;line-height:1.5;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;
+}
+.wrap{max-width:560px;margin:0 auto;padding-block:18px 64px;padding-left:18px;padding-right:18px}
+@media (max-width:400px){.wrap{padding-left:14px;padding-right:14px}}
+
+.mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace}
+.lab{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:9.5px;letter-spacing:.17em;
+  text-transform:uppercase;color:var(--dim)}
+.cond{font-family:"Barlow Condensed","Barlow",Arial,sans-serif;font-variant-numeric:tabular-nums}
+
+/* masthead */
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  border-bottom:2px solid var(--ink);padding-bottom:8px}
+.top h1{font-family:"Barlow Condensed",Arial,sans-serif;font-size:23px;font-weight:700;
+  letter-spacing:.05em;text-transform:uppercase;margin:0;line-height:1;white-space:nowrap}
+.top .sub{color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  font-family:"JetBrains Mono",monospace;white-space:nowrap}
+
+/* tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin:0 0 20px}
+.tab{flex:1;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+  font-family:"Barlow Condensed",Arial,sans-serif;font-size:15px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim);padding:12px 4px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--work)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{
+  outline:2px solid var(--work);outline-offset:2px}
+
+/* setup */
+.field{margin-top:18px}
+.field > .lab{display:block;margin-bottom:7px}
+.step{display:flex;align-items:stretch;border:1px solid var(--line);background:var(--panel)}
+.step button{flex:none;width:52px;background:none;border:0;color:var(--ink-2);font-size:22px;
+  cursor:pointer;font-family:"Barlow Condensed",Arial,sans-serif;line-height:1}
+.step button:active{background:var(--panel-2)}
+.step .val{flex:1;text-align:center;padding:12px 4px;border-left:1px solid var(--line);
+  border-right:1px solid var(--line)}
+.step .val b{font-family:"Barlow Condensed",Arial,sans-serif;font-size:30px;font-weight:700;
+  display:block;line-height:1;font-variant-numeric:tabular-nums}
+.step .val span{display:block;font-family:"JetBrains Mono",monospace;font-size:9px;
+  letter-spacing:.15em;text-transform:uppercase;color:var(--dim);margin-top:3px}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel);border:1px solid var(--line);color:var(--ink-2);
+  font-family:"JetBrains Mono",monospace;font-size:11px;padding:9px 11px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.chip.small{font-size:10px;padding:7px 9px}
+
+input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--ink);
+  font:inherit;font-size:max(16px,1rem);padding:12px 13px}
+input[type=text]::placeholder{color:#565c65}
+input[type=text]:focus{outline:none;border-color:var(--work)}
+
+.go{width:100%;margin-top:22px;background:var(--work);border:0;color:#120604;
+  font-family:"Barlow Condensed",Arial,sans-serif;font-size:26px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;padding:18px;cursor:pointer;line-height:1}
+.go:active{background:#c03e33}
+.go.ghost{background:none;border:1px solid var(--line);color:var(--ink-2);font-size:18px;padding:14px}
+.row{display:flex;gap:9px}
+.row > *{flex:1}
+.plan{color:var(--dim);font-size:13px;margin-top:10px;text-align:center}
+.plan b{color:var(--ink-2);font-weight:600}
+
+/* the clock */
+.pips{display:flex;gap:4px;margin-bottom:14px}
+.pips i{flex:1;height:5px;background:var(--hair);display:block}
+.pips i.done{background:var(--work-dim)}
+.pips i.now{background:var(--work)}
+.pips i.now.rest{background:var(--rest)}
+
+.clockwrap{border:1px solid var(--line);background:var(--panel);padding:26px 18px 22px;text-align:center}
+.clockwrap.resting{border-color:var(--rest-dim);background:#0e151800}
+.state{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.3em;
+  text-transform:uppercase;color:var(--work)}
+.clockwrap.resting .state{color:var(--rest)}
+.clock{font-family:"Barlow Condensed",Arial,sans-serif;font-size:clamp(84px,27vw,132px);
+  font-weight:700;line-height:.86;letter-spacing:-.01em;font-variant-numeric:tabular-nums;
+  margin:6px 0 2px;color:var(--ink)}
+.clock.warn{color:var(--work)}
+.ofm{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim)}
+.objline{margin-top:14px;padding-top:13px;border-top:1px solid var(--hair);
+  font-size:14px;color:var(--ink-2)}
+.objline b{color:var(--ink);font-weight:600}
+
+/* round card */
+.card{border:1px solid var(--line);background:var(--panel);padding:16px}
+.card h3{font-family:"Barlow Condensed",Arial,sans-serif;font-size:19px;font-weight:700;
+  letter-spacing:.06em;text-transform:uppercase;margin:0 0 2px}
+.scalerow{margin-top:15px}
+.scalerow .q{font-size:14.5px;font-weight:600;margin-bottom:2px}
+.scalerow .hint{color:var(--dim);font-size:12px;margin-bottom:7px}
+.scale{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+.scale button{background:var(--panel-2);border:1px solid var(--line);color:var(--ink-2);
+  font-family:"Barlow Condensed",Arial,sans-serif;font-size:21px;font-weight:600;
+  padding:13px 0;cursor:pointer;line-height:1}
+.scale button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.ends{display:flex;justify-content:space-between;margin-top:5px}
+.ends span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+
+/* data */
+.hero{border-top:2px solid var(--ink);border-bottom:1px solid var(--line);padding:16px 0 18px;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.hero .big{font-family:"Barlow Condensed",Arial,sans-serif;font-size:clamp(54px,15vw,76px);
+  font-weight:700;line-height:.84;font-variant-numeric:tabular-nums}
+.hero .unit{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--dim);margin-top:5px}
+.hero .side{text-align:right;display:flex;flex-direction:column;gap:7px}
+.hero .side div{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+.hero .side b{color:var(--ink);font-family:"Barlow Condensed",Arial,sans-serif;font-size:19px;
+  font-weight:700;display:block;letter-spacing:0}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);
+  border:1px solid var(--line);margin-top:18px}
+.cell{background:var(--ground);padding:12px 13px}
+.cell .v{font-family:"Barlow Condensed",Arial,sans-serif;font-size:27px;font-weight:700;
+  line-height:1;font-variant-numeric:tabular-nums;display:block}
+.cell .k{display:block;margin-top:4px}
+.cell.rec .v{color:var(--record)}
+
+.sec{margin-top:26px}
+.sec > h2{font-family:"Barlow Condensed",Arial,sans-serif;font-size:17px;font-weight:700;
+  letter-spacing:.1em;text-transform:uppercase;margin:0 0 3px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sec > h2 em{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:9.5px;
+  letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.sec > p.note{color:var(--dim);font-size:12.5px;margin:0 0 12px}
+
+.xpbar{height:6px;background:var(--hair);margin-top:9px;position:relative;overflow:hidden}
+.xpbar i{display:block;height:100%;background:var(--work)}
+
+/* charts */
+.chart{margin-top:12px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.spark{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--hair)}
+.spark .nm{flex:none;width:96px;font-size:12.5px;color:var(--ink-2)}
+.spark svg{flex:1;height:26px;display:block}
+.spark .nowv{flex:none;width:30px;text-align:right;font-family:"Barlow Condensed",Arial,sans-serif;
+  font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+
+/* log */
+.entry{border-bottom:1px solid var(--hair);padding:13px 0;display:flex;gap:13px;align-items:baseline}
+.entry .d{flex:none;width:52px}
+.entry .d b{font-family:"Barlow Condensed",Arial,sans-serif;font-size:21px;font-weight:700;display:block;line-height:1}
+.entry .d span{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+.entry .m{flex:1;min-width:0}
+.entry .m .t{font-size:14.5px;font-weight:600}
+.entry .m .s{color:var(--dim);font-size:12.5px;margin-top:2px;overflow-wrap:anywhere}
+.entry .x{flex:none;background:none;border:0;color:#4a505a;cursor:pointer;font-size:17px;padding:2px 4px}
+.entry .x:hover{color:var(--work)}
+.empty{color:var(--dim);font-size:13.5px;padding:18px 0;border-top:1px solid var(--line)}
+
+.foot{margin-top:34px;padding-top:12px;border-top:1px solid var(--line);
+  display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.foot button{background:none;border:0;color:var(--dim);cursor:pointer;
+  font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;padding:6px 0}
+.foot button:hover{color:var(--ink)}
+.errbar{border:1px solid var(--work);border-left:3px solid var(--work);background:var(--panel);
+  padding:11px 13px;margin-bottom:14px;font-size:13px;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="errbar" id="err" hidden></div>
+
+  <header class="top">
+    <h1>Dharana Rounds</h1>
+    <span class="sub" id="top-right">&mdash;</span>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" data-tab="train" aria-selected="true">Train</button>
+    <button class="tab" data-tab="log" aria-selected="false">Log</button>
+    <button class="tab" data-tab="prog" aria-selected="false">Progress</button>
+  </div>
+
+  <section id="p-train"></section>
+  <section id="p-log" hidden></section>
+  <section id="p-prog" hidden></section>
+
+  <div class="foot">
+    <span class="lab" id="save-state">saved on this device</span>
+    <button id="export">Export data</button>
+    <button id="wipe">Erase everything</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ===================== Dharana Rounds =====================
+   A round timer and a training log for concentration practice,
+   built like a boxing card rather than a wellness app: rounds,
+   a bell, a minute between them, and a score for the round you
+   just did.
+
+   Dharana is the one limb that behaves like a trainable physical
+   skill — attention bound to a single object, released and
+   re-bound. So the three things scored each round are the three
+   things that actually vary: how long the object stayed put, how
+   hard the pull was, and how fast you got back.
+   ========================================================== */
+
+const $ = (id) => document.getElementById(id);
+const seen = [];
+function oops(msg) {
+  if (!msg || seen.indexOf(msg) > -1) return;
+  seen.push(msg);
+  const b = $("err");
+  if (!b) return;
+  b.hidden = false;
+  b.textContent = "Something broke: " + seen.join(" · ") + ". Your saved rounds are not affected.";
+}
+addEventListener("error", (e) => oops((e.message || "error") + (e.lineno ? " @" + e.lineno : "")));
+addEventListener("unhandledrejection", (e) => oops(String((e.reason && e.reason.message) || e.reason)));
+const guard = (fn) => function (ev) { try { return fn(ev); } catch (err) { oops(String(err && err.message || err)); } };
+
+/* ---------- what a round is scored on ---------- */
+const SCALES = [
+  { key: "stability", q: "Focus stability", short: "Stability",
+    hint: "How much of the round the object actually stayed put.",
+    lo: "never settled", hi: "locked on" },
+  { key: "distraction", q: "Distraction level", short: "Distraction", invert: true,
+    hint: "How hard the pull away was. Lower is better.",
+    lo: "quiet", hi: "relentless" },
+  { key: "recovery", q: "Recovery speed", short: "Recovery",
+    hint: "Once you noticed you had gone, how fast you were back.",
+    lo: "gone for minutes", hi: "instant" },
+];
+
+const TYPES = [
+  "Breath at the nostrils", "Counting breaths", "Candle flame", "Mantra / sound",
+  "Single body point", "Visualised object", "Kasina disc", "Open awareness",
+];
+const OBJECT_SUGGESTIONS = ["the nostril tip", "the flame", "the count", "so-ham", "the point between the brows", "a blue disc"];
+
+/* ---------- state ---------- */
+const LS = "dharana:rounds:v1", DOC = "state/dharana-rounds";
+const state = {
+  loaded: false,
+  setup: { rounds: 5, length: 5, rest: true, type: TYPES[0], object: "" },
+  sessions: [],          /* {id, at, length, rest, type, object, rounds:[{sec, stability, distraction, recovery}]} */
+  live: null,            /* a session in progress, with absolute timestamps */
+  sound: true,
+};
+let db = null, tab = "train";
+
+function payload() {
+  return { setup: state.setup, sessions: state.sessions.slice(-2000), live: state.live, sound: state.sound };
+}
+function adopt(o) {
+  if (!o || typeof o !== "object") return;
+  /* The cloud store hands back frozen snapshots. Adopting one as-is made the
+     running session read-only: every tick, Pause, End and Save threw, and the
+     timer sat on one screen. Work on a private copy instead. */
+  try { o = JSON.parse(JSON.stringify(o)); } catch (e) { return; }
+  if (o.setup) Object.assign(state.setup, o.setup);
+  if (Array.isArray(o.sessions)) state.sessions = o.sessions;
+  if (o.live && typeof o.live === "object") state.live = o.live;
+  if (typeof o.sound === "boolean") state.sound = o.sound;
+}
+function saveLocal() {
+  if (!state.loaded) return false;
+  try { localStorage.setItem(LS, JSON.stringify(payload())); return true; }
+  catch (e) { return false; }
+}
+let cloudTimer = null;
+function save() {
+  const ok = saveLocal();
+  const el = $("save-state");
+  if (el) el.textContent = ok ? (db ? "saved · synced" : "saved on this device") : "can't save here — nothing is being kept";
+  clearTimeout(cloudTimer);
+  if (!db) return;
+  cloudTimer = setTimeout(() => { db.doc(DOC).set(payload()).catch(() => {}); }, 400);
+}
+addEventListener("pagehide", () => saveLocal());
+addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") saveLocal(); });
+
+/* ---------- small helpers ---------- */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const now = () => Date.now();
+const uid = () => Math.random().toString(36).slice(2, 10);
+const pad = (n) => (n < 10 ? "0" : "") + n;
+const mmss = (sec) => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + pad(sec % 60); };
+const dayKey = (t) => { const d = new Date(t); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const startOfDay = (t) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const DAY = 86400000;
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const sessionSec = (s) => s.rounds.reduce((a, r) => a + (r.sec || 0), 0);
+const sessionMin = (s) => sessionSec(s) / 60;
+function avgOf(rounds, key) {
+  const v = rounds.map((r) => r[key]).filter((x) => typeof x === "number");
+  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+}
+
+/* ---------- the bell ----------
+   Two detuned partials and a long decay. It should sound like a
+   bell being struck in a room, not like a phone notification. */
+let ac = null;
+function armAudio() {
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+  } catch (e) { ac = null; }
+}
+function bell(times) {
+  if (!state.sound) return;
+  armAudio();
+  if (!ac) return;
+  for (let i = 0; i < (times || 1); i++) strike(ac.currentTime + i * 0.62, 1 - i * 0.12);
+}
+function strike(at, gainMul) {
+  const parts = [[523.25, 1], [1046.5, 0.42], [1567.9, 0.16], [2093, 0.08]];
+  for (const [hz, amp] of parts) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(hz * (1 + (Math.random() - 0.5) * 0.004), at);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(0.22 * amp * (gainMul || 1), at + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 2.6 + amp * 1.4);
+    o.connect(g); g.connect(ac.destination);
+    o.start(at); o.stop(at + 4);
+  }
+}
+function clapper() {
+  if (!state.sound) return;
+  armAudio();
+  if (!ac) return;
+  const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+  o.type = "triangle"; o.frequency.setValueAtTime(180, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.13, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+  o.connect(g); g.connect(ac.destination);
+  o.start(t); o.stop(t + 0.2);
+}
+
+let wake = null;
+async function keepAwake(on) {
+  try {
+    if (on && "wakeLock" in navigator && !wake) wake = await navigator.wakeLock.request("screen");
+    else if (!on && wake) { await wake.release(); wake = null; }
+  } catch (e) { wake = null; }
+}
+
+/* ================= the round timer =================
+   Everything runs off wall-clock timestamps rather than a tick
+   count, so a phone that sleeps mid-round comes back correct
+   instead of minutes behind. */
+
+let ticker = null;
+const REST_SEC = 60;
+
+function plannedTotal() {
+  const s = state.setup;
+  const work = s.rounds * s.length;
+  const rest = s.rest ? (s.rounds - 1) : 0;
+  return { work: work, rest: rest, all: work + rest };
+}
+
+function startSession() {
+  armAudio();
+  const s = state.setup;
+  state.live = {
+    id: uid(), startedAt: now(), length: s.length, rest: s.rest,
+    planned: s.rounds, type: s.type, object: (s.object || "").trim(),
+    idx: 0, phase: "work", phaseEndsAt: now() + s.length * 60000,
+    paused: false, pausedLeft: 0, warned: false,
+    rounds: [],
+  };
+  save();
+  keepAwake(true);
+  bell(1);
+  renderTrain();
+  startTicker();
+}
+
+function startTicker() {
+  clearInterval(ticker);
+  ticker = setInterval(guard(tick), 250);
+}
+function stopTicker() { clearInterval(ticker); ticker = null; }
+
+function phaseLeft() {
+  const L = state.live;
+  if (!L) return 0;
+  return L.paused ? L.pausedLeft / 1000 : (L.phaseEndsAt - now()) / 1000;
+}
+
+function tick() {
+  const L = state.live;
+  if (!L) { stopTicker(); return; }
+  if (L.paused) { paintClock(); return; }
+  let left = phaseLeft();
+
+  /* Seconds out: a clapper ten seconds before the rest ends. */
+  if (L.phase === "rest" && !L.warned && left <= 10 && left > 0) { L.warned = true; clapper(); }
+
+  let guard_ = 0;
+  while (left <= 0 && state.live && state.live.phase !== "done" && guard_++ < 200) {
+    advance(guard_ > 1);
+    left = phaseLeft();
+    if (!state.live) return;
+  }
+  paintClock();
+}
+
+function advance(silent) {
+  const L = state.live;
+  if (!L || L.phase === "done") return;
+  if (L.phase === "work") {
+    /* bank the round that just finished */
+    while (L.rounds.length <= L.idx) L.rounds.push({ sec: 0 });
+    L.rounds[L.idx].sec = L.length * 60;
+    const last = L.idx >= L.planned - 1;
+    if (!silent) bell(last ? 3 : 2);
+    if (last) { save(); return finishSession(); }
+    if (L.rest) {
+      L.phase = "rest"; L.warned = false;
+      L.phaseEndsAt = now() + REST_SEC * 1000;
+    } else {
+      L.idx++;
+      L.phase = "work";
+      L.phaseEndsAt = now() + L.length * 60000;
+      if (!silent) bell(1);
+    }
+  } else {
+    L.idx++;
+    L.phase = "work"; L.warned = false;
+    L.phaseEndsAt = now() + L.length * 60000;
+    if (!silent) bell(1);
+  }
+  save();
+  renderTrain();
+}
+
+function finishSession() {
+  stopTicker();
+  keepAwake(false);
+  const L = state.live;
+  L.phase = "done";
+  L.phaseEndsAt = now();
+  L.paused = false;
+  save();
+  renderTrain();
+}
+
+/* ---------- controls ---------- */
+const ACT = Object.create(null);
+ACT.start = () => startSession();
+ACT.pause = () => {
+  const L = state.live;
+  if (!L || L.phase === "done") return;
+  if (L.paused) { L.phaseEndsAt = now() + L.pausedLeft; L.paused = false; keepAwake(true); }
+  else { L.pausedLeft = Math.max(0, L.phaseEndsAt - now()); L.paused = true; keepAwake(false); }
+  save(); renderTrain();
+};
+ACT.skip = () => {
+  const L = state.live;
+  if (!L || L.phase === "done") return;
+  L.phaseEndsAt = now();
+  L.paused = false;
+  tick();
+};
+ACT.stop = () => {
+  const L = state.live;
+  if (!L) return;
+  /* credit the part of the round actually sat */
+  if (L.phase === "work") {
+    const done = L.length * 60 - Math.max(0, phaseLeft());
+    if (done >= 20) {
+      while (L.rounds.length <= L.idx) L.rounds.push({ sec: 0 });
+      L.rounds[L.idx].sec = Math.round(done);
+    }
+  }
+  stopTicker();
+  keepAwake(false);
+  L.phase = "done";
+  save(); renderTrain();
+};
+ACT.rate = (arg) => {
+  const [i, key, val] = arg.split(":");
+  const L = state.live;
+  if (!L) return;
+  const r = L.rounds[+i];
+  if (!r) return;
+  r[key] = r[key] === +val ? undefined : +val;
+  save();
+  /* Repaint only the card while a round is live — rebuilding the whole
+     timer on every tap flickers the clock during the rest minute, which
+     is exactly when the scoring happens. */
+  if (L.phase === "rest") paintCard(); else renderTrain();
+};
+ACT.saveSession = () => {
+  const L = state.live;
+  if (!L) return;
+  const kept = L.rounds.filter((r) => r.sec > 0);
+  if (kept.length) {
+    state.sessions.push({
+      id: L.id, at: L.startedAt, length: L.length, rest: L.rest,
+      type: L.type, object: L.object, rounds: kept,
+    });
+  }
+  state.live = null;
+  save();
+  renderTrain(); renderLog(); renderProg();
+};
+ACT.discard = () => { state.live = null; stopTicker(); keepAwake(false); save(); renderTrain(); };
+
+ACT.rounds = (d) => { state.setup.rounds = clamp(state.setup.rounds + (+d), 1, 20); save(); renderTrain(); };
+ACT.length = (d) => { state.setup.length = clamp(state.setup.length + (+d), 1, 60); save(); renderTrain(); };
+ACT.rest = () => { state.setup.rest = !state.setup.rest; save(); renderTrain(); };
+ACT.type = (t) => { state.setup.type = t; save(); renderTrain(); };
+ACT.obj = (o) => { state.setup.object = o; save(); renderTrain(); };
+ACT.del = (id) => {
+  state.sessions = state.sessions.filter((s) => s.id !== id);
+  save(); renderLog(); renderProg();
+};
+
+document.addEventListener("click", guard((e) => {
+  const t = e.target.closest("[data-act],.tab");
+  if (!t) return;
+  if (t.classList.contains("tab")) {
+    tab = t.dataset.tab;
+    document.querySelectorAll(".tab").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.tab === tab)));
+    $("p-train").hidden = tab !== "train";
+    $("p-log").hidden = tab !== "log";
+    $("p-prog").hidden = tab !== "prog";
+    if (tab === "log") renderLog();
+    if (tab === "prog") renderProg();
+    return;
+  }
+  const fn = ACT[t.dataset.act];
+  if (fn) fn(t.dataset.arg);
+}));
+document.addEventListener("input", guard((e) => {
+  if (e.target.id === "obj-in") { state.setup.object = e.target.value; save(); }
+}));
+addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && state.live) tick(); });
+
+/* ================= views ================= */
+
+function scaleBlock(i, r) {
+  return SCALES.map((sc) => {
+    const v = r[sc.key];
+    return '<div class="scalerow"><div class="q">' + sc.q + "</div>" +
+      '<div class="hint">' + sc.hint + "</div>" +
+      '<div class="scale">' +
+      [1, 2, 3, 4, 5].map((n) =>
+        '<button data-act="rate" data-arg="' + i + ":" + sc.key + ":" + n + '" ' +
+        'aria-pressed="' + (v === n) + '">' + n + "</button>").join("") +
+      "</div>" +
+      '<div class="ends"><span>' + sc.lo + "</span><span>" + sc.hi + "</span></div></div>";
+  }).join("");
+}
+
+function renderTrain() {
+  const el = $("p-train");
+  const L = state.live;
+  if (!L) return renderSetup(el);
+  if (L.phase === "done") return renderFinish(el, L);
+  renderRun(el, L);
+}
+
+function renderSetup(el) {
+  const s = state.setup, t = plannedTotal();
+  const last = state.sessions[state.sessions.length - 1];
+  const objs = [];
+  for (let i = state.sessions.length - 1; i >= 0 && objs.length < 4; i--) {
+    const o = state.sessions[i].object;
+    if (o && objs.indexOf(o) < 0) objs.push(o);
+  }
+  for (const o of OBJECT_SUGGESTIONS) if (objs.length < 4 && objs.indexOf(o) < 0) objs.push(o);
+
+  el.innerHTML =
+    '<div class="row">' +
+    '<div class="field" style="margin-top:0"><span class="lab">Rounds</span>' +
+    '<div class="step"><button data-act="rounds" data-arg="-1" aria-label="fewer rounds">&minus;</button>' +
+    '<div class="val"><b>' + s.rounds + "</b><span>rounds</span></div>" +
+    '<button data-act="rounds" data-arg="1" aria-label="more rounds">+</button></div></div>' +
+    '<div class="field" style="margin-top:0"><span class="lab">Round length</span>' +
+    '<div class="step"><button data-act="length" data-arg="-1" aria-label="shorter">&minus;</button>' +
+    '<div class="val"><b>' + s.length + "</b><span>minutes</span></div>" +
+    '<button data-act="length" data-arg="1" aria-label="longer">+</button></div></div>' +
+    "</div>" +
+
+    '<div class="field"><span class="lab">Between rounds</span><div class="chips">' +
+    '<button class="chip" data-act="rest" aria-pressed="' + s.rest + '">1:00 rest</button>' +
+    '<button class="chip" data-act="rest" aria-pressed="' + (!s.rest) + '">straight through</button>' +
+    "</div></div>" +
+
+    '<div class="field"><span class="lab">Practice</span><div class="chips">' +
+    TYPES.map((x) => '<button class="chip small" data-act="type" data-arg="' + esc(x) + '" ' +
+      'aria-pressed="' + (s.type === x) + '">' + esc(x) + "</button>").join("") +
+    "</div></div>" +
+
+    '<div class="field"><span class="lab">Object of concentration</span>' +
+    '<input type="text" id="obj-in" value="' + esc(s.object) + '" placeholder="what attention is bound to" autocomplete="off">' +
+    '<div class="chips" style="margin-top:7px">' +
+    objs.map((o) => '<button class="chip small" data-act="obj" data-arg="' + esc(o) + '">' + esc(o) + "</button>").join("") +
+    "</div></div>" +
+
+    '<button class="go" data-act="start">Start</button>' +
+    '<p class="plan"><b>' + t.work + " min</b> of work" +
+    (s.rest ? " &middot; <b>" + t.rest + " min</b> rest &middot; " + t.all + " min on the clock" : " &middot; no rest") +
+    (last ? " &middot; last time " + Math.round(sessionMin(last)) + " min" : "") + "</p>";
+}
+
+function renderRun(el, L) {
+  el.innerHTML =
+    '<div class="pips" id="pips"></div>' +
+    '<div class="clockwrap" id="cw">' +
+    '<div class="state" id="st">WORK</div>' +
+    '<div class="clock" id="ck">0:00</div>' +
+    '<div class="ofm" id="ofm">round 1 of ' + L.planned + "</div>" +
+    (L.object || L.type
+      ? '<div class="objline">' + esc(L.type) + (L.object ? " &middot; <b>" + esc(L.object) + "</b>" : "") + "</div>"
+      : "") +
+    "</div>" +
+    '<div id="cardslot"></div>' +
+    '<div class="row" style="margin-top:14px">' +
+    '<button class="go ghost" data-act="pause">' + (L.paused ? "Resume" : "Pause") + "</button>" +
+    '<button class="go ghost" data-act="skip">Skip</button>' +
+    '<button class="go ghost" data-act="stop">End</button>' +
+    "</div>";
+  paintCard();
+  paintClock();
+}
+
+/* The card comes up during the rest minute — sixty seconds is
+   plenty for three taps, and the round is still fresh. */
+function paintCard() {
+  const L = state.live, slot = $("cardslot");
+  if (!slot || !L) return;
+  if (L.phase !== "rest" || !L.rounds[L.idx]) { slot.innerHTML = ""; return; }
+  slot.innerHTML = '<div class="card" style="margin-top:14px"><h3>Round ' + (L.idx + 1) + " card</h3>" +
+    '<p class="hint" style="color:var(--dim);font-size:12.5px;margin:0">Score it now. Skip it and the minutes still count.</p>' +
+    scaleBlock(L.idx, L.rounds[L.idx]) + "</div>";
+}
+
+function paintClock() {
+  const L = state.live;
+  if (!L || L.phase === "done") return;
+  const ck = $("ck"), st = $("st"), cw = $("cw"), ofm = $("ofm"), pips = $("pips");
+  if (!ck) return;
+  const left = Math.max(0, phaseLeft());
+  ck.textContent = mmss(left);
+  ck.classList.toggle("warn", L.phase === "work" && left <= 10);
+  const resting = L.phase === "rest";
+  cw.classList.toggle("resting", resting);
+  st.textContent = L.paused ? "PAUSED" : resting ? "REST" : "WORK";
+  ofm.textContent = resting
+    ? "next up: round " + (L.idx + 2) + " of " + L.planned
+    : "round " + (L.idx + 1) + " of " + L.planned;
+  let h = "";
+  for (let i = 0; i < L.planned; i++) {
+    const cls = i < L.idx ? "done" : i === L.idx ? (resting ? "now rest" : "now") : "";
+    h += '<i class="' + cls + '"></i>';
+  }
+  if (pips.innerHTML !== h) pips.innerHTML = h;
+}
+
+function renderFinish(el, L) {
+  const kept = L.rounds.filter((r) => r.sec > 0);
+  const mins = Math.round(kept.reduce((a, r) => a + r.sec, 0) / 60);
+  const unrated = kept.map((r, i) => [r, i])
+    .filter(([r]) => SCALES.some((sc) => r[sc.key] === undefined));
+  el.innerHTML =
+    '<div class="hero" style="border-top:2px solid var(--work)">' +
+    '<div><div class="big">' + mins + '</div><div class="unit">minutes done</div></div>' +
+    '<div class="side"><div>rounds<b>' + kept.length + " of " + L.planned + "</b></div>" +
+    "<div>practice<b>" + esc(L.type.split(" ")[0]) + "</b></div></div></div>" +
+    (unrated.length
+      ? '<div class="sec"><h2>Score the rounds <em>' + unrated.length + " left</em></h2>" +
+        '<p class="note">Only the ones you did not score during a rest.</p>' +
+        unrated.slice(0, 1).map(([r, i]) =>
+          '<div class="card"><h3>Round ' + (i + 1) + "</h3>" + scaleBlock(i, r) + "</div>").join("")
+      : '<div class="sec"><h2>Card complete</h2><p class="note">Every round scored.</p></div>') +
+    '<button class="go" data-act="saveSession">Save the session</button>' +
+    '<button class="go ghost" data-act="discard" style="margin-top:9px">Throw it away</button>';
+}
+
+/* ================= totals ================= */
+
+function stats() {
+  const S = state.sessions;
+  const byDay = {};
+  let totalSec = 0, xp = 0;
+  let pbRound = 0, pbRounds = 0, pbStability = 0;
+  for (const s of S) {
+    const sec = sessionSec(s);
+    totalSec += sec;
+    const k = dayKey(s.at);
+    byDay[k] = (byDay[k] || 0) + sec;
+    for (const r of s.rounds) pbRound = Math.max(pbRound, r.sec || 0);
+    pbRounds = Math.max(pbRounds, s.rounds.length);
+    const st = avgOf(s.rounds, "stability");
+    if (st !== null) pbStability = Math.max(pbStability, st);
+    /* XP is minutes, plus up to half again for a well-held session. */
+    const mins = sec / 60;
+    xp += mins + mins * 0.5 * (st === null ? 0 : (st - 1) / 4);
+  }
+  xp = Math.round(xp);
+  const level = Math.floor(Math.sqrt(xp / 60)) + 1;
+  const levelFloor = Math.pow(level - 1, 2) * 60, levelTop = Math.pow(level, 2) * 60;
+
+  const dayMins = (t) => Math.round((byDay[dayKey(t)] || 0) / 60);
+  let pbDay = 0;
+  for (const k in byDay) pbDay = Math.max(pbDay, Math.round(byDay[k] / 60));
+
+  /* A streak survives today being empty — it breaks on a whole missed day. */
+  let streak = 0, cursor = startOfDay(now());
+  if (!byDay[dayKey(cursor)]) cursor -= DAY;
+  while (byDay[dayKey(cursor)]) { streak++; cursor -= DAY; }
+  let best = 0, run = 0;
+  const keys = Object.keys(byDay).sort();
+  for (let i = 0; i < keys.length; i++) {
+    if (i && (new Date(keys[i]) - new Date(keys[i - 1])) <= DAY * 1.5) run++; else run = 1;
+    best = Math.max(best, run);
+  }
+
+  const since = (d) => S.filter((s) => s.at >= startOfDay(now()) - (d - 1) * DAY)
+    .reduce((a, s) => a + sessionSec(s), 0) / 60;
+  const prev7 = S.filter((s) => s.at < startOfDay(now()) - 6 * DAY && s.at >= startOfDay(now()) - 13 * DAY)
+    .reduce((a, s) => a + sessionSec(s), 0) / 60;
+
+  return {
+    totalMin: Math.round(totalSec / 60), sessions: S.length, byDay: byDay, dayMins: dayMins,
+    xp: xp, level: level, levelFloor: levelFloor, levelTop: levelTop,
+    today: Math.round(since(1)), week: Math.round(since(7)), prevWeek: Math.round(prev7),
+    streak: streak, bestStreak: Math.max(best, streak),
+    pbRound: pbRound, pbRounds: pbRounds, pbDay: pbDay, pbStability: pbStability,
+  };
+}
+
+/* ---------- 28 days of minutes ---------- */
+function barsChart(st) {
+  const days = [];
+  for (let i = 27; i >= 0; i--) {
+    const t = startOfDay(now()) - i * DAY;
+    days.push({ t: t, min: Math.round((st.byDay[dayKey(t)] || 0) / 60) });
+  }
+  const max = Math.max(10, ...days.map((d) => d.min));
+  const H = 78, TOP = 16, W = 280;
+  const y = (v) => H - (v / max) * (H - TOP);
+  let bars = "", labels = "";
+  days.forEach((d, i) => {
+    const x = i * 10 + 1.2, isToday = i === 27, isBest = d.min > 0 && d.min === st.pbDay;
+    const fill = isBest ? "var(--record)" : "var(--work)";
+    const date = new Date(d.t);
+    const nice = date.getDate() + "/" + (date.getMonth() + 1);
+    if (d.min > 0) {
+      const h = Math.max(2.5, H - y(d.min));
+      bars += '<rect x="' + x + '" y="' + (H - h) + '" width="7.6" height="' + h + '" fill="' + fill + '" rx="1">' +
+        "<title>" + nice + " — " + d.min + " min</title></rect>";
+    } else {
+      bars += '<rect x="' + x + '" y="' + (H - 2) + '" width="7.6" height="2" fill="var(--hair)">' +
+        "<title>" + nice + " — nothing</title></rect>";
+    }
+    if (isToday) bars += '<rect x="' + (x - 1) + '" y="' + TOP + '" width="9.6" height="' + (H - TOP + 3) +
+      '" fill="none" stroke="var(--line)" stroke-width="1"/>';
+    if (i % 7 === 0 || isToday)
+      labels += '<text x="' + (x + 3.8) + '" y="' + (H + 11) + '" fill="var(--dim)" font-size="7.2" ' +
+        'text-anchor="middle" font-family="JetBrains Mono, monospace">' + date.getDate() + "</text>";
+  });
+  return '<div class="chart"><svg viewBox="-2 0 ' + (W + 4) + ' 96" role="img" ' +
+    'aria-label="Minutes per day for the last 28 days">' +
+    '<line x1="0" y1="' + TOP + '" x2="' + W + '" y2="' + TOP + '" stroke="var(--hair)" stroke-width="1"/>' +
+    '<text x="0" y="' + (TOP - 4) + '" fill="var(--dim)" font-size="7.2" ' +
+    'font-family="JetBrains Mono, monospace">busiest day ' + max + " min</text>" +
+    '<line x1="0" y1="' + H + '" x2="' + W + '" y2="' + H + '" stroke="var(--line)" stroke-width="1"/>' +
+    bars + labels + "</svg></div>";
+}
+
+/* ---------- one line per thing scored ---------- */
+function sparks() {
+  const S = state.sessions.slice(-20);
+  const colour = { stability: "var(--good)", distraction: "var(--work)", recovery: "var(--rest)" };
+  return SCALES.map((sc) => {
+    const pts = S.map((s) => avgOf(s.rounds, sc.key)).filter((v) => v !== null);
+    const nowv = pts.length ? pts[pts.length - 1].toFixed(1) : "—";
+    let path = "", dot = "";
+    if (pts.length > 1) {
+      const W = 100, H = 22;
+      const xs = (i) => (i / (pts.length - 1)) * W;
+      const ys = (v) => H - ((v - 1) / 4) * (H - 4) - 2;
+      path = '<path d="' + pts.map((v, i) => (i ? "L" : "M") + xs(i).toFixed(1) + " " + ys(v).toFixed(1)).join(" ") +
+        '" fill="none" stroke="' + colour[sc.key] + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+      dot = '<circle cx="' + xs(pts.length - 1).toFixed(1) + '" cy="' + ys(pts[pts.length - 1]).toFixed(1) +
+        '" r="3" fill="' + colour[sc.key] + '"/>';
+    }
+    return '<div class="spark"><span class="nm">' + sc.short +
+      (sc.invert ? ' <span class="lab">low=good</span>' : "") + "</span>" +
+      '<svg viewBox="0 0 100 24" preserveAspectRatio="none" role="img" aria-label="' + sc.q +
+      ' over the last ' + pts.length + ' sessions">' + path + dot + "</svg>" +
+      '<span class="nowv">' + nowv + "</span></div>";
+  }).join("");
+}
+
+function renderProg() {
+  const el = $("p-prog");
+  const st = stats();
+  if (!state.sessions.length) {
+    el.innerHTML = '<div class="empty" style="border:0">Nothing logged yet. Finish a session and the numbers start here.</div>';
+    return;
+  }
+  const pct = clamp(((st.xp - st.levelFloor) / Math.max(1, st.levelTop - st.levelFloor)) * 100, 0, 100);
+  const delta = st.week - st.prevWeek;
+  el.innerHTML =
+    '<div class="hero"><div><div class="big">' + st.totalMin + '</div><div class="unit">minutes, all time</div></div>' +
+    '<div class="side"><div>this week<b>' + st.week + " min</b></div>" +
+    "<div>vs last<b>" + (delta >= 0 ? "+" : "") + delta + " min</b></div></div></div>" +
+
+    '<div class="sec"><h2>Level ' + st.level + ' <em>' + st.xp + " xp</em></h2>" +
+    '<p class="note">XP is minutes sat, plus up to half again when the rounds held. Level ' +
+    (st.level + 1) + " at " + st.levelTop + " xp &mdash; " + (st.levelTop - st.xp) + " to go.</p>" +
+    '<div class="xpbar"><i style="width:' + pct.toFixed(1) + '%"></i></div></div>' +
+
+    '<div class="grid">' +
+    '<div class="cell"><span class="v">' + st.streak + '</span><span class="k lab">day streak</span></div>' +
+    '<div class="cell"><span class="v">' + st.sessions + '</span><span class="k lab">sessions</span></div>' +
+    '<div class="cell"><span class="v">' + st.today + '</span><span class="k lab">minutes today</span></div>' +
+    '<div class="cell"><span class="v">' + (st.totalMin >= 60 ? (st.totalMin / 60).toFixed(1) : "0") +
+    '</span><span class="k lab">hours on the cushion</span></div>' +
+    "</div>" +
+
+    '<div class="sec"><h2>Last 28 days <em>minutes</em></h2>' + barsChart(st) + "</div>" +
+
+    '<div class="sec"><h2>Round scores <em>last ' + Math.min(20, state.sessions.length) + "</em></h2>" +
+    '<p class="note">Session averages, one line each. Hold a bar above to read its day.</p>' + sparks() + "</div>" +
+
+    '<div class="sec"><h2>Personal bests</h2><div class="grid">' +
+    '<div class="cell rec"><span class="v">' + Math.round(st.pbRound / 60) + '</span><span class="k lab">longest round, min</span></div>' +
+    '<div class="cell rec"><span class="v">' + st.pbRounds + '</span><span class="k lab">most rounds, one session</span></div>' +
+    '<div class="cell rec"><span class="v">' + st.pbDay + '</span><span class="k lab">best day, min</span></div>' +
+    '<div class="cell rec"><span class="v">' + st.bestStreak + '</span><span class="k lab">longest streak, days</span></div>' +
+    '<div class="cell rec"><span class="v">' + (st.pbStability ? st.pbStability.toFixed(1) : "—") +
+    '</span><span class="k lab">best stability average</span></div>' +
+    '<div class="cell rec"><span class="v">' + st.xp + '</span><span class="k lab">total xp</span></div>' +
+    "</div></div>";
+}
+
+function renderLog() {
+  const el = $("p-log");
+  const S = state.sessions.slice().sort((a, b) => b.at - a.at);
+  if (!S.length) {
+    el.innerHTML = '<div class="empty" style="border:0">No sessions yet.</div>';
+    return;
+  }
+  el.innerHTML = '<p class="note" style="color:var(--dim);font-size:12.5px;margin:0 0 6px">' +
+    S.length + " session" + (S.length === 1 ? "" : "s") + " &middot; newest first</p>" +
+    S.map((s) => {
+      const d = new Date(s.at), mins = Math.round(sessionMin(s));
+      const sc = SCALES.map((x) => {
+        const v = avgOf(s.rounds, x.key);
+        return v === null ? null : x.q[0] + " " + v.toFixed(1);
+      }).filter(Boolean).join("  ");
+      return '<div class="entry"><div class="d"><b>' + d.getDate() + "</b><span>" +
+        d.toLocaleString(undefined, { month: "short" }) + "</span></div>" +
+        '<div class="m"><div class="t">' + s.rounds.length + " × " + s.length + " min &middot; " + mins + " min total</div>" +
+        '<div class="s">' + esc(s.type) + (s.object ? " &middot; " + esc(s.object) : "") +
+        (sc ? '<br><span class="mono" style="font-size:11px">' + sc + "</span>" : "") + "</div></div>" +
+        '<button class="x" data-act="del" data-arg="' + s.id + '" aria-label="delete session">&times;</button></div>';
+    }).join("");
+}
+
+/* ---------- boot ---------- */
+$("export").addEventListener("click", guard(() => {
+  const ta = document.createElement("textarea");
+  ta.readOnly = true;
+  ta.value = JSON.stringify({ sessions: state.sessions }, null, 1);
+  ta.style.cssText = "width:100%;height:150px;margin-top:10px;background:var(--panel);color:var(--ink);" +
+    "border:1px solid var(--line);font-family:JetBrains Mono,monospace;font-size:11px;padding:8px";
+  const old = document.getElementById("exp-box");
+  if (old) return old.remove();
+  ta.id = "exp-box";
+  $("export").parentNode.appendChild(ta);
+  ta.select();
+}));
+$("wipe").addEventListener("click", guard(() => {
+  const b = $("wipe");
+  if (b.dataset.sure !== "1") {
+    b.dataset.sure = "1"; b.textContent = "Sure? This deletes every session";
+    setTimeout(() => { b.dataset.sure = "0"; b.textContent = "Erase everything"; }, 5000);
+    return;
+  }
+  state.sessions = []; state.live = null;
+  save(); location.reload();
+}));
+
+function paintTopRight() {
+  const st = stats();
+  const el = $("top-right");
+  if (el) el.textContent = state.sessions.length
+    ? st.totalMin + " min · lvl " + st.level
+    : "dharana · round work";
+}
+
+function boot() {
+  try { const raw = localStorage.getItem(LS); if (raw) adopt(JSON.parse(raw)); }
+  catch (e) { oops("could not read saved sessions"); }
+  state.loaded = true;
+
+  /* A session left running is picked up where the clock actually is. */
+  if (state.live && state.live.phase !== "done") { startTicker(); tick(); }
+  renderTrain(); renderLog(); renderProg(); paintTopRight();
+  save();
+
+  (async () => {
+    try {
+      db = (typeof claude !== "undefined" && claude.use) ? await claude.use("db") : null;
+      if (!db) return;
+      const snap = await db.doc(DOC).get();
+      if (snap.exists && !state.sessions.length) {
+        adopt(snap.data());
+        /* A session picked up from the cloud needs its clock started too,
+           or it shows one frozen screen. */
+        if (state.live && state.live.phase !== "done") { startTicker(); tick(); }
+        renderTrain(); renderLog(); renderProg(); paintTopRight();
+      }
+      save();
+    } catch (e) { db = null; }
+  })();
+}
+const realSave = save;
+save = function () { realSave(); paintTopRight(); };
+boot();
+</script>
