@@ -1,0 +1,796 @@
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Galley</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F1F3F2;--sheet:#FFFFFF;--ink:#1E2226;--dim:#5C646C;--rule:#D6DBD8;--soft:#E7EAE8;
+  --economy:#B7791F;--economy-t:#F6E6C6;--clarity:#2F6DB5;--clarity-t:#D9E6F6;
+  --stock:#8E4585;--stock-t:#EFDCEC;--hedge:#6F7520;--hedge-t:#E9EBCB;
+  --tells:#1F7A68;--tells-t:#D0ECE5;--rhythm:#5F6873;--rhythm-t:#E4E7EA;
+  --good:#2E7A4B;--bad:#B03A2E;
+  --serif:"Newsreader",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --ground:#14171A;--sheet:#1B1F23;--ink:#E5E8EA;--dim:#9AA2AA;--rule:#2C3238;--soft:#23282D;
+  --economy:#E3AB52;--economy-t:#45361A;--clarity:#82B3EC;--clarity-t:#1D3352;
+  --stock:#D697CD;--stock-t:#3F2440;--hedge:#C7CC6C;--hedge-t:#35381A;
+  --tells:#6FD0BC;--tells-t:#163A33;--rhythm:#A7B0BA;--rhythm-t:#2A3036;
+  --good:#6DC08F;--bad:#EC8A7F}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --ground:#14171A;--sheet:#1B1F23;--ink:#E5E8EA;--dim:#9AA2AA;--rule:#2C3238;--soft:#23282D;
+  --economy:#E3AB52;--economy-t:#45361A;--clarity:#82B3EC;--clarity-t:#1D3352;
+  --stock:#D697CD;--stock-t:#3F2440;--hedge:#C7CC6C;--hedge-t:#35381A;
+  --tells:#6FD0BC;--tells-t:#163A33;--rhythm:#A7B0BA;--rhythm-t:#2A3036;
+  --good:#6DC08F;--bad:#EC8A7F}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:780px;margin:0 auto;padding-inline:18px;padding-block:24px 90px}
+.lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  border-bottom:2px solid var(--ink);padding-bottom:10px}
+header h1{font-family:var(--serif);font-weight:600;font-size:34px;margin:0;letter-spacing:-.01em}
+header p{margin:2px 0 0;color:var(--dim);font-size:13.5px;max-width:52ch}
+.tabs{display:flex;gap:0;border:1px solid var(--ink);border-radius:4px;overflow:hidden;margin-top:16px;width:fit-content;max-width:100%}
+.tabs button{appearance:none;border:0;background:transparent;color:var(--ink);font:500 14px var(--sans);
+  padding:10px 16px;min-height:42px;cursor:pointer}
+.tabs button+button{border-left:1px solid var(--ink)}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--ground)}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+.intro{margin:14px 0 0;color:var(--dim);font-size:14px;max-width:62ch}
+.field{margin-top:14px}
+.field label{display:block;margin-bottom:5px}
+textarea,input[type=text]{width:100%;background:var(--sheet);color:var(--ink);border:1px solid var(--rule);border-radius:4px;
+  font:16px/1.6 var(--serif);padding:12px 14px}
+textarea{min-height:170px;resize:vertical}
+textarea.code{font:13.5px/1.55 var(--mono)}
+input[type=text]{font-family:var(--sans);font-size:15px;padding:10px 12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:560px){.pair{grid-template-columns:1fr}}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.go{appearance:none;border:1px solid var(--ink);background:var(--ink);color:var(--ground);border-radius:4px;
+  font:600 15px var(--sans);padding:11px 18px;min-height:44px;cursor:pointer}
+.go[disabled]{opacity:.5;cursor:default}
+.ghost{appearance:none;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);border-radius:4px;
+  font:500 14px var(--sans);padding:9px 14px;min-height:40px;cursor:pointer}
+.note{color:var(--dim);font-size:13px}
+.flag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  border:1px solid var(--rule);color:var(--dim);border-radius:3px;padding:2px 7px}
+
+/* the numbers */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;background:var(--rule);
+  border:1px solid var(--rule);border-radius:4px;overflow:hidden;margin-top:18px}
+.stats div{background:var(--sheet);padding:10px 12px}
+.stats b{display:block;font:500 19px var(--mono);font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--dim)}
+
+/* the marked-up proof */
+.sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:18px 20px;margin-top:14px;
+  font:17px/1.75 var(--serif);white-space:pre-wrap;overflow-wrap:anywhere}
+.sheet.code{font:13.5px/1.7 var(--mono)}
+mark{background:transparent;color:inherit;border-bottom:2px solid;padding:0 1px;border-radius:2px;cursor:pointer}
+mark.economy{background:var(--economy-t);border-color:var(--economy)}
+mark.clarity{background:var(--clarity-t);border-color:var(--clarity)}
+mark.stock{background:var(--stock-t);border-color:var(--stock)}
+mark.hedge{background:var(--hedge-t);border-color:var(--hedge)}
+mark.tells{background:var(--tells-t);border-color:var(--tells)}
+mark.rhythm{background:transparent;border-bottom:2px dotted var(--rhythm)}
+mark.quote{background:transparent;outline:1.5px dashed var(--ink);outline-offset:1px;border:0}
+mark.on{box-shadow:0 0 0 2px var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.key{appearance:none;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--rule);background:var(--sheet);
+  color:var(--ink);border-radius:999px;font:500 12.5px var(--sans);padding:5px 11px;cursor:pointer}
+.key i{width:10px;height:10px;border-radius:2px}
+.key[aria-pressed="false"]{opacity:.45}
+.key b{font:500 11.5px var(--mono);color:var(--dim)}
+
+.finds{margin-top:14px}
+.find{display:grid;grid-template-columns:4px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--rule);cursor:pointer}
+.find .bar{border-radius:2px}
+.find .t{font-size:14.5px}
+.find .t q{font-family:var(--serif);font-style:italic;quotes:"“" "”"}
+.find .fix{font-size:13.5px;margin-top:2px}
+.find .src{font:11px var(--mono);color:var(--dim);margin-top:3px}
+.find.on{background:var(--soft)}
+.conf{font:10px var(--mono);letter-spacing:.08em;text-transform:uppercase;border-radius:3px;padding:1px 5px;
+  border:1px solid var(--rule);color:var(--dim);margin-left:6px;white-space:nowrap}
+.conf.high{border-color:var(--ink);color:var(--ink)}
+.empty{color:var(--dim);font-style:italic;margin-top:10px}
+
+h2{font-family:var(--serif);font-weight:600;font-size:23px;margin:34px 0 0;text-wrap:balance}
+h3{font:600 15px var(--sans);margin:18px 0 0}
+.status{margin-top:14px;display:flex;align-items:center;gap:10px;color:var(--dim)}
+.status .dot{width:7px;height:7px;border-radius:50%;background:var(--ink);animation:b 1s ease-in-out infinite}
+@keyframes b{50%{opacity:.2}}
+@media (prefers-reduced-motion:reduce){.status .dot{animation:none}}
+.err{margin-top:14px;border-left:3px solid var(--bad);background:var(--sheet);padding:10px 14px;border-radius:0 4px 4px 0}
+
+/* critique */
+.verdict{font:italic 19px/1.45 var(--serif);margin-top:10px}
+.scores{margin-top:12px;display:grid;gap:10px}
+.score{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:11px 14px}
+.score .h{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.score .n{font:500 16px var(--mono)}
+.pips{display:inline-flex;gap:3px;margin-left:8px;vertical-align:middle}
+.pips i{width:14px;height:6px;border-radius:1px;background:var(--soft)}
+.pips i.on{background:var(--ink)}
+.score .why{font-size:14px;margin-top:4px}
+blockquote{margin:6px 0 0;padding-left:10px;border-left:2px solid var(--rule);font:italic 15px/1.5 var(--serif);color:var(--ink)}
+blockquote.bad{border-left-color:var(--bad);color:var(--dim);text-decoration:line-through}
+.unverified{font:11px var(--mono);color:var(--bad)}
+.fixrow{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:12px 14px;margin-top:10px}
+.fixrow .to{margin-top:6px;padding-left:10px;border-left:2px solid var(--good);font:15px/1.5 var(--serif)}
+.fixrow .why{font-size:13.5px;color:var(--dim);margin-top:6px}
+pre{background:var(--sheet);border:1px solid var(--rule);border-radius:4px;padding:14px;overflow-x:auto;
+  font:13px/1.55 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0}
+.copy{float:right;margin:-4px 0 6px 8px}
+.steps{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px}
+.steps li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;background:var(--sheet);
+  border:1px solid var(--rule);border-radius:4px;padding:10px 12px}
+.kind{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:3px 7px;white-space:nowrap}
+.kind.code{border:1px solid var(--rule);color:var(--dim)}
+.kind.model{background:var(--ink);color:var(--ground)}
+.sourcebox{margin-top:30px;font-size:13px;color:var(--dim);border-top:1px solid var(--rule);padding-top:12px;max-width:66ch}
+</style>
+
+<div class="wrap">
+  <header>
+    <div><h1>Galley</h1>
+      <p>Marks up prose and prompts with checks you can trace to a source, then gives a blind critique that has to quote its evidence.</p></div>
+  </header>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="prose" aria-selected="true">Prose</button>
+    <button role="tab" data-tab="prompt" aria-selected="false">Prompt</button>
+    <button role="tab" data-tab="build" aria-selected="false">Build</button>
+  </div>
+  <main id="main"></main>
+</div>
+
+<script>
+"use strict";
+
+/* ==========================================================================
+   THE KNOWLEDGE. Every check below names where it comes from. They are
+   heuristics that find candidates; they do not replace judgment, and the page
+   says so. None of them use a model.
+   ========================================================================== */
+
+const SRC={
+  strunk:"Strunk & White, The Elements of Style — “omit needless words”",
+  leeches:"Strunk & White — “Rather, very, little, pretty: these are the leeches that infest the pond of prose”",
+  orwell1:"Orwell, Politics and the English Language — rule 1: never use a figure of speech you are used to seeing in print",
+  orwell4:"Orwell, rule 4: never use the passive where you can use the active",
+  sword:"Helen Sword, “zombie nouns” — verbs turned into abstract nouns drain a sentence of action",
+  plain:"Plain-language guidelines — put the actor first; lead with the subject, not “there is”",
+  provost:"Gary Provost — vary sentence length; a string of equal sentences drones",
+  long:"Plain-language guidelines — sentences over about 35 words lose readers",
+  repeat:"Editing practice — a word used three times in a short stretch gets noticed",
+  tells:"Patterns overrepresented in model-written prose. A pattern, not proof: people write these too",
+  audit:"Anthropic's prompt-audit guidance for current Claude models",
+};
+
+const CAT={
+  economy:{name:"Needless words",desc:"Phrases that can be cut or shortened"},
+  clarity:{name:"Hidden actors",desc:"Passive voice, zombie nouns, weak openers"},
+  stock:{name:"Stock phrases",desc:"Clichés and dead metaphors"},
+  hedge:{name:"Hedges",desc:"Softeners and intensifiers that weaken a claim"},
+  tells:{name:"Model-prose tells",desc:"Words and shapes common in generated text"},
+  rhythm:{name:"Rhythm",desc:"Very long sentences, droning runs, repeated words"},
+};
+
+// phrase → shorter version ("" = cut it)
+const FILLER={"in order to":"to","due to the fact that":"because","owing to the fact that":"because",
+  "in spite of the fact that":"although","despite the fact that":"although","at this point in time":"now",
+  "at the present time":"now","in the event that":"if","for the purpose of":"to","in the process of":"",
+  "on a daily basis":"daily","it is important to note that":"","it should be noted that":"",
+  "it is worth noting that":"","it goes without saying that":"","needless to say":"",
+  "with regard to":"about","with respect to":"about","in regard to":"about","as a matter of fact":"",
+  "for all intents and purposes":"","each and every":"each","first and foremost":"first",
+  "basic fundamentals":"fundamentals","end result":"result","past history":"history","future plans":"plans",
+  "close proximity":"near","completely finished":"finished","absolutely essential":"essential",
+  "a number of":"some","a majority of":"most","is able to":"can","are able to":"can","has the ability to":"can",
+  "prior to":"before","subsequent to":"after","in the near future":"soon","at all times":"always",
+  "the reason why is that":"because","so as to":"to","whether or not":"whether","all of the":"all the",
+  "in terms of":"(say what you mean)","the fact that":"(rephrase)","at the end of the day":"",
+  "in light of the fact that":"because","until such time as":"until","in close proximity to":"near",
+  "make an effort to":"try to","it is clear that":"","there is no doubt that":"","the question as to whether":"whether"};
+
+const CLICHES=["think outside the box","low-hanging fruit","move the needle","game changer","game-changer",
+  "level playing field","tip of the iceberg","double-edged sword","only time will tell","time will tell",
+  "in the nick of time","avoid like the plague","crystal clear","last but not least","when all is said and done",
+  "in today's fast-paced world","in today’s fast-paced world","in this day and age","the bottom line",
+  "few and far between","easier said than done","the elephant in the room","perfect storm",
+  "take it to the next level","hit the ground running","best of both worlds","calm before the storm",
+  "blessing in disguise","at the drop of a hat","beat around the bush","bite the bullet","break the ice",
+  "cut to the chase","silver lining","go the extra mile","heart of gold","in a nutshell","jump on the bandwagon",
+  "leave no stone unturned","light at the end of the tunnel","make no mistake","moving forward",
+  "needle in a haystack","on the same page","par for the course","push the envelope","pushing the envelope",
+  "raise the bar","reinvent the wheel","second to none","since the dawn of time","state of the art",
+  "writing on the wall","touch base","when push comes to shove","win-win","circle back","paradigm shift",
+  "world-class","cutting-edge","best-in-class","next level","next-level","at the end of the day"];
+
+const LEECHES=["very","really","quite","rather","somewhat","fairly","pretty","actually","basically",
+  "essentially","literally","arguably","perhaps","possibly","seemingly","sort of","kind of","a bit",
+  "a little bit","in my opinion","to some extent","more or less","I think","I believe","I feel"];
+
+const TELL_WORDS=["delve","delves","delving","tapestry","testament","intricate","multifaceted","realm",
+  "bustling","vibrant","embark","embarks","foster","fosters","fostering","underscore","underscores",
+  "showcase","showcases","elevate","elevates","unleash","harness","resonate","resonates","meticulous",
+  "meticulously","beacon","symphony","ever-evolving","seamless","seamlessly","pivotal","paramount",
+  "holistic","synergy","navigate the","navigating the","the landscape of","in the realm of","dive into",
+  "deep dive","at its core","it's worth noting","it’s worth noting","worth noting","notably","moreover",
+  "furthermore","in conclusion","leverage","leverages","leveraging","robust","nuanced","profound"];
+
+const TELL_SHAPES=[
+  {re:/\bnot (?:just|only|merely|simply) [^.;:!?]{1,50}?,? but(?: also)?\b/gi,msg:"“Not just X, but Y” framing",
+   fix:"Say the Y plainly; the contrast with X is usually invented."},
+  {re:/\b(?:it'?s|it’s|this is|that'?s|that’s) not (?:about |just )?[^.;:!?—–]{1,45}\s*[—–-]+\s*(?:it'?s|it’s)\b/gi,
+   msg:"“It's not X — it's Y” reveal",fix:"State the point directly."},
+  {re:/\bWhether you'?re\b|\bWhether you’re\b/g,msg:"“Whether you're X or Y” opener",fix:"Speak to the actual reader."},
+  {re:/\b(?:Here'?s|Here’s) (?:the thing|why|the kicker)\b|\bThe (?:best part|kicker|result|catch|twist)\?/g,
+   msg:"Set-up-and-reveal phrasing",fix:"Give the point without the drumroll."},
+];
+
+const PARTICIPLES="known|made|done|given|taken|seen|written|shown|built|found|held|kept|left|lost|paid|said|sent|told|thought|brought|bought|caught|taught|put|set|cut|read|run|won|drawn|driven|chosen|spoken|broken|forgotten|hidden|beaten|bitten|eaten|fallen|flown|grown|thrown|worn|torn|sworn|begun|sung|sunk|struck|stuck|hung|led|fed|met|shot|spent|sold|understood|meant|felt|heard";
+const PASSIVE=new RegExp(`\\b(?:am|is|are|was|were|be|been|being)\\s+(?:\\w+ly\\s+)?(?:\\w{3,}ed|${PARTICIPLES})\\b(?:\\s+by\\b)?`,"gi");
+
+const ZOMBIE=/\b(?:make|makes|made|making|give|gives|gave|giving|take|takes|took|taking|conduct|conducts|conducted|conducting|perform|performs|performed|provide|provides|provided|providing|reach|reached|carry out|carried out|come to|came to)\s+(?:a|an|the)?\s*(decision|conclusion|assessment|analysis|recommendation|contribution|improvement|reduction|investigation|review|examination|determination|evaluation|consideration|adjustment|payment|statement|suggestion|agreement|attempt|arrangement|discovery|comparison|response|reference|mention|change|choice|use)\b/gi;
+const ZOMBIE_FIX={decision:"decide",conclusion:"conclude",assessment:"assess",analysis:"analyse",recommendation:"recommend",
+  contribution:"contribute",improvement:"improve",reduction:"reduce",investigation:"investigate",review:"review",
+  examination:"examine",determination:"determine",evaluation:"evaluate",consideration:"consider",adjustment:"adjust",
+  payment:"pay",statement:"state",suggestion:"suggest",agreement:"agree",attempt:"try",arrangement:"arrange",
+  discovery:"discover",comparison:"compare",response:"respond",reference:"refer to",mention:"mention",change:"change",
+  choice:"choose",use:"use"};
+
+const STOP=new Set("the a an and or but if of to in on at by for with from as is are was were be been being it its this that these those there their they them he she his her we our you your i me my not no so than then too very can will would could should may might do does did have has had just into about over also more most such only own same other some any each few all both what which who whom whose when where why how".split(" "));
+
+/* ==========================================================================
+   PROSE ANALYSIS — all local, all instant.
+   ========================================================================== */
+
+const ABBR=new Set(["mr","mrs","ms","dr","st","vs","etc","e.g","i.e","jr","sr","prof","inc","ltd","co","no","fig","approx"]);
+function sentences(text){
+  const out=[];let start=0;
+  const re=/[.!?]+["'”’)\]]*(?=\s+|$)|\n\s*\n/g;let m;
+  while((m=re.exec(text))){
+    const end=m.index+m[0].length;
+    const before=text.slice(start,m.index).trim().split(/\s+/).pop()||"";
+    if(m[0].startsWith(".")&&ABBR.has(before.toLowerCase().replace(/\.$/,"")))continue;
+    const chunk=text.slice(start,end);
+    if(chunk.trim())out.push({start:start+chunk.search(/\S/),end,text:chunk.trim()});
+    start=end}
+  if(text.slice(start).trim()){const chunk=text.slice(start);out.push({start:start+chunk.search(/\S/),end:text.length,text:chunk.trim()})}
+  return out}
+const words=s=>(s.match(/[A-Za-z0-9][A-Za-z0-9'’-]*/g)||[]);
+function syllables(w){w=w.toLowerCase().replace(/[^a-z]/g,"");if(w.length<=3)return 1;
+  w=w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/,"").replace(/^y/,"");
+  const m=w.match(/[aeiouy]{1,2}/g);return Math.max(1,m?m.length:1)}
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const escRe=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+
+function phraseFinds(text,list,cat,build){
+  const out=[];
+  for(const p of list){
+    const re=new RegExp(`(?<![A-Za-z])${escRe(p).replace(/'|’/g,"['’]")}(?![A-Za-z])`,"gi");let m;
+    while((m=re.exec(text)))out.push(Object.assign({start:m.index,end:m.index+m[0].length,cat,hit:m[0]},build(p,m[0])))}
+  return out}
+
+function analyzeProse(text){
+  const f=[];
+  const sents=sentences(text);
+  const allWords=words(text);
+  const nWords=allWords.length;
+
+  for(const [p,to] of Object.entries(FILLER)){
+    const re=new RegExp(`(?<![A-Za-z])${escRe(p)}(?![A-Za-z])`,"gi");let m;
+    while((m=re.exec(text)))f.push({start:m.index,end:m.index+m[0].length,cat:"economy",
+      msg:to===""?"Can be cut":to.startsWith("(")?"Wordy":`Wordy — “${to}” says the same`,
+      fix:to===""?"Delete it and read the sentence again.":to.startsWith("(")?`Say it directly ${to.slice(1,-1)}.`:`Use “${to}”.`,
+      src:SRC.strunk,conf:"medium"})}
+
+  f.push(...phraseFinds(text,CLICHES,"stock",()=>({msg:"Stock phrase",
+    fix:"Say the specific thing you mean, in words the reader hasn't seen a thousand times.",src:SRC.orwell1,conf:"medium"})));
+
+  f.push(...phraseFinds(text,LEECHES,"hedge",(p)=>({msg:["very","really","quite","rather","pretty"].includes(p.toLowerCase())?"Intensifier":"Hedge",
+    fix:["very","really"].includes(p.toLowerCase())?"Cut it, or find the stronger word it's propping up.":"Cut it if you mean the claim; qualify it once, precisely, if you don't.",
+    src:["very","rather","pretty"].includes(p.toLowerCase())?SRC.leeches:SRC.strunk,conf:"low"})));
+
+  f.push(...phraseFinds(text,TELL_WORDS,"tells",()=>({msg:"Common in model-written prose",
+    fix:"Use the plain word you'd say out loud.",src:SRC.tells,conf:"low"})));
+  for(const s of TELL_SHAPES){let m;s.re.lastIndex=0;
+    while((m=s.re.exec(text)))f.push({start:m.index,end:m.index+m[0].length,cat:"tells",msg:s.msg,fix:s.fix,src:SRC.tells,conf:"medium"})}
+
+  let m;PASSIVE.lastIndex=0;
+  while((m=PASSIVE.exec(text))){
+    if(/\b(?:is|are|was|were|be|been|being)\s+(?:need|used|based|supposed|interested|tired|excited|bored|concerned|involved|located|called|named|married|pleased|surprised|worried|scared|confused)\b/i.test(m[0]))continue;
+    f.push({start:m.index,end:m.index+m[0].length,cat:"clarity",msg:"Passive voice",
+      fix:"Name who does it and put them first — unless the actor truly doesn't matter.",src:SRC.orwell4,conf:"low"})}
+  ZOMBIE.lastIndex=0;
+  while((m=ZOMBIE.exec(text))){const noun=m[1].toLowerCase();
+    f.push({start:m.index,end:m.index+m[0].length,cat:"clarity",msg:`Zombie noun — the verb is hiding in “${noun}”`,
+      fix:`Try “${ZOMBIE_FIX[noun]||"the verb"}”.`,src:SRC.sword,conf:"medium"})}
+  const weak=/(^|[.!?]["'”’]?\s+|\n)(There (?:is|are|was|were)\b|It (?:is|was) \w+ (?:that|to)\b)/g;
+  while((m=weak.exec(text))){const s=m.index+m[1].length;
+    f.push({start:s,end:s+m[2].length,cat:"clarity",msg:"Slow opener",
+      fix:"Start with the thing that acts: “There are three reasons…” → “Three reasons…”.",src:SRC.plain,conf:"low"})}
+
+  const lens=sents.map(s=>words(s.text).length);
+  sents.forEach((s,i)=>{if(lens[i]>35)f.push({start:s.start,end:s.end,cat:"rhythm",
+    msg:`Long sentence — ${lens[i]} words`,fix:"Split it where the idea turns.",src:SRC.long,conf:"medium"})});
+  for(let i=0;i+3<sents.length;i++){
+    const run=lens.slice(i,i+4);
+    if(Math.min(...run)>=10&&Math.max(...run)-Math.min(...run)<=4){
+      f.push({start:sents[i].start,end:sents[i+3].end,cat:"rhythm",msg:"Four sentences of the same length in a row",
+        fix:"Break the pattern: a short sentence lands after long ones.",src:SRC.provost,conf:"low"});i+=3}}
+
+  const toks=[];const tre=/[A-Za-z][A-Za-z'’-]*/g;
+  while((m=tre.exec(text)))toks.push({w:m[0].toLowerCase(),start:m.index,end:m.index+m[0].length});
+  const flagged=new Set();
+  for(let i=0;i<toks.length;i++){const t=toks[i];if(t.w.length<4||STOP.has(t.w)||flagged.has(i))continue;
+    const hits=[i];for(let j=i+1;j<toks.length&&j<=i+40;j++)if(toks[j].w===t.w)hits.push(j);
+    if(hits.length>=3){for(const h of hits.slice(2)){flagged.add(h);
+      f.push({start:toks[h].start,end:toks[h].end,cat:"rhythm",msg:`“${t.w}” three times in a short stretch`,
+        fix:"Vary it, or restructure so it isn't needed.",src:SRC.repeat,conf:"low"})}}}
+
+  // stats
+  const syl=allWords.reduce((a,w)=>a+syllables(w),0);
+  const ns=Math.max(1,sents.length);
+  const avg=nWords/ns;
+  const sd=Math.sqrt(lens.reduce((a,l)=>a+(l-avg)**2,0)/ns);
+  const ease=nWords?206.835-1.015*avg-84.6*(syl/nWords):0;
+  const grade=nWords?0.39*avg+11.8*(syl/nWords)-15.59:0;
+  const dashes=(text.match(/—/g)||[]).length;
+  const tricolon=(text.match(/\b[\w'’-]+(?: [\w'’-]+){0,3}, [\w'’-]+(?: [\w'’-]+){0,3},? and [\w'’-]+/g)||[]).length;
+  return {findings:dedupe(f),stats:{words:nWords,sentences:sents.length,avg,sd,ease,grade,
+    dashes,dashRate:nWords?dashes/nWords*100:0,tricolon}}}
+
+/* ==========================================================================
+   PROMPT ANALYSIS — the signals from the prompt-audit guidance, each tied to
+   the group it documents, with the guidance's own confidence and fix.
+   ========================================================================== */
+
+const PROMPT_RULES=[
+  {g:"1a",re:/\b(?:MUST|NEVER|ALWAYS|CRITICAL|IMPORTANT|REQUIRED)\b/g,cat:"hedge",conf:"medium",
+   msg:"Pressure language",why:"Current models follow the system prompt closely, so emphasis written for older models makes them over-apply the rule and turn rigid. When several things are marked critical, the markers stop meaning anything.",
+   fix:"Say it at normal volume, with the reason next to it."},
+  {g:"1a",re:/!!+/g,cat:"hedge",conf:"medium",msg:"Shouting",why:"Emphasis stops carrying information when it's everywhere.",fix:"Remove it; state the instruction plainly."},
+  {g:"1a",re:/\b(?:try to|if possible|ideally|where possible)\b/gi,cat:"hedge",conf:"medium",msg:"Hedged requirement",
+   why:"Current models read hedges literally, as permission to skip the thing.",fix:"If it's required, say so (“Include a summary.”). If it's optional, say when."},
+  {g:"1a",re:/\byou (?:tend to|often|sometimes|usually|have a tendency to)\b/gi,cat:"hedge",conf:"medium",msg:"Trait claim about the model",
+   why:"Describing a failure tends to anchor toward it.",fix:"State the behaviour you want instead."},
+  {g:"1a",re:/\b(?:don'?t|do not) be too \w+/gi,cat:"hedge",conf:"medium",msg:"“Don't be too X”",
+   why:"Describes the failure, not the target.",fix:"Say the target: “Keep responses to the length the question needs.”"},
+  {g:"1a",re:/\bbe thorough\b|\b(?:don'?t|do not) be lazy\b|\b(?:don'?t|do not) stop early\b/gi,cat:"economy",conf:"high",
+   msg:"Booster for an old failure",why:"Current models are proactive by default; this causes over-work.",fix:"Delete it."},
+  {g:"1b",re:/\bthink step[- ]by[- ]step\b|\btake a deep breath\b/gi,cat:"economy",conf:"high",msg:"Reasoning incantation",
+   why:"Thinking models already reason; depth is set with the API's thinking and effort settings, not prose.",fix:"Delete it; set effort in the request if you need more depth."},
+  {g:"1b",re:/<\/?(?:scratchpad|thinking|brainstorm)>/gi,cat:"economy",conf:"medium",msg:"Scratchpad tags",
+   why:"Replaced by native thinking.",fix:"Remove the tag scaffolding."},
+  {g:"1b",re:/\b(?:output|respond|reply|answer)(?: with)? only (?:in )?(?:valid )?JSON\b|\bonly (?:valid )?JSON\b/gi,cat:"clarity",conf:"medium",
+   msg:"JSON by instruction",why:"The API's structured outputs guarantee the shape; prose asks can't.",fix:"Use structured outputs (a JSON schema in the request) and drop the instruction."},
+  {g:"1b",re:/\b(?:at most|no more than|under|maximum of|max(?:imum)?) \d+ (?:words|sentences|bullets|bullet points|characters|lines)\b/gi,cat:"rhythm",conf:"medium",
+   msg:"Numeric output cap",why:"Hard caps tuned for older, wordier models starve reasoning on hard inputs.",fix:"Describe the reader instead: “answer only what was asked, in a form they can scan.”"},
+  {g:"1b",re:/\bevery \d+ (?:tool calls|messages|steps|turns)\b/gi,cat:"rhythm",conf:"medium",msg:"Progress-update cadence",
+   why:"Current models narrate appropriately on their own.",fix:"Delete it; say when you want updates, not how often."},
+  {g:"1c",re:/\b(?:do not|don'?t) hallucinate\b|\b(?:never|don'?t|do not) make (?:things|stuff) up\b/gi,cat:"hedge",conf:"low",
+   msg:"“Don't hallucinate”",why:"Worth re-testing whether it changes anything; it's not documented as harmful.",fix:"Better: say what to do when unsure (“say you don't know”)."},
+  {g:"1c",re:/\b(?:Remember,|Again,|As (?:stated|mentioned) (?:above|earlier|before))/g,cat:"economy",conf:"medium",
+   msg:"Repetition as reinforcement",why:"Duplicated rules make the model spend effort reconciling the wordings.",fix:"Say it once, in the right place."},
+  {g:"1c",re:/\b(?:you will be (?:graded|evaluated|scored)|graded on|hidden tests?|rubric)\b/gi,cat:"clarity",conf:"medium",
+   msg:"Grader vocabulary",why:"Describes the scoring apparatus instead of the requirement, and pushes effort toward being watched.",fix:"State each requirement the grader checks. Never describe the grader."},
+  {g:"1c",re:/\b(?:it'?s|it is) usually best to\b|\ba good strategy is\b/gi,cat:"economy",conf:"low",msg:"Strategy coaching",
+   why:"The model's own plan is usually better than a general heuristic.",fix:"Delete it unless it changes what counts as success."},
+  {g:"1c",re:/\bbe (?:accurate|helpful|thorough|clear|concise|professional|precise)\b/gi,cat:"economy",conf:"medium",msg:"Generic virtue",
+   why:"Restates a trained default; the model treats everything as an instruction, so it's noise.",fix:"Replace with what only you know: the reader, the quality bar, the reason."},
+  {g:"1d",re:/\bclaude-(?:2|instant|3)|\bclaude 3|3\.5 sonnet|\bgpt-3/gi,cat:"tells",conf:"high",msg:"Retired model named",
+   why:"Mitigations written for a retired model outlive it.",fix:"Remove, and re-test whether the behaviour it patched still happens."},
+  {g:"1d",re:/\bhold (?:all )?(?:findings|results)\b|\b(?:don'?t|do not) narrate\b|\bno interim\b/gi,cat:"tells",conf:"medium",
+   msg:"Update suppressor",why:"Written for chatty models; current ones under-narrate with these present.",fix:"Remove, then say when you do want user-facing updates."},
+  {g:"1d",re:/\b(?:never|don'?t|do not) use (?:bullets|bullet points|headers|headings|bold|markdown)\b|\bno (?:bullets|bullet points|headers|markdown)\b/gi,cat:"tells",conf:"medium",
+   msg:"Blanket anti-formatting rule",why:"Written against models that over-formatted; now strips formatting the reader wanted.",fix:"Say when formatting is appropriate instead."},
+  {g:"1d",re:/\b(?:no longer|now works|instead of the old)\b/gi,cat:"tells",conf:"low",msg:"Migration phrasing",
+   why:"Reads as a diff against a prompt the model never saw.",fix:"Write as if the current rule is the only one that ever existed."},
+];
+
+function analyzePrompt(text){
+  const f=[];
+  for(const r of PROMPT_RULES){r.re.lastIndex=0;let m;
+    while((m=r.re.exec(text))){
+      const line=text.slice(text.lastIndexOf("\n",m.index)+1,(text.indexOf("\n",m.index)+1||text.length+1)-1);
+      const reasoned=/\bbecause\b|\bso that\b|\bsince\b|\bwhich means\b/i.test(line);
+      f.push({start:m.index,end:m.index+m[0].length,cat:r.cat,group:r.g,conf:r.g==="1a"&&reasoned?"low":r.conf,
+        msg:r.msg+(r.g==="1a"&&reasoned?" (has a reason next to it — keep the reason, drop the volume)":""),
+        fix:r.fix,why:r.why,src:SRC.audit+" · group "+r.g})}}
+
+  // runs of 3+ prohibition lines
+  const lines=text.split("\n");let pos=0;const starts=lines.map(l=>{const s=pos;pos+=l.length+1;return s});
+  for(let i=0;i<lines.length;){
+    let j=i;while(j<lines.length&&/^\s*(?:[-*•\d.)]+\s*)?(?:do not|don'?t|never|avoid)\b/i.test(lines[j]))j++;
+    if(j-i>=3){const unreasoned=lines.slice(i,j).filter(l=>!/\bbecause\b|\bso that\b|\bsince\b/i.test(l)).length;
+      f.push({start:starts[i],end:starts[j-1]+lines[j-1].length,cat:"clarity",group:"1c/1e",conf:"medium",
+        msg:`${j-i} prohibitions in a row, ${unreasoned} without a reason`,
+        why:"Describing success beats listing failures, and a ban on a failure the model wasn't going to make can steer it toward that failure. Keep the ones that encode a real policy, with their reason.",
+        fix:"Rewrite the rest as one positive statement of what good looks like.",src:SRC.audit+" · groups 1c, 1e"});i=j}
+    else i++}
+
+  // numbered choreography
+  const stepLines=lines.filter(l=>/^\s*(?:step\s*\d+|\d+[.)])\s+[A-Z]/i.test(l)).length;
+  if(stepLines>=5){const first=lines.findIndex(l=>/^\s*(?:step\s*\d+|\d+[.)])\s+[A-Z]/i.test(l));
+    f.push({start:starts[first],end:starts[first]+lines[first].length,cat:"rhythm",group:"1c",conf:"low",
+      msg:`${stepLines} numbered steps`,why:"For judgment tasks, a hand-written script usually does worse than the model's own plan.",
+      fix:"Keep numbered steps only where the order really matters; otherwise state the outcome and how to check it.",src:SRC.audit+" · group 1c"})}
+
+  // identity stub standing in for context (keep list: a one-line role is fine)
+  const stub=/^\s*You are (?:a|an) (?:helpful|expert|world[- ]class|highly skilled)[^.\n]*[.\n]/i.exec(text);
+  const rest=stub?words(text.slice(stub[0].length)).length:0;
+  if(stub&&rest<40)f.push({start:stub.index,end:stub.index+stub[0].length,cat:"clarity",group:"1d",conf:"medium",
+    msg:"Identity line standing in for context",why:"A one-line role is fine. The problem is when it's the only context: the model fills the gap with safe, generic defaults.",
+    fix:"Add who the output is for, what it's used for, and what good looks like.",src:SRC.audit+" · group 1d, keep list 9"});
+
+  const n=words(text).length;
+  const caps=(text.match(/\b(?:MUST|NEVER|ALWAYS|CRITICAL|IMPORTANT|REQUIRED)\b/g)||[]).length;
+  const reasons=(text.match(/\bbecause\b|\bso that\b|\bsince\b/gi)||[]).length;
+  const mentionsReader=/\b(?:reader|audience|user|customer|for (?:a|an|the) \w+)\b/i.test(text);
+  const mentionsFormat=/\b(?:format|json|schema|table|list|markdown|return|reply with|output)\b/i.test(text);
+  return {findings:dedupe(f),stats:{words:n,caps,reasons,mentionsReader,mentionsFormat}}}
+
+function dedupe(f){
+  f.sort((a,b)=>a.start-b.start||(b.end-b.start)-(a.end-a.start));
+  const out=[];for(const x of f){if(out.some(y=>y.start===x.start&&y.end===x.end&&y.cat===x.cat))continue;out.push(x)}
+  return out}
+
+/* ==========================================================================
+   QUOTE VERIFICATION — a critique claim counts only if its quote is really
+   in the text. Whitespace and curly quotes are forgiven; words are not.
+   ========================================================================== */
+
+function normMap(s){let out="",map=[];let ws=false;
+  for(let i=0;i<s.length;i++){let c=s[i];
+    if(/\s/.test(c)){if(ws)continue;c=" ";ws=true}else ws=false;
+    if(c==="’"||c==="‘")c="'";if(c==="“"||c==="”")c='"';if(c==="—"||c==="–")c="-";
+    out+=c;map.push(i)}
+  return {s:out,map}}
+function locate(text,quote){
+  if(!quote||quote.length<3)return null;
+  const T=normMap(text),Q=normMap(String(quote).trim().replace(/^["'“”]+|["'“”]+$/g,"")).s;
+  let i=T.s.indexOf(Q);
+  if(i<0)i=T.s.toLowerCase().indexOf(Q.toLowerCase());
+  if(i<0)return null;
+  return {start:T.map[i],end:T.map[i+Q.length-1]+1}}
+
+/* ==========================================================================
+   STATE, STORAGE, MODEL
+   ========================================================================== */
+
+const SAMPLE={
+  prose:"In today's fast-paced world, it is important to note that effective communication is absolutely essential. Our team made a decision to conduct an analysis of the feedback that was received from customers. The results were very interesting, and they really underscore the need for a more holistic approach. It's not just about speed — it's about trust. Moving forward, we will leverage these insights in order to deliver a seamless experience, and at the end of the day, that's what really matters to our customers and to our team and to our business.",
+  prompt:"You are a helpful assistant.\nIMPORTANT: You MUST ALWAYS answer in JSON!!\nThink step by step before answering.\nBe thorough and do not be lazy.\nNever make things up.\nNever use bullet points.\nNever mention competitors.\nTry to include a summary if possible.\nKeep answers to at most 50 words.\nRemember, you will be graded on accuracy.",
+  goal:"Turn an incoming customer support email into a ticket: a category, an urgency level, and a one-line summary the on-call person can act on.",
+};
+
+const state={tab:"prose",prose:"",purpose:"",reader:"",prompt:"",goal:"",who:"",rules:"",shape:"",
+  showCats:Object.fromEntries(Object.keys(CAT).map(k=>[k,true])),showQuotes:true,
+  critique:null,review:null,build:null,busy:"",err:"",active:-1,sampleProse:true,samplePrompt:true};
+let sample=null,ctl=null;
+
+function load(){try{const d=JSON.parse(localStorage.getItem("galley:v1")||"null");
+  if(d){for(const k of ["prose","purpose","reader","prompt","goal","who","rules","shape","tab"])if(typeof d[k]==="string")state[k]=d[k];
+    state.sampleProse=!d.prose;state.samplePrompt=!d.prompt}}catch(e){}
+  if(!state.prose)state.prose=SAMPLE.prose;if(!state.prompt)state.prompt=SAMPLE.prompt;if(!state.goal)state.goal=SAMPLE.goal}
+function save(){try{localStorage.setItem("galley:v1",JSON.stringify({prose:state.sampleProse?"":state.prose,
+  purpose:state.purpose,reader:state.reader,prompt:state.samplePrompt?"":state.prompt,goal:state.goal,who:state.who,
+  rules:state.rules,shape:state.shape,tab:state.tab}))}catch(e){}}
+
+function errCopy(e){const c=e&&e.code;
+  if(c==="not_granted"||c==="sampling_disabled"||c==="capability_disabled")return"This page can't reach Claude. Open it from your Claude account and allow it when asked.";
+  if(c==="rate_limited")return"Too many requests, or you've hit a usage limit. Give it a minute.";
+  if(c==="invalid_json")return"The reply came back cut short or garbled. Try again, or with a shorter text.";
+  if(c==="prompt_too_large")return"That's too long to send in one go. Try a shorter section.";
+  if(c==="refused")return"Claude declined that one.";
+  return`That didn't work${c?" ("+c+")":""}. Try again.`}
+
+async function ask(prompt){
+  if(!sample)throw{code:"not_granted"};
+  ctl=new AbortController();
+  return sample.json(prompt,{modelTier:"complex",signal:ctl.signal,cache:false,
+    onText:({text})=>{const el=document.getElementById("progress");if(el)el.textContent=`Writing… ${text.length.toLocaleString()} characters`}})}
+
+/* ---- the three model calls. They follow the guidance the Prompt tab checks for:
+   context before rules, reasons beside rules, no shouting, outcomes not scripts. ---- */
+
+async function runCritique(){
+  const text=state.prose.trim();if(words(text).length<20){state.err="Give it at least a few sentences to judge.";return render()}
+  state.busy="critique";state.err="";state.critique=null;render();
+  try{
+    const out=await ask(`You're reading a piece of writing as a good editor would, to help the writer improve it.
+
+What it's for: ${state.purpose.trim()||"not stated — judge it against what the piece itself seems to be trying to do"}
+Who reads it: ${state.reader.trim()||"not stated"}
+
+<piece>
+${text.slice(0,14000)}
+</piece>
+
+Score it 1 to 5 on six things. A 3 is competent professional prose that does its job, and most decent drafts land at 3 on most of these. A 5 is rare: you'd point to it as an example of doing this well. The scores only help the writer if they spread, so score what's on the page rather than rounding up to be encouraging.
+
+- clarity: a reader gets the meaning on the first pass. 1: you have to reread to work out the claim. 5: every sentence is understood once.
+- specificity: concrete nouns, numbers, examples, named things. 1: all abstraction ("solutions", "impact"). 5: the reader could picture or check each claim.
+- economy: every sentence earns its place. 1: padded with preamble and repetition. 5: nothing to cut.
+- rhythm: sentence length and shape vary with the sense; it reads well aloud. 1: monotonous or tangled. 5: the sound carries the meaning.
+- voice: sounds like a particular person with a point of view. 1: could have been written by anyone about anything. 5: unmistakably someone's.
+- fit: does the job for the stated reader and purpose.
+
+Every judgment rests on evidence, so quote the exact words it's about, copied character for character. The writer's tool checks each quote against the text and discards any that don't match, so paraphrases get thrown away.
+
+Then the fixes that would improve it most, biggest first. Five at most, and fewer if the piece is strong, because padding the list with nitpicks hides the real problems. For each: the exact words, a rewrite of just those words in the writer's own voice, and why the rewrite is better. Then what's working, quoted, so they know what to keep.
+
+Reply with only this JSON:
+{"verdict":"one sentence an editor would say first",
+"scores":{"clarity":{"score":3,"why":"","quote":""},"specificity":{"score":3,"why":"","quote":""},"economy":{"score":3,"why":"","quote":""},"rhythm":{"score":3,"why":"","quote":""},"voice":{"score":3,"why":"","quote":""},"fit":{"score":3,"why":"","quote":""}},
+"fixes":[{"quote":"","rewrite":"","why":"","dimension":"clarity"}],
+"working":[{"quote":"","why":""}]}`);
+    state.critique=out}
+  catch(e){if(!(e&&e.code==="cancelled"))state.err=errCopy(e)}
+  state.busy="";render()}
+
+const AUDIT_BRIEF=`How prompts go wrong on current Claude models (from Anthropic's prompt-audit guidance):
+- 1a Pressure language. Current models follow the system prompt closely, so CRITICAL/MUST/NEVER written for older models makes them over-apply rules and turn rigid; hedges like "try to" are read as permission to skip. Fix: normal volume, reason beside the rule.
+- 1b Scaffolds replaced by API features: "think step by step", scratchpad tags, "output only JSON", numeric word caps, update cadences. Fix: thinking/effort settings, structured outputs, qualitative guidance.
+- 1c Over-specification: step scripts for judgment tasks, prohibition lists, a single gold example the model will copy, bullet walls that sever rules from reasons, generic virtues, repetition, grader vocabulary, strategy coaching. Fix: state outcomes, constraints and how to verify; positive statements of intent.
+- 1d Fossils: workarounds for retired models, "no longer" phrasing, patch accretion, identity lines standing in for real context, update suppressors, blanket anti-formatting rules.
+- 1e Prohibition clusters: keep bans that encode a real policy (with the reason); rewrite style bans with no provenance as one positive line.
+Keep: context is never cruft (audience, product, environment, quality bar, reasons); length is not the problem; fragile operations keep exact scripts; a one-line role is fine; a single end-of-prompt recap is fine; sometimes the fix is adding text.`;
+
+async function runReview(){
+  const text=state.prompt.trim();if(words(text).length<5){state.err="Paste a prompt first.";return render()}
+  state.busy="review";state.err="";state.review=null;render();
+  try{
+    const out=await ask(`Someone wrote this prompt for a Claude model and wants to know how it will actually behave, and how to make it better.
+
+<prompt>
+${text.slice(0,16000)}
+</prompt>
+
+${AUDIT_BRIEF}
+
+First, restate in two sentences what you'd do if you were given this prompt. If that's hard to say, the prompt is unclear, and that's the most useful thing to report.
+
+Then the places a model could reasonably read it two ways, and the things it would have to guess because the prompt doesn't say (who the output is for, what good looks like, what to do when unsure).
+
+Then findings, each tied to the groups above with the exact words quoted character for character; the writer's tool checks quotes against the prompt and drops any that don't match. Rate confidence the way the guidance does: high if it's documented behaviour, medium if it's widely observed, low if it's a hunch. Report only real problems. A clean prompt with no findings is a good result, so don't invent any.
+
+Finally, a rewritten prompt that keeps every piece of real context and every legitimate constraint, fixes the findings, and adds what the model would otherwise have to guess, with placeholders in [brackets] where only the author knows the answer.
+
+Reply with only this JSON:
+{"restatement":"","ambiguities":[{"quote":"","readings":["",""]}],"missing":[""],
+"findings":[{"quote":"","group":"1a","why":"","confidence":"high","action":"rewrite","replacement":""}],
+"rewrite":"the full improved prompt","changes":["short line per change"]}`);
+    state.review=out}
+  catch(e){if(!(e&&e.code==="cancelled"))state.err=errCopy(e)}
+  state.busy="";render()}
+
+async function runBuild(){
+  const goal=state.goal.trim();if(words(goal).length<5){state.err="Describe what it should do first.";return render()}
+  state.busy="build";state.err="";state.build=null;render();
+  try{
+    const out=await ask(`Design the thing described below: the pipeline around the model call, not just the prompt.
+
+What it should do: ${goal}
+Who or what uses the output: ${state.who.trim()||"not stated"}
+Hard rules the author already knows, with reasons if given: ${state.rules.trim()||"none stated"}
+Shape of the output: ${state.shape.trim()||"not stated"}
+
+${AUDIT_BRIEF}
+
+Two things matter most. First, most "AI features" hide steps whose inputs fully decide the output: routing, counting, filtering, formatting, validating. Those belong in plain code, which is cheaper, faster and never wrong in new ways. Keep the model for the step that genuinely needs judgment, and name that step. Second, the prompt for that step should give the model the context only the author has (who reads the output, what it's used for, what good looks like, the reason behind each rule) and state outcomes rather than a script, at normal volume. Put [placeholders] where only the author can fill in the answer.
+
+If the output feeds another program, give a JSON schema so the API's structured outputs can guarantee the shape, rather than asking for JSON in prose. Then give five test inputs a real user might send, chosen to find the edges (ambiguous, empty, hostile, unusual), each with what a good output does.
+
+Reply with only this JSON:
+{"steps":[{"name":"","kind":"code","does":"","why":""}],
+"modelStep":"which step needs the model, and why only that one",
+"prompt":"the full prompt text for the model step",
+"schema":null,
+"tests":[{"input":"","good":""}],
+"watch":["what to measure once it's live"]}`);
+    state.build=out}
+  catch(e){if(!(e&&e.code==="cancelled"))state.err=errCopy(e)}
+  state.busy="";render()}
+
+/* ==========================================================================
+   DRAWING
+   ========================================================================== */
+
+function marked(text,finds,quotes){
+  const spans=[];
+  finds.forEach((f,i)=>{if(state.showCats[f.cat])spans.push({start:f.start,end:f.end,cls:f.cat,i})});
+  if(state.showQuotes)for(const q of quotes||[])spans.push({start:q.start,end:q.end,cls:"quote",i:"q"+q.k});
+  spans.sort((a,b)=>a.start-b.start||(b.end-b.start)-(a.end-a.start));
+  let h="",pos=0,open=null;
+  const kept=[];for(const s of spans){if(kept.length&&s.start<kept[kept.length-1].end)continue;kept.push(s)}
+  for(const s of kept){h+=esc(text.slice(pos,s.start));
+    h+=`<mark class="${s.cls}${String(s.i)===String(state.active)?" on":""}" data-i="${s.i}">${esc(text.slice(s.start,s.end))}</mark>`;pos=s.end}
+  return h+esc(text.slice(pos))}
+
+function legend(finds){
+  const n={};for(const f of finds)n[f.cat]=(n[f.cat]||0)+1;
+  return`<div class="legend">${Object.entries(CAT).map(([k,c])=>`<button class="key" data-cat="${k}" aria-pressed="${state.showCats[k]}" title="${esc(c.desc)}">
+    <i style="background:var(--${k})"></i>${esc(c.name)} <b>${n[k]||0}</b></button>`).join("")}</div>`}
+
+function findList(finds,text){
+  const shown=finds.map((f,i)=>({f,i})).filter(x=>state.showCats[x.f.cat]);
+  if(!shown.length)return`<p class="empty">Nothing flagged in the categories shown.</p>`;
+  return`<div class="finds">${shown.map(({f,i})=>`<div class="find${i===state.active?" on":""}" data-i="${i}">
+    <div class="bar" style="background:var(--${f.cat})"></div>
+    <div><div class="t"><q>${esc(text.slice(f.start,Math.min(f.end,f.start+90)))}${f.end-f.start>90?"…":""}</q> — ${esc(f.msg)}<span class="conf ${f.conf}">${f.conf}</span></div>
+      ${f.why?`<div class="fix" style="color:var(--dim)">${esc(f.why)}</div>`:""}
+      <div class="fix">${esc(f.fix)}</div>
+      <div class="src">${esc(f.src)}</div></div></div>`).join("")}</div>`}
+
+function pips(n){return`<span class="pips">${[1,2,3,4,5].map(i=>`<i class="${i<=n?"on":""}"></i>`).join("")}</span>`}
+
+function quoteBlock(text,q,list,k){
+  const at=locate(text,q);
+  if(at){list.push(Object.assign({k},at));return`<blockquote>${esc(q)}</blockquote>`}
+  return q?`<blockquote class="bad">${esc(q)}</blockquote><div class="unverified">Not found in the text — this claim is discounted.</div>`:""}
+
+function prosePanel(){
+  const text=state.prose;const {findings:finds,stats:s}=analyzeProse(text);
+  const quotes=[];let crit="";
+  if(state.critique){const c=state.critique,sc=c.scores||{};let bad=0,total=0;
+    const cq=q=>{total++;const b=quoteBlock(text,q,quotes,total);if(/class="bad"/.test(b))bad++;return b};
+    const dims=["clarity","specificity","economy","rhythm","voice","fit"];
+    const rows=dims.map(d=>{const x=sc[d]||{};const n=Math.max(1,Math.min(5,Math.round(Number(x.score)||0)));
+      return`<div class="score"><div class="h"><b style="text-transform:capitalize">${d}</b><span class="n">${n}/5${pips(n)}</span></div>
+        <div class="why">${esc(x.why||"")}</div>${cq(x.quote)}</div>`}).join("");
+    const fixes=(c.fixes||[]).slice(0,5).map(x=>`<div class="fixrow"><span class="lab">${esc(x.dimension||"")}</span>
+      ${cq(x.quote)}<div class="to">${esc(x.rewrite||"")}</div><div class="why">${esc(x.why||"")}</div></div>`).join("");
+    const working=(c.working||[]).slice(0,4).map(x=>`<div class="fixrow">${cq(x.quote)}<div class="why">${esc(x.why||"")}</div></div>`).join("");
+    const avg=dims.reduce((a,d)=>a+(Number((sc[d]||{}).score)||0),0)/dims.length;
+    crit=`<h2>Critique</h2>
+      <p class="note">Blind: it wasn't told who wrote this. ${total-bad} of ${total} quotes found in your text${bad?`; ${bad} didn't match and are struck out`:""}. Average ${avg.toFixed(1)} / 5, where 3 is competent professional prose.</p>
+      <div class="verdict">${esc(c.verdict||"")}</div>
+      <div class="scores">${rows}</div>
+      ${fixes?`<h3>What would help most</h3>${fixes}`:""}
+      ${working?`<h3>What's working</h3>${working}`:""}`}
+
+  return`<p class="intro">Paste writing. The marks appear as you type and come from the sources named on each one — no AI involved. The critique is separate, and optional.</p>
+    ${state.sampleProse?`<div style="margin-top:12px"><span class="flag">Sample — replace with your own</span></div>`:""}
+    <div class="field"><textarea id="prose" aria-label="Your writing" spellcheck="true">${esc(text)}</textarea></div>
+    <div class="stats">
+      <div><b>${s.words}</b><span>words</span></div>
+      <div><b>${s.avg.toFixed(1)}</b><span>words / sentence</span></div>
+      <div><b>${s.sd.toFixed(1)}</b><span>length spread${s.sentences>3&&s.sd<4?" · flat":""}</span></div>
+      <div><b>${Math.round(s.ease)}</b><span>Flesch ease${s.ease>=60?" · plain":s.ease>=40?" · dense":" · hard"}</span></div>
+      <div><b>${Math.max(0,s.grade).toFixed(1)}</b><span>grade level</span></div>
+      <div><b>${s.dashRate.toFixed(1)}</b><span>em-dashes / 100 words</span></div>
+    </div>
+    ${legend(finds)}
+    <div class="sheet" id="sheet">${marked(text,finds,quotes)}</div>
+    ${findList(finds,text)}
+    <h2>Blind critique</h2>
+    <p class="note">An editor's read on six things, scored against anchors where 3 is competent. It must quote the words behind each judgment; quotes that aren't in your text are struck out.</p>
+    <div class="pair" style="margin-top:10px">
+      <div><label class="lab" for="purpose">What it's for (optional)</label><input type="text" id="purpose" value="${esc(state.purpose)}" placeholder="Cover letter, short story, product page…"></div>
+      <div><label class="lab" for="reader">Who reads it (optional)</label><input type="text" id="reader" value="${esc(state.reader)}" placeholder="A hiring manager, a ten-year-old…"></div>
+    </div>
+    <div class="row"><button class="go" id="critique" ${state.busy?"disabled":""}>Get a blind critique</button>
+      ${state.critique&&quotes.length?`<button class="ghost" id="togglequotes">${state.showQuotes?"Hide":"Show"} quoted words on the sheet</button>`:""}</div>
+    ${status()}${crit}`}
+
+function promptPanel(){
+  const text=state.prompt;const {findings:finds,stats:s}=analyzePrompt(text);
+  const quotes=[];let rev="";
+  if(state.review){const r=state.review;let k=0;
+    const cq=q=>quoteBlock(text,q,quotes,++k);
+    rev=`<h2>How a model will read it</h2>
+      <div class="verdict">${esc(r.restatement||"")}</div>
+      ${(r.ambiguities||[]).length?`<h3>Could be read two ways</h3>${r.ambiguities.map(a=>`<div class="fixrow">${cq(a.quote)}
+        <div class="why">${(a.readings||[]).map((x,i)=>`${i?"<br>":""}${i+1}. ${esc(x)}`).join("")}</div></div>`).join("")}`:""}
+      ${(r.missing||[]).length?`<h3>It would have to guess</h3><ul>${r.missing.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+      ${(r.findings||[]).length?`<h3>Findings</h3>${r.findings.map(x=>`<div class="fixrow"><span class="lab">Group ${esc(x.group||"")} · ${esc(x.action||"")}</span>
+        <span class="conf ${esc(x.confidence||"")}">${esc(x.confidence||"")}</span>${cq(x.quote)}
+        <div class="why">${esc(x.why||"")}</div>${x.replacement?`<div class="to">${esc(x.replacement)}</div>`:""}</div>`).join("")}`
+        :`<p class="note">No findings. That's a real result, not a failure to look.</p>`}
+      ${r.rewrite?`<h3>Rewritten</h3><button class="ghost copy" data-copy="rewrite">Copy</button><pre id="rewrite">${esc(r.rewrite)}</pre>
+        ${(r.changes||[]).length?`<ul class="note">${r.changes.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}`:""}`}
+  return`<p class="intro">Paste a system prompt, a tool description or instructions for a model. The checks come from Anthropic's prompt-audit guidance for current Claude models, with that guidance's confidence levels. It also knows what <em>not</em> to cut: real context and reasons always stay.</p>
+    ${state.samplePrompt?`<div style="margin-top:12px"><span class="flag">Sample — replace with your own</span></div>`:""}
+    <div class="field"><textarea id="prompt" class="code" aria-label="Your prompt" spellcheck="false">${esc(text)}</textarea></div>
+    <div class="stats">
+      <div><b>${s.words}</b><span>words</span></div>
+      <div><b>${s.caps}</b><span>capitalised pressure words</span></div>
+      <div><b>${s.reasons}</b><span>reasons given (because / so that)</span></div>
+      <div><b style="color:var(--${s.mentionsReader?"good":"bad"})">${s.mentionsReader?"yes":"no"}</b><span>says who it's for</span></div>
+      <div><b style="color:var(--${s.mentionsFormat?"good":"bad"})">${s.mentionsFormat?"yes":"no"}</b><span>says what to return</span></div>
+    </div>
+    ${legend(finds)}
+    <div class="sheet code" id="sheet">${marked(text,finds,quotes)}</div>
+    ${findList(finds,text)}
+    <h2>Review</h2>
+    <p class="note">Says back what a model would do with this prompt, where it could be misread, what it would have to guess, and a rewrite that keeps your context.</p>
+    <div class="row"><button class="go" id="review" ${state.busy?"disabled":""}>Review this prompt</button></div>
+    ${status()}${rev}`}
+
+function buildPanel(){
+  let out="";const b=state.build;
+  if(b){out=`<h2>The design</h2>
+    <ol class="steps">${(b.steps||[]).map(s=>`<li><span class="kind ${s.kind==="model"?"model":"code"}">${s.kind==="model"?"model":"code"}</span>
+      <div><b>${esc(s.name||"")}</b> — ${esc(s.does||"")}<div class="note">${esc(s.why||"")}</div></div></li>`).join("")}</ol>
+    ${b.modelStep?`<p class="note" style="margin-top:10px">${esc(b.modelStep)}</p>`:""}
+    ${b.prompt?`<h3>Prompt for the model step</h3><button class="ghost copy" data-copy="bprompt">Copy</button><pre id="bprompt">${esc(b.prompt)}</pre>`:""}
+    ${b.schema?`<h3>Output schema</h3><p class="note">Pass this as the structured-output format so the shape is guaranteed rather than requested.</p><button class="ghost copy" data-copy="bschema">Copy</button><pre id="bschema">${esc(typeof b.schema==="string"?b.schema:JSON.stringify(b.schema,null,2))}</pre>`:""}
+    ${(b.tests||[]).length?`<h3>Test it with these</h3>${b.tests.map(t=>`<div class="fixrow"><div style="font-family:var(--mono);font-size:13px">${esc(t.input||"")}</div><div class="why">Good output: ${esc(t.good||"")}</div></div>`).join("")}`:""}
+    ${(b.watch||[]).length?`<h3>Measure once it's live</h3><ul>${b.watch.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+    <p class="note" style="margin-top:16px">Paste the prompt into the Prompt tab to check it against the same guidance it was built from.</p>`}
+  return`<p class="intro">Describe what you want a model to do. You get the whole engine: which steps should be plain code, the one step that needs the model, its prompt, an output schema if another program reads it, and test inputs that find the edges.</p>
+    <div class="field"><label class="lab" for="goal">What should it do</label><textarea id="goal" style="min-height:90px">${esc(state.goal)}</textarea></div>
+    <div class="pair">
+      <div><label class="lab" for="who">Who or what uses the output</label><input type="text" id="who" value="${esc(state.who)}" placeholder="The on-call support person, a dashboard…"></div>
+      <div><label class="lab" for="shape">Output shape</label><input type="text" id="shape" value="${esc(state.shape)}" placeholder="JSON for our ticket system, a short reply…"></div>
+    </div>
+    <div class="field"><label class="lab" for="rules">Rules you already know, and why</label><input type="text" id="rules" value="${esc(state.rules)}" placeholder="Never promise refunds, because only billing can approve them"></div>
+    <div class="row"><button class="go" id="build" ${state.busy?"disabled":""}>Design it</button></div>
+    ${status()}${out}`}
+
+function status(){
+  let h="";
+  if(state.busy)h+=`<div class="status"><span class="dot"></span><span id="progress">Reading…</span>
+    <button class="ghost" id="stop" style="min-height:32px;padding:4px 10px">Stop</button></div>`;
+  if(state.err)h+=`<div class="err">${esc(state.err)}</div>`;
+  if(!sample&&!state.busy)h+=`<p class="note" style="margin-top:10px">The marks work anywhere. The critique, review and builder need this page opened from your Claude account.</p>`;
+  return h}
+
+function footer(){
+  return`<div class="sourcebox"><b>Where the knowledge comes from.</b> Prose marks: Strunk &amp; White, Orwell's rules, Helen Sword on zombie nouns, plain-language guidelines, Gary Provost on sentence rhythm, and the Flesch readability formulas. Prompt marks and reviews: Anthropic's prompt-audit guidance for current Claude models. Every mark is a heuristic that finds a candidate for you to judge, and passive-voice and cliché detection will sometimes flag something that's fine. The model-prose list is a pattern, not proof. Nothing is sent anywhere until you press a button, and your drafts stay in this browser.</div>`}
+
+function render(){
+  document.querySelectorAll("[data-tab]").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===state.tab)));
+  const focus=document.activeElement&&document.activeElement.id;
+  const sel=focus&&document.activeElement.selectionStart;
+  const main=document.getElementById("main");
+  main.innerHTML=(state.tab==="prose"?prosePanel():state.tab==="prompt"?promptPanel():buildPanel())+footer();
+  if(focus){const el=document.getElementById(focus);if(el){el.focus();try{if(sel!=null)el.setSelectionRange(sel,sel)}catch(e){}}}}
+
+// Typing re-marks only the sheet and the lists, never the textarea itself.
+let tId=0;
+function refreshMarks(){
+  clearTimeout(tId);tId=setTimeout(()=>{
+    const ta=document.activeElement;const id=ta&&ta.id;const s=ta&&ta.selectionStart,e=ta&&ta.selectionEnd;
+    const sc=window.scrollY;render();window.scrollTo(0,sc);
+    if(id){const el=document.getElementById(id);if(el){el.focus();try{el.setSelectionRange(s,e)}catch(x){}}}},280)}
+
+document.addEventListener("input",ev=>{
+  const t=ev.target;
+  if(t.id==="prose"){state.prose=t.value;state.sampleProse=false;state.critique=null;save();return refreshMarks()}
+  if(t.id==="prompt"){state.prompt=t.value;state.samplePrompt=false;state.review=null;save();return refreshMarks()}
+  if(["purpose","reader","goal","who","rules","shape"].includes(t.id)){state[t.id]=t.value;save()}});
+
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("button,mark,.find");if(!t)return;
+  if(t.dataset.tab){state.tab=t.dataset.tab;state.err="";state.active=-1;save();return render()}
+  if(t.dataset.cat){state.showCats[t.dataset.cat]=!state.showCats[t.dataset.cat];return render()}
+  if(t.tagName==="MARK"||t.classList.contains("find")){
+    const i=t.dataset.i;state.active=/^\d+$/.test(i)?Number(i):i;render();
+    const other=t.tagName==="MARK"?document.querySelector(`.find[data-i="${i}"]`):document.querySelector(`mark[data-i="${i}"]`);
+    if(other&&other.scrollIntoView)other.scrollIntoView({block:"center",behavior:"smooth"});return}
+  if(t.id==="critique")return void runCritique();
+  if(t.id==="review")return void runReview();
+  if(t.id==="build")return void runBuild();
+  if(t.id==="stop"){if(ctl)ctl.abort();return}
+  if(t.id==="togglequotes"){state.showQuotes=!state.showQuotes;return render()}
+  if(t.dataset.copy){const el=document.getElementById(t.dataset.copy);const txt=el?el.textContent:"";
+    const done=()=>{t.textContent="Copied";setTimeout(()=>{t.textContent="Copy"},1400)};
+    try{navigator.clipboard.writeText(txt).then(done,()=>{selectText(el)})}catch(e){selectText(el)}}});
+function selectText(el){if(!el)return;const r=document.createRange();r.selectNodeContents(el);
+  const s=window.getSelection();s.removeAllRanges();s.addRange(r)}
+
+load();render();
+(async()=>{try{sample=await claude.use("sample")}catch(e){sample=null}render()})();
+</script>
