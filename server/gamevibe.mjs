@@ -178,7 +178,7 @@ exist, chosen for the FEELING rather than the genre.`,
         };
         const [discovered, seeded] = await Promise.all([
           catalog.discoverVibe(opts).catch(e => { console.warn("[rumble] discover failed:", e.message); return []; }),
-          Promise.all((reading.seeds || []).slice(0, 14).map(async s => {
+          Promise.all((reading.seeds || []).slice(0, isIgdb ? 10 : 14).map(async s => {   // IGDB: 4 requests a second
             try {
               const hits = await catalog.search(s.title, 5);
               const want = titleKey(s.title);

@@ -26,13 +26,20 @@ class Igdb {
     this.id = clientId; this.secret = clientSecret;
     this.apiBase = apiBase || "https://api.igdb.com";
     this.authBase = authBase || "https://id.twitch.tv";
-    this.token = null; this.expires = 0;
+    this.token = null; this.expires = 0; this.authing = null;
     this.name = "igdb";
+    this.started = []; this.open = 0;
   }
   configured() { return !!(this.id && this.secret); }
 
-  async auth() {
-    if (this.token && Date.now() < this.expires - 60_000) return this.token;
+  // Parallel queries share one token request instead of each asking Twitch.
+  auth() {
+    if (this.token && Date.now() < this.expires - 60_000) return Promise.resolve(this.token);
+    if (!this.authing) this.authing = this.fetchToken().finally(() => { this.authing = null; });
+    return this.authing;
+  }
+
+  async fetchToken() {
     const url = `${this.authBase}/oauth2/token`
       + `?client_id=${encodeURIComponent(this.id)}`
       + `&client_secret=${encodeURIComponent(this.secret)}`
@@ -45,9 +52,25 @@ class Igdb {
     return this.token;
   }
 
-  async query(body) {
+  /* IGDB allows 4 requests a second and 8 open at once; past that it answers
+   * 429. Rumble looks up a dozen games at a time, so requests wait their turn
+   * here rather than failing there. */
+  async slot() {
+    for (;;) {
+      const t = Date.now();
+      // A 1.1 s window leaves room for the request to arrive later than it left.
+      this.started = this.started.filter(x => t - x < 1100);
+      if (this.started.length < 4 && this.open < 8) { this.started.push(t); this.open++; return; }
+      await new Promise(r => setTimeout(r, this.started.length >= 4 ? 1100 - (t - this.started[0]) + 5 : 50));
+    }
+  }
+
+  async query(body, retried) {
     const token = await this.auth();
-    const r = await fetch(`${this.apiBase}/v4/games`, {
+    await this.slot();
+    let r;
+    try {
+      r = await fetch(`${this.apiBase}/v4/games`, {
       method: "POST",
       headers: {
         "Client-ID": this.id,
@@ -56,8 +79,11 @@ class Igdb {
         "Content-Type": "text/plain",
       },
       body,
-    });
-    if (r.status === 401) { this.token = null; throw new Error("IGDB rejected the token; it will re-authenticate on retry"); }
+      });
+    } finally { this.open--; }
+    if (r.status === 429 && !retried) { await new Promise(res => setTimeout(res, 1100)); return this.query(body, true); }
+    if (r.status === 401 && !retried) { this.token = null; return this.query(body, true); }
+    if (r.status === 401) throw new Error("IGDB rejected the token; check IGDB_CLIENT_ID and IGDB_CLIENT_SECRET");
     if (!r.ok) throw new Error(`IGDB query failed (${r.status}): ${clean(await r.text(), 200)}`);
     return r.json();
   }
@@ -241,8 +267,8 @@ export function makeCatalog(env) {
   const want = tidy(env.CATALOG_PROVIDER).toLowerCase();
   const rawgKey = envValue(env, ["RAWG_API_KEY", "RAWG_KEY", "RAWG_API", "RAWG_TOKEN", "RAWG"],
     /^rawg[_-]?(?:api)?[_-]?(?:key|token)?$/i);
-  const igdbId = envValue(env, ["IGDB_CLIENT_ID", "TWITCH_CLIENT_ID"], /^(?:igdb|twitch)[_-]?client[_-]?id$/i);
-  const igdbSecret = envValue(env, ["IGDB_CLIENT_SECRET", "TWITCH_CLIENT_SECRET"], /^(?:igdb|twitch)[_-]?client[_-]?secret$/i);
+  const igdbId = envValue(env, ["IGDB_CLIENT_ID", "TWITCH_CLIENT_ID"], /^(?:igdb|twitch)[_-]?(?:api[_-]?)?(?:client[_-]?)?id$/i);
+  const igdbSecret = envValue(env, ["IGDB_CLIENT_SECRET", "TWITCH_CLIENT_SECRET"], /^(?:igdb|twitch)[_-]?(?:api[_-]?)?(?:client[_-]?)?secret$/i);
   const igdb = new Igdb({ clientId: igdbId.value, clientSecret: igdbSecret.value,
     apiBase: env.IGDB_API_BASE, authBase: env.TWITCH_AUTH_BASE });
   const rawg = new Rawg({ apiKey: rawgKey.value, apiBase: env.RAWG_API_BASE });
