@@ -14,6 +14,7 @@ import { makeCatalog } from "./catalog.mjs";
 import { makeRater, FEATURE_KEYS, RATING_SCHEMA_VERSION } from "./rate.mjs";
 import { makeScreenCatalog, makeScreenRater, AXIS_KEYS } from "./screen.mjs";
 import { makeLLM } from "./llm.mjs";
+import { makeVibe } from "./vibe.mjs";
 import { makeStore } from "./store.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +47,7 @@ const APP_HTML = firstExisting(env.APP_HTML, "/app/app/games.html", "../games/in
 const APP_TOKEN = (env.APP_TOKEN || "").trim();
 
 const APP_HTML_HOLDS = firstExisting(env.APP_HTML_HOLDS, "/app/app/holds.html", "../holds/index.html", "./holds.html");
+const APP_HTML_VIBE = firstExisting(env.APP_HTML_VIBE, "/app/app/wavelength.html", "../wavelength/index.html", "./wavelength.html");
 
 const llm = makeLLM(env);
 const catalog = makeCatalog(env);                 // games — IGDB / RAWG
@@ -55,6 +57,7 @@ const screenRater = makeScreenRater(llm.client, llm.defaults.model, llm.defaults
   llm.defaults.effort, llm.defaults.betas, (prompt, schema, o) => llm.parse(prompt, schema, o));
 const store = makeStore(DATA_DIR);
 await store.init();
+const vibe = makeVibe({ screenCatalog, store, llm });
 
 /* ------------------------------------------------------------- helpers --- */
 
@@ -238,6 +241,29 @@ async function handleApi(req, res, url) {
     });
   }
 
+  /* ---- Wavelength ------------------------------------------------------ */
+
+  if (route === "/api/vibe/pool" && req.method === "POST") {
+    if (!llm.configured()) return fail(res, 503, "ANTHROPIC_API_KEY is not set on this server.", { missing: ["ANTHROPIC_API_KEY"] });
+    if (!screenCatalog.connected) return fail(res, 503, "TMDb is not configured on this server.", { missing: screenCatalog.missing });
+    const body = await readBody(req);
+    const text = String((body && body.vibe) || "").trim();
+    if (text.length < 3) return fail(res, 400, "Describe what you're in the mood for.");
+    const out = await vibe.pool(text, (body && body.form) || "either");
+    return send(res, 200, out);
+  }
+
+  if (route === "/api/vibe/rank" && req.method === "POST") {
+    if (!llm.configured()) return fail(res, 503, "ANTHROPIC_API_KEY is not set on this server.", { missing: ["ANTHROPIC_API_KEY"] });
+    if (!screenCatalog.connected) return fail(res, 503, "TMDb is not configured on this server.", { missing: screenCatalog.missing });
+    const body = await readBody(req);
+    const text = String((body && body.vibe) || "").trim();
+    const ids = Array.isArray(body && body.ids) ? body.ids.map(String).filter(id => /^tmdb:(tv|movie):\d+$/.test(id)) : [];
+    if (!text || !ids.length) return fail(res, 400, "Nothing to score.");
+    const ranked = await vibe.rank(text, (body && body.reading) || {}, ids);
+    return send(res, 200, { ranked });
+  }
+
   if (route === "/api/screen/state") {
     if (req.method === "GET") return send(res, 200, { state: store.getScreenState() });
     if (req.method === "PUT") {
@@ -261,6 +287,20 @@ async function handleApi(req, res, url) {
   }
 
   return fail(res, 404, "No such endpoint.");
+}
+
+/* The app files are written for the claude.ai viewer, which wraps them in a
+ * document with a charset and a phone viewport. Served bare, phones lay the page
+ * out at desktop width and "autosize" long paragraphs, so body text comes out
+ * several times larger than the headings. Supply the same wrapper here. */
+function asDocument(html) {
+  if (/^\s*<!doctype/i.test(html)) return html;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+${html}
+</body></html>`;
 }
 
 function missingPage(name, where) {
@@ -303,7 +343,9 @@ h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
 .note{color:var(--dim);font-size:13px;margin-top:26px}
 </style>
 <div class="wrap">
-  <h1>Two apps on this server</h1>
+  <h1>Three apps on this server</h1>
+  ${card("/wavelength", "Wavelength", "Shows and films — describe a feeling, get titles that match it.",
+    "TMDb", screenCatalog.connected, screenCatalog.missing)}
   ${card("/holds", "Will It Hold", "Shows and films — whether you'll actually get through one.",
     "TMDb", screenCatalog.connected, screenCatalog.missing)}
   ${card("/games", "Two Hours In", "Games — whether one survives its first week with you.",
@@ -326,12 +368,17 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/games" || url.pathname === "/games/") {
       if (!existsSync(APP_HTML)) return send(res, 500, missingPage("Two Hours In", APP_HTML), "text/html; charset=utf-8");
       const html = await fs.readFile(APP_HTML, "utf8");
-      return send(res, 200, html, "text/html; charset=utf-8");
+      return send(res, 200, asDocument(html), "text/html; charset=utf-8");
+    }
+    if (url.pathname === "/wavelength" || url.pathname === "/wavelength/") {
+      if (!existsSync(APP_HTML_VIBE)) return send(res, 500, missingPage("Wavelength", APP_HTML_VIBE), "text/html; charset=utf-8");
+      const html = await fs.readFile(APP_HTML_VIBE, "utf8");
+      return send(res, 200, asDocument(html), "text/html; charset=utf-8");
     }
     if (url.pathname === "/holds" || url.pathname === "/holds/") {
       if (!existsSync(APP_HTML_HOLDS)) return send(res, 500, missingPage("Will It Hold", APP_HTML_HOLDS), "text/html; charset=utf-8");
       const html = await fs.readFile(APP_HTML_HOLDS, "utf8");
-      return send(res, 200, html, "text/html; charset=utf-8");
+      return send(res, 200, asDocument(html), "text/html; charset=utf-8");
     }
     return fail(res, 404, "Not found.");
   } catch (e) {
@@ -344,13 +391,14 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   const line = s => console.log(`  ${s}`);
   console.log(`\nhttp://localhost:${PORT}\n`);
+  console.log(`  Wavelength   http://localhost:${PORT}/wavelength  (find by feeling)`);
   console.log(`  Will It Hold  http://localhost:${PORT}/holds    (shows and films)`);
   console.log(`  Two Hours In  http://localhost:${PORT}/games    (games)\n`);
   line(`catalog   games: ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
   line(`          screen: ${screenCatalog.connected ? "tmdb connected" : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
   line(`ratings   ${llm.configured() ? `${llm.defaults.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);
   line(`data      ${DATA_DIR}`);
-  line(`apps      ${APP_HTML}\n            ${APP_HTML_HOLDS}`);
+  line(`apps      ${APP_HTML}\n            ${APP_HTML_HOLDS}\n            ${APP_HTML_VIBE}`);
   line(`access    ${APP_TOKEN ? "token required (APP_TOKEN is set)" : "OPEN — anyone with the URL can spend your API credit; set APP_TOKEN"}`);
   console.log("");
 });

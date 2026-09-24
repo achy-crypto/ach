@@ -1,4 +1,4 @@
-# Standalone server for Will It Hold and Two Hours In
+# Standalone server for Wavelength, Will It Hold and Two Hours In
 
 Runs both apps outside the Claude artifact sandbox so it can do three things the
 published page cannot: search a real game catalog, resolve titles to stable
@@ -7,15 +7,26 @@ The browser is handed results, never a key.**
 
 Two apps are served:
 
+- `/wavelength` — **Wavelength**: describe a feeling, get shows and films that match it. TMDb.
 - `/holds` — **Will It Hold**: shows and films, catalog from TMDb.
 - `/games` — **Two Hours In**: games, catalog from IGDB or RAWG.
 
-`/` is a signpost page linking to both and showing which catalogs are connected.
+`/` is a signpost page linking to all three and showing which catalogs are connected.
 Neither app is served at the root, so neither looks like "the" app.
 
 Each page runs in both places. It probes `/api/health` on
 load: if this server answers it uses the catalog and the server-side rater, and
 if nothing answers it falls back to the artifact behaviour and says so on screen.
+
+## Wavelength, in one paragraph
+
+You describe a mood. Claude reads it into things TMDb can search on — its genre names,
+its own keyword tags, an era, things to avoid — plus a few titles it thinks fit. TMDb does
+the retrieval, so every result is a real catalog record; a suggested title TMDb doesn't have
+is dropped, and a tag phrase with no TMDb equivalent is dropped rather than guessed. Claude
+then scores each title against what you wrote, from TMDb's synopsis and tags. The score is a
+judgment and is labelled as one; the tags a title shares with the reading are computed on the
+server and shown as the catalog facts they are.
 
 ## What a rating is, and is not
 
@@ -136,6 +147,8 @@ Two files in `DATA_DIR`, deliberately separate:
 | `GET /api/screen/title?id=` | Full TMDb record — runtime, episode and season counts. |
 | `GET /api/screen/discover?form=&offset=` | The candidate pool for Will It Hold. |
 | `POST /api/screen/place` | Places titles on the user's anchor scale. Facts are fetched server-side from TMDb, never taken from the caller. |
+| `POST /api/vibe/pool` | Wavelength step 1–2: reads the vibe into TMDb genres and tags, retrieves real titles, drops suggestions TMDb doesn't have. |
+| `POST /api/vibe/rank` | Wavelength step 3: scores each title against the vibe from TMDb's own synopsis and tags. Facts are re-read server-side by id. |
 | `GET/PUT /api/state`, `GET/PUT /api/screen/state` | Each app's own state. |
 
 ## Cost

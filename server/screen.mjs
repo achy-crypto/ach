@@ -18,7 +18,7 @@ const TMDB_BASE = "https://api.themoviedb.org/3";
 function clean(s, n = 1200) { return String(s || "").replace(/\s+/g, " ").trim().slice(0, n); }
 const yearOf = d => (d && /^\d{4}/.test(d)) ? Number(String(d).slice(0, 4)) : null;
 
-class Tmdb {
+export class Tmdb {
   constructor({ apiKey, readToken, base }) {
     this.key = apiKey; this.token = readToken; this.base = base || TMDB_BASE;
     this.name = "tmdb"; this.genreCache = {};
@@ -56,6 +56,8 @@ class Tmdb {
         language: g.original_language || null,
         overview: clean(g.overview),
         voteCount: g.vote_count || 0,
+        poster: g.poster_path ? `https://image.tmdb.org/t/p/w185${g.poster_path}` : null,
+        keywords: g.keywords ? (g.keywords.results || g.keywords.keywords || []).map(k => k.name) : undefined,
         retrievedAt: Date.now(),
       },
     };
@@ -74,9 +76,62 @@ class Tmdb {
         language: g.original_language || null,
         overview: clean(g.overview),
         voteCount: g.vote_count || 0,
+        poster: g.poster_path ? `https://image.tmdb.org/t/p/w185${g.poster_path}` : null,
+        keywords: g.keywords ? (g.keywords.keywords || g.keywords.results || []).map(k => k.name) : undefined,
         retrievedAt: Date.now(),
       },
     };
+  }
+
+  /* ---- for Wavelength: vibe search ------------------------------------ */
+
+  // TMDb's own tag vocabulary. A phrase resolves to its closest real tag, or nothing.
+  async keywordIds(phrases) {
+    const out = [];
+    await Promise.all((phrases || []).slice(0, 10).map(async phrase => {
+      try {
+        const j = await this.get("search/keyword", { query: phrase });
+        const hit = (j.results || [])[0];
+        if (hit) out.push({ phrase, id: hit.id, name: hit.name });
+      } catch (e) { /* an unmatched phrase is simply dropped */ }
+    }));
+    return out;
+  }
+
+  async genreIdsByName(kind, names) {
+    const map = await this.genreNames(kind);
+    const byName = {};
+    for (const [id, n] of Object.entries(map)) byName[String(n).toLowerCase()] = Number(id);
+    return (names || []).map(n => byName[String(n).toLowerCase()]).filter(Boolean);
+  }
+
+  // One page of discover results filtered by the vibe's genres and tags.
+  async discoverVibe({ kind, genreIds = [], keywordIds = [], withoutGenreIds = [], withoutKeywordIds = [],
+                        from = null, to = null, maxRuntime = null, page = 1 }) {
+    const endpoint = kind === "show" ? "tv" : "movie";
+    const dateKey = kind === "show" ? "first_air_date" : "primary_release_date";
+    const params = {
+      language: "en-US", include_adult: "false", page,
+      sort_by: "vote_count.desc",
+      "vote_count.gte": kind === "show" ? 60 : 150,
+      with_genres: genreIds.join("|") || null,          // | is OR in TMDb discover
+      with_keywords: keywordIds.join("|") || null,
+      without_genres: withoutGenreIds.join(",") || null,
+      without_keywords: withoutKeywordIds.join(",") || null,
+      [`${dateKey}.gte`]: from ? `${from}-01-01` : null,
+      [`${dateKey}.lte`]: to ? `${to}-12-31` : null,
+      "with_runtime.lte": kind === "film" && maxRuntime ? maxRuntime : null,
+    };
+    const j = await this.get(`discover/${endpoint}`, params);
+    return (j.results || []).map(r => ({ id: `tmdb:${endpoint}:${r.id}`, kind }));
+  }
+
+  // Full record plus TMDb's keyword tags, in one request.
+  async detailsWithKeywords(id) {
+    const m = /^tmdb:(tv|movie):(\d+)$/.exec(String(id));
+    if (!m) throw new Error("not a TMDb id");
+    const row = await this.get(`${m[1]}/${m[2]}`, { language: "en-US", append_to_response: "keywords" });
+    return m[1] === "tv" ? this.shapeTv(row) : this.shapeMovie(row);
   }
 
   async genreNames(kind) {
@@ -165,6 +220,7 @@ class Tmdb {
 export function makeScreenCatalog(env) {
   const t = new Tmdb({ apiKey: env.TMDB_API_KEY, readToken: env.TMDB_READ_TOKEN, base: env.TMDB_API_BASE });
   return {
+    client: t,
     provider: t.configured() ? "tmdb" : null,
     connected: t.configured(),
     missing: t.configured() ? [] : ["TMDB_API_KEY (or TMDB_READ_TOKEN)"],
