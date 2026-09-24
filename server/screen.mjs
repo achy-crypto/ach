@@ -217,10 +217,29 @@ export class Tmdb {
   }
 }
 
+/* TMDb's settings page shows two credentials side by side: a short v3 "API Key"
+ * (32 hex characters, sent as ?api_key=) and a long v4 "API Read Access Token"
+ * (a JWT starting eyJ, sent as a Bearer header). Pasting the long one into
+ * TMDB_API_KEY is the commonest setup mistake and TMDb answers it with a 401, so
+ * whichever one arrives is sent the way it has to be. Stray whitespace and
+ * quotes from copy-paste are stripped too. */
+export function tmdbCredentials(env) {
+  const tidy = v => String(v || "").trim().replace(/^["']|["']$/g, "").trim();
+  let apiKey = tidy(env.TMDB_API_KEY), readToken = tidy(env.TMDB_READ_TOKEN);
+  const looksLikeToken = v => /^eyJ/.test(v) || v.split(".").length === 3;
+  if (apiKey && looksLikeToken(apiKey)) { if (!readToken) readToken = apiKey; apiKey = ""; }
+  if (readToken && !looksLikeToken(readToken) && /^[0-9a-f]{32}$/i.test(readToken)) {
+    if (!apiKey) apiKey = readToken; readToken = "";
+  }
+  return { apiKey, readToken, kind: readToken ? "read token (Bearer)" : apiKey ? "API key (v3)" : "none" };
+}
+
 export function makeScreenCatalog(env) {
-  const t = new Tmdb({ apiKey: env.TMDB_API_KEY, readToken: env.TMDB_READ_TOKEN, base: env.TMDB_API_BASE });
+  const cred = tmdbCredentials(env);
+  const t = new Tmdb({ apiKey: cred.apiKey, readToken: cred.readToken, base: env.TMDB_API_BASE });
   return {
     client: t,
+    credentialKind: cred.kind,
     provider: t.configured() ? "tmdb" : null,
     connected: t.configured(),
     missing: t.configured() ? [] : ["TMDB_API_KEY (or TMDB_READ_TOKEN)"],

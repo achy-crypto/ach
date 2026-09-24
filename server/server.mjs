@@ -102,7 +102,8 @@ async function handleApi(req, res, url) {
       needsToken: !!APP_TOKEN,
       authed: authed(req, url),
       catalog: { connected: catalog.connected, provider: catalog.provider, missing: catalog.missing },
-      screen: { connected: screenCatalog.connected, provider: screenCatalog.provider, missing: screenCatalog.missing },
+      screen: { connected: screenCatalog.connected, provider: screenCatalog.provider, missing: screenCatalog.missing,
+        credential: screenCatalog.credentialKind },
       rater: { configured: rater.configured(), model: llm.defaults.model, schema: RATING_SCHEMA_VERSION },
       ratingsCached: store.ratingCount(),
       features: FEATURE_KEYS,
@@ -395,7 +396,7 @@ server.listen(PORT, () => {
   console.log(`  Will It Hold  http://localhost:${PORT}/holds    (shows and films)`);
   console.log(`  Two Hours In  http://localhost:${PORT}/games    (games)\n`);
   line(`catalog   games: ${catalog.connected ? `${catalog.provider} connected` : `NOT connected — set ${catalog.missing.join(", ")}`}`);
-  line(`          screen: ${screenCatalog.connected ? "tmdb connected" : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
+  line(`          screen: ${screenCatalog.connected ? `tmdb configured, using the ${screenCatalog.credentialKind}` : `NOT connected — set ${screenCatalog.missing.join(", ")}`}`);
   line(`ratings   ${llm.configured() ? `${llm.defaults.model} via ANTHROPIC_API_KEY` : "NOT configured — set ANTHROPIC_API_KEY"}`);
   line(`data      ${DATA_DIR}`);
   line(`apps      ${APP_HTML}\n            ${APP_HTML_HOLDS}\n            ${APP_HTML_VIBE}`);
