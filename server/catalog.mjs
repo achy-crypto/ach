@@ -277,12 +277,27 @@ export function makeCatalog(env) {
     return lastCheck;
   }
 
+  /* What this process can actually see, by NAME only — never a value. This is
+   * what tells "the key isn't here" apart from "the key is here but wrong". */
+  function diagnose() {
+    const lines = [];
+    const names = Object.keys(env).filter(k => /rawg|igdb|twitch|catalog/i.test(k) && !/_BASE$/.test(k));
+    for (const n of names) lines.push(tidy(env[n]) ? `${n} is set` : `${n} is there but empty`);
+    if (!names.length) lines.push("No setting with RAWG, IGDB or CATALOG in its name reached this server.");
+    if (Object.keys(env).some(k => /^[0-9a-f]{24,}$/i.test(k.trim())))
+      lines.push("One setting's NAME looks like a key. The key goes in the Value box; the Name should be RAWG_API_KEY.");
+    const commit = tidy(env.RENDER_GIT_COMMIT).slice(0, 7);
+    if (commit) lines.push(`Running commit ${commit}${env.RENDER_GIT_BRANCH ? ` from ${tidy(env.RENDER_GIT_BRANCH)}` : ""}.`);
+    return lines;
+  }
+
   return {
     provider: chosen ? chosen.name : null,
     connected: !!chosen,
     missing,
     note,
     check,
+    diagnose,
     search: (q, n) => chosen ? chosen.search(q, n) : Promise.reject(new Error("no catalog configured")),
     byId: id => chosen ? chosen.byId(id) : Promise.reject(new Error("no catalog configured")),
     discover: o => chosen ? chosen.discover(o) : Promise.reject(new Error("no catalog configured")),

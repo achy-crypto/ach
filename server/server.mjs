@@ -108,7 +108,8 @@ async function handleApi(req, res, url) {
       needsToken: !!APP_TOKEN,
       authed: authed(req, url),
       catalog: { connected: catalog.connected, provider: catalog.provider, missing: catalog.missing, note: catalog.note,
-        check: catalogCheck && { ok: catalogCheck.ok, error: catalogCheck.error || null } },
+        check: catalogCheck && { ok: catalogCheck.ok, error: catalogCheck.error || null },
+        seen: catalogCheck && !catalogCheck.ok ? catalog.diagnose() : undefined },
       screen: { connected: screenCatalog.connected, provider: screenCatalog.provider, missing: screenCatalog.missing,
         credential: screenCatalog.credentialKind },
       rater: { configured: rater.configured(), model: llm.defaults.model, schema: RATING_SCHEMA_VERSION },
@@ -373,6 +374,9 @@ h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
 .on{color:var(--ok);border-color:var(--ok)}
 .off{color:var(--bad);border-color:var(--bad)}
 .note{color:var(--dim);font-size:13px;margin-top:26px}
+.seen{border:1px dashed var(--bad);border-radius:4px;padding:12px 14px;margin:-4px 0 14px;font-size:13.5px}
+.seen ul{margin:6px 0 0;padding-left:18px;font-family:ui-monospace,monospace;font-size:12.5px}
+.seen p{margin:8px 0 0;color:var(--dim)}
 </style>
 <div class="wrap">
   <h1>Four apps on this server</h1>
@@ -385,6 +389,10 @@ h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)
     catalog.connected && gameCheck && !gameCheck.ok
       ? `${catalog.provider.toUpperCase()} key is set but was rejected: ${String(gameCheck.error || "").replace(/[<>&]/g, "")}` : "")}
   ${catalog.note ? `<p class="note" style="margin-top:-6px">${catalog.note.replace(/[<>&]/g, "")}</p>` : ""}
+  ${!(gameCheck && gameCheck.ok) ? `<div class="seen"><b>What this server sees for the game catalog</b><ul>${
+    catalog.diagnose().map(l => `<li>${l.replace(/[<>&]/g, "")}</li>`).join("")}</ul>
+    <p>Setting a key in Render only reaches the app after a deploy. After saving it, use
+    <b>Manual Deploy → Deploy latest commit</b>, wait for "Live", then reload this page.</p></div>` : ""}
   ${card("/holds", "Will It Hold", "Shows and films — whether you'll actually get through one.",
     "TMDb", screenCatalog.connected, screenCatalog.missing)}
   ${card("/games", "Two Hours In", "Games — whether one survives its first week with you.",
