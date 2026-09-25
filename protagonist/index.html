@@ -1,0 +1,767 @@
+<title>Protagonist</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#F2EFE8;--page:#FBFAF6;--ink:#1B1C22;--dim:#6A6B73;--rule:#DCD8CE;--soft:#E9E5DB;
+  --sys:#2B63C9;--sys-wash:#2B63C912;--sys-line:#2B63C955;
+  --hp:#C23B32;--mp:#2B63C9;--xp:#B8862B;--good:#2E7D4F;--bad:#B3392E;--mixed:#B8862B;
+  --prose:"Literata",Georgia,serif;--ui:"Manrope",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --ground:#0F1116;--page:#161920;--ink:#E7E5DF;--dim:#999AA3;--rule:#2A2E38;--soft:#1E222B;
+  --sys:#7EB0FF;--sys-wash:#7EB0FF12;--sys-line:#7EB0FF55;
+  --hp:#EE6B60;--mp:#7EB0FF;--xp:#E0B45A;--good:#6CC08F;--bad:#EE7F72;--mixed:#E0B45A}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --ground:#0F1116;--page:#161920;--ink:#E7E5DF;--dim:#999AA3;--rule:#2A2E38;--soft:#1E222B;
+  --sys:#7EB0FF;--sys-wash:#7EB0FF12;--sys-line:#7EB0FF55;
+  --hp:#EE6B60;--mp:#7EB0FF;--xp:#E0B45A;--good:#6CC08F;--bad:#EE7F72;--mixed:#E0B45A}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 230px}
+button{font-family:inherit}
+button:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--sys);outline-offset:2px}
+.lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+/* masthead */
+.stick{position:sticky;top:0;z-index:5;background:var(--ground)}
+.top{display:flex;align-items:center;gap:10px;
+  padding:12px 0 10px;border-bottom:1px solid var(--rule)}
+.brand{font-family:var(--prose);font-weight:600;font-size:21px;letter-spacing:-.01em;cursor:pointer;white-space:nowrap}
+.top .title{flex:1;min-width:0;color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tbtn{appearance:none;border:1px solid var(--rule);background:var(--page);color:var(--ink);border-radius:6px;
+  font-size:13px;font-weight:600;padding:7px 11px;min-height:36px;cursor:pointer;white-space:nowrap}
+.tbtn[aria-pressed="true"]{background:var(--ink);color:var(--page);border-color:var(--ink)}
+
+/* status strip */
+.strip{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--rule);
+  cursor:pointer}
+.lv{font-family:var(--mono);font-weight:700;font-size:13px;white-space:nowrap}
+.meter{min-width:0}
+.meter .l{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim)}
+.meter .b{height:6px;background:var(--soft);border-radius:3px;overflow:hidden;margin-top:3px}
+.meter .b i{display:block;height:100%;border-radius:3px;transition:width .4s}
+.pts{font-family:var(--mono);font-size:10px;color:var(--xp);font-weight:700}
+
+/* reading column */
+.story{margin-top:18px}
+.chap{margin:34px 0 14px;text-align:center}
+.chap .n{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.chap h2{font-family:var(--prose);font-weight:600;font-size:clamp(22px,5.4vw,28px);line-height:1.2;margin:6px 0 0;text-wrap:balance}
+.act{margin:24px 0 10px;font-family:var(--mono);font-size:13px;color:var(--dim);border-left:2px solid var(--rule);padding:2px 0 2px 10px}
+.act b{color:var(--ink);font-weight:500}
+.prose{font-family:var(--prose);font-size:17.5px;line-height:1.72}
+.prose p{margin:0 0 .95em}
+.prose p:last-child{margin-bottom:0}
+.prose em{font-style:italic}
+.dice{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:4px 0 12px;font-family:var(--mono);font-size:12px;color:var(--dim)}
+.die{display:inline-grid;place-items:center;width:22px;height:22px;border:1.5px solid var(--dim);border-radius:5px;color:var(--ink);font-weight:700;font-size:12px}
+.band{font-weight:700;border-radius:4px;padding:1px 7px;border:1px solid}
+.band.hit{color:var(--good);border-color:var(--good)}
+.band.mixed{color:var(--mixed);border-color:var(--mixed)}
+.band.miss{color:var(--bad);border-color:var(--bad)}
+.sys{margin:14px 0;border:1px solid var(--sys-line);background:var(--sys-wash);border-radius:4px;padding:10px 13px;
+  font-family:var(--mono);font-size:13px;line-height:1.5;color:var(--ink)}
+.sys .h{color:var(--sys);font-weight:700;letter-spacing:.04em}
+.sys .t{margin-top:3px}
+.sys .src{float:right;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.caret{display:inline-block;width:.5em;height:1em;background:var(--ink);vertical-align:-2px;animation:blink 1s steps(2) infinite;margin-left:2px}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}.meter .b i{transition:none}}
+.interrupted{font-family:var(--mono);font-size:12px;color:var(--bad);margin-top:6px}
+
+/* the action dock */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:6;background:linear-gradient(transparent,var(--ground) 18px);padding-top:18px}
+.dock .in{max-width:720px;margin:0 auto;padding:0 16px calc(12px + env(safe-area-inset-bottom,0px))}
+.choices{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.choices::-webkit-scrollbar{display:none}
+.choice{flex:none;max-width:78vw;appearance:none;text-align:left;border:1px solid var(--rule);background:var(--page);color:var(--ink);
+  border-radius:8px;padding:8px 11px;font-size:13.5px;line-height:1.35;cursor:pointer}
+.choice small{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:2px}
+.say{display:flex;gap:8px;align-items:flex-end}
+.say textarea{flex:1;min-width:0;resize:none;border:1px solid var(--rule);background:var(--page);color:var(--ink);border-radius:8px;
+  font-family:var(--ui);font-size:16px;line-height:1.4;padding:10px 12px;min-height:46px;max-height:140px}
+.go{appearance:none;border:0;border-radius:8px;background:var(--ink);color:var(--page);font-weight:700;font-size:15px;
+  padding:0 18px;min-height:46px;cursor:pointer}
+.go[disabled]{opacity:.45;cursor:default}
+.minor{display:flex;gap:14px;margin-top:6px;font-size:12px}
+.minor button{appearance:none;border:0;background:none;color:var(--dim);padding:4px 0;cursor:pointer;font-size:12px}
+.minor button:hover{color:var(--ink)}
+.status{display:flex;align-items:center;gap:10px;color:var(--dim);font-size:13.5px;min-height:46px}
+.status .stop{margin-left:auto}
+.err{margin:14px 0;border-left:3px solid var(--bad);background:var(--page);padding:10px 13px;border-radius:0 6px 6px 0;font-size:14px}
+
+/* drawers */
+.drawer{position:fixed;inset:0;z-index:10;background:#0008;display:flex;justify-content:flex-end}
+.drawer .panel{width:min(440px,100%);height:100%;overflow-y:auto;background:var(--page);padding:18px 16px 40px;border-left:1px solid var(--rule)}
+.panel h3{font-family:var(--prose);font-size:20px;margin:0 0 4px}
+.panel h4{margin:22px 0 8px}
+.x{float:right}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.stat{border:1px solid var(--rule);border-radius:6px;padding:8px 4px;text-align:center}
+.stat b{display:block;font-family:var(--mono);font-size:18px}
+.stat span{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.1em}
+.stat button{margin-top:5px;appearance:none;border:1px solid var(--xp);color:var(--xp);background:none;border-radius:4px;font-weight:700;padding:2px 8px;cursor:pointer}
+.li{padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.li .s{color:var(--dim);font-size:13px}
+.tag{font-family:var(--mono);font-size:10px;border:1px solid var(--rule);border-radius:4px;padding:1px 6px;color:var(--dim);margin-left:6px}
+.clock{display:flex;gap:3px;margin-top:5px}
+.clock i{flex:1;height:7px;border-radius:2px;background:var(--soft)}
+.clock i.on{background:var(--hp)}
+.spark{display:flex;align-items:flex-end;gap:3px;height:34px;margin-top:6px}
+.spark i{flex:1;background:var(--sys);border-radius:2px 2px 0 0;opacity:.8}
+.note{color:var(--dim);font-size:13px}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--rule);font-size:13.5px}
+.kv span:last-child{font-family:var(--mono);text-align:right}
+
+/* home */
+.hero{margin:34px 0 8px}
+.hero h1{font-family:var(--prose);font-weight:600;font-size:clamp(30px,8vw,44px);line-height:1.05;margin:0;letter-spacing:-.015em}
+.hero p{color:var(--dim);margin:10px 0 0;max-width:56ch}
+.presets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px}
+.preset{appearance:none;text-align:left;border:1px solid var(--rule);background:var(--page);color:var(--ink);border-radius:8px;padding:12px;cursor:pointer}
+.preset b{display:block;font-size:14.5px}
+.preset span{display:block;color:var(--dim);font-size:12.5px;margin-top:3px;line-height:1.4}
+.preset[aria-pressed="true"]{border-color:var(--sys);box-shadow:inset 0 0 0 1px var(--sys)}
+.field{margin-top:16px}
+.field .lab{display:block;margin-bottom:6px}
+.field input,.field select,.field textarea{width:100%;border:1px solid var(--rule);background:var(--page);color:var(--ink);border-radius:8px;
+  font-family:var(--ui);font-size:16px;padding:10px 12px;min-height:44px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media (max-width:520px){.pair{grid-template-columns:1fr}}
+.begin{width:100%;margin-top:20px;min-height:52px;font-size:17px}
+.camps{margin-top:34px}
+.camp{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--rule);cursor:pointer}
+.camp .t{font-weight:600}
+.camp .s{color:var(--dim);font-size:13px}
+.camp .del{appearance:none;border:0;background:none;color:var(--dim);font-size:18px;cursor:pointer;padding:4px 8px}
+.how{margin-top:30px;border-top:1px solid var(--rule);padding-top:14px;color:var(--dim);font-size:13.5px;max-width:62ch}
+.how b{color:var(--ink)}
+</style>
+
+<div class="wrap">
+  <div class="stick">
+  <header class="top">
+    <div class="brand" data-go="home">Protagonist</div>
+    <div class="title" id="ttl"></div>
+    <button class="tbtn" id="bsheet" data-drawer="sheet" hidden>Sheet</button>
+    <button class="tbtn" id="bengine" data-drawer="engine" hidden>Engine</button>
+  </header>
+  <div id="strip"></div>
+  </div>
+  <main id="main"></main>
+</div>
+<div class="dock" id="dock" hidden><div class="in" id="dockin"></div></div>
+<div class="drawer" id="drawer" hidden></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   PROTAGONIST — a game master for Royal Road–style serials where you are the
+   main character.
+
+   What keeps it from going flat is code, not a longer prompt:
+   - DICE decide outcomes. The page rolls 2d6 before Claude writes a word and
+     hands over the outcome for each stat, so failure is real.
+   - A DIRECTOR picks each turn's beat from a deck (pressure, reveal, callback,
+     breather, rival…), never repeating recent ones, balancing tension, and
+     naming the specific earlier character or thread a callback brings back.
+   - CLOCKS tick on their own. When one fills, its consequence happens.
+   - A LEDGER of phrases, stock beats and sentence openers already used in
+     this story goes into every turn, so the prose doesn't loop.
+   - NUMBERS live here: HP, XP, levels and stat points are applied and bounded
+     by the page. Claude narrates them; it doesn't keep the books.
+   ============================================================================ */
+
+const STATS=["STR","AGI","INT","WIL","CHA"];
+const STAT_NAMES={STR:"Strength",AGI:"Agility",INT:"Intellect",WIL:"Will",CHA:"Presence"};
+
+const PRESETS=[
+  {id:"apoc",name:"System apocalypse",blurb:"The System arrives on Earth. Tutorials, classes, monsters in the supermarket.",
+   brief:"System apocalypse LitRPG: a game-like System has just integrated modern Earth. Blue status windows, classes, skills, levels, a tutorial that is not safe, and ordinary life breaking in real time."},
+  {id:"isekai",name:"Isekai",blurb:"You died. You woke up somewhere else, with one strange advantage.",
+   brief:"Isekai: the protagonist has died on Earth and woken in another world, keeping their memories and one odd advantage that is not obviously overpowered. Culture shock, found family, and a world with its own politics."},
+  {id:"cult",name:"Cultivation",blurb:"Sects, qi realms, arrogant young masters and very old grudges.",
+   brief:"Xianxia cultivation: sects, realms of cultivation, pills and techniques, face and grudges, secret realms, and a protagonist starting near the bottom of the ladder."},
+  {id:"dungeon",name:"Dungeon diver",blurb:"A city built on a living dungeon. Delve, loot, get out alive.",
+   brief:"Dungeon-delving progression fantasy: a frontier city built around a living dungeon that changes. Parties, loot, guild politics, dungeon floors with their own ecosystems."},
+  {id:"academy",name:"Magic academy",blurb:"Rankings, rivals, tournaments and a secret the faculty keeps.",
+   brief:"Magic academy progression: class rankings, rivals, duels and tournaments, mentors with agendas, and something wrong beneath the school."},
+  {id:"tower",name:"Tower climb",blurb:"Floor by floor, each with its own trial and its own rules.",
+   brief:"Tower climbing: a tower whose floors each hold a different world and trial; climbers' guilds, rankings, and whatever sits at the top."},
+  {id:"fan",name:"Fanfic",blurb:"Drop into a world you already love. Name it below.",
+   brief:"Fan fiction set in an existing fictional world the reader names. Canon characters and places can appear; scenes are original, and the protagonist is a new character whose choices can change canon events."},
+  {id:"custom",name:"Your own",blurb:"Describe the premise yourself.",brief:""},
+];
+
+/* The director's deck. tension: +1 raises pressure, -1 lets the reader breathe. */
+const BEATS=[
+  {id:"pressure",t:1,w:3,text:"A threat moves on its own agenda, visibly, whether or not the protagonist is looking at it."},
+  {id:"reveal",t:0,w:2,text:"A reveal: the protagonist learns something that changes what an earlier event meant."},
+  {id:"complication",t:1,w:3,text:"A complication that isn't the protagonist's fault: a third party, bad timing, a tool or plan failing in an interesting way."},
+  {id:"callback",t:0,w:3,text:"A callback: bring back {x} and make it matter now."},
+  {id:"temptation",t:0,w:2,text:"A temptation: power, loot or a shortcut offered at a visible price."},
+  {id:"breather",t:-1,w:2,text:"A breather: a quiet, human moment. Banter, food, someone's history, a small joy. The stakes stay; the pace drops."},
+  {id:"rival",t:1,w:2,text:"A rival: someone competent wants the same thing, and shows it."},
+  {id:"reward",t:-1,w:2,text:"A reward that opens options: loot, an insight into a skill, or an ally. Something that changes what the protagonist can try next."},
+  {id:"strange",t:0,w:1,text:"Something strange that breaks this setting's usual pattern, which even the world's own rules don't explain yet."},
+  {id:"escalate",t:1,w:2,text:"Raise the stakes of the open thread \"{x}\": it gets bigger, closer, or more personal."},
+  {id:"agency",t:0,w:2,text:"{x} acts on what they want without being asked, and it lands in the protagonist's path."},
+];
+
+/* Stock phrases story models overproduce (the same list Galley's Story tab uses). */
+const SLOP=[
+  [/\bshivers? (?:ran |run |running |went |sent )?(?:down|up) (?:\w+ )?spine\b/gi,"a shiver down the spine"],
+  [/\bbreath (?:that )?(?:\w+ )?(?:didn['’]?t|did not|hadn['’]?t) (?:even )?(?:know|reali[sz]e) (?:\w+ )?(?:was|were|had been) holding\b/gi,"a breath they didn't know they were holding"],
+  [/\b(?:barely|just) above a whisper\b/gi,"barely above a whisper"],
+  [/\bthe air (?:was |grew |hung |felt )?(?:thick|heavy|electric|charged) with\b/gi,"the air thick with"],
+  [/\ba (?:mix|mixture|blend) of \w+ and \w+\b/gi,"a mix of X and Y"],
+  [/\beyes (?:widened|narrowed|sparkl\w*|gleam\w*|glint\w*|twinkl\w*)\b/gi,"eyes widened/glinted"],
+  [/\bsmirk (?:played|playing|tugged|tugging|danced|dancing) (?:on|at)\b/gi,"a smirk playing on the lips"],
+  [/\bheart (?:pounding|pounded|raced|racing|skipped a beat|hammer\w*)\b/gi,"heart pounding"],
+  [/\bcouldn['’]?t help but\b/gi,"couldn't help but"],
+  [/\blittle did (?:he|she|they|I|you|\w+) know\b/gi,"little did they know"],
+  [/\bwhat (?:felt|seemed) like (?:an eternity|hours|forever)\b/gi,"what felt like an eternity"],
+  [/\bevery (?:fiber|fibre) of (?:\w+ )?being\b/gi,"every fibre of their being"],
+  [/\ba testament to\b/gi,"a testament to"],
+  [/\bonly time (?:would|will) tell\b/gi,"only time would tell"],
+  [/\b(?:adventure|journey) (?:had |has )?only just begun\b/gi,"the adventure had only just begun"],
+  [/\bknuckles (?:turning |turned )?white\b/gi,"white knuckles"],
+  [/\bjaw (?:clench\w*|tighten\w*)\b/gi,"jaw clenched"],
+  [/\bsomewhere (?:in the distance|far off),? (?:a|an) \w+/gi,"somewhere in the distance, a …"],
+  [/\b(?:pregnant|deafening|heavy) silence\b/gi,"a heavy silence"],
+  [/\b(?:voice|tone) (?:dripping|laced) with\b/gi,"voice dripping with"],
+  [/\bwashed over (?:her|him|them|me|you)\b/gi,"washed over them"],
+  [/\bmischie(?:f|vous\w*)\b/gi,"mischief"],
+  [/\bshadows (?:danced|dancing)\b/gi,"shadows danced"],
+];
+const STOP=new Set("the a an and or but if of to in on at by for with from as is are was were be been it its this that he she his her they them their you your i me my we our not no so than then too very can will would could should had has have do does did just into about over also what which who when where how there here".split(" "));
+
+/* ---------------------------------------------------------------- state -- */
+const S={view:"home",camp:null,list:[],busy:false,step:"",err:"",drawer:null,live:"",preset:"apoc",retry:null};
+let sample=null,db=null,uid=null,ctl=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const uid8=()=>Math.random().toString(36).slice(2,10);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const num=(v,d=0)=>Number.isFinite(+v)?+v:d;
+function d6(){try{const a=new Uint32Array(1);crypto.getRandomValues(a);return 1+a[0]%6}catch(e){return 1+Math.floor(Math.random()*6)}}
+const words=s=>(String(s).toLowerCase().replace(/[’]/g,"'").match(/[a-z0-9']+/g)||[]);
+
+/* ------------------------------------------------------------- storage -- */
+/* The browser keeps a copy for a fast start; the account store keeps the real
+   one. Snapshots from the store arrive frozen, so everything read is cloned. */
+const LS_INDEX="protagonist:index",LS_C=id=>"protagonist:c:"+id;
+function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+const metaOf=c=>({id:c.id,title:c.title,preset:c.setup.preset,updated:c.updated,level:c.pc.level,turn:c.turn,chapter:c.chapter,name:c.pc.name});
+let chain=Promise.resolve();
+function fit(c){ // keep a campaign under the store's 256 KiB document cap
+  let s=JSON.stringify(c);
+  while(s.length>200000&&c.log.length>40){c.log.splice(0,10);c.trimmed=true;s=JSON.stringify(c)}
+  return c}
+function persist(){
+  const c=S.camp;if(!c)return;
+  c.updated=Date.now();fit(c);
+  const meta=metaOf(c);
+  S.list=[meta].concat(S.list.filter(m=>m.id!==c.id)).slice(0,40);
+  // The undo copy stays in memory: saving it would double every campaign's size.
+  const body=clone(Object.assign({},c,{prev:null})),list=clone(S.list);
+  lsSet(LS_C(c.id),body);lsSet(LS_INDEX,S.list);
+  if(!db||!uid)return;
+  chain=chain.then(async()=>{
+    try{await campRef(c.id).set(body);await profRef().set({campaigns:list})}
+    catch(e){if(e&&e.code==="quota_exceeded")S.err="Your saved campaigns are full. Delete an old one from the home screen.";}
+  })}
+const profRef=()=>db.doc("data/users/"+uid+"/profile");
+const campRef=id=>profRef().collection("campaigns").doc(id);
+async function loadCamp(id){
+  let c=lsGet(LS_C(id));
+  if(db&&uid){try{const snap=await campRef(id).get();if(snap.exists){const r=clone(snap.data());if(!c||num(r.updated)>=num(c.updated))c=r}}catch(e){}}
+  return c}
+async function deleteCamp(id){
+  S.list=S.list.filter(m=>m.id!==id);lsDel(LS_C(id));lsSet(LS_INDEX,S.list);
+  if(db&&uid)chain=chain.then(async()=>{try{await campRef(id).delete();await profRef().set({campaigns:clone(S.list)})}catch(e){}})}
+
+/* ------------------------------------------------------------ director -- */
+function director(c){
+  const p=c.pc;
+  if(p.down)return{id:"down",t:0,text:"The protagonist dropped to 0 HP last turn. Don't kill them. They come to captured, rescued at a price, or having lost something that matters. Make the loss real and specific."};
+  const full=c.clocks.find(k=>k.filled>=k.size);
+  if(full)return{id:"clock",t:1,clock:full.id,text:`The clock "${full.name}" has run out: ${full.fills}. It happens now, arriving into this scene or changing it.`};
+  const recent=c.cards.slice(-3);
+  const last3=c.tension.slice(-3).reduce((a,b)=>a+b,0),last2=c.tension.slice(-2).reduce((a,b)=>a+b,0);
+  const old=c.turn-3;
+  const fills={
+    callback:()=>{const opts=[].concat(
+        c.npcs.filter(n=>num(n.seen)<=old).map(n=>`${n.name} (${n.role||"someone from earlier"})`),
+        c.threads.filter(t=>num(t.opened)<=old).map(t=>`the unfinished business "${t.text}"`),
+        c.pc.items.length>1?[`the ${pick(c.pc.items)} the protagonist is carrying`]:[],
+        c.summary.slice(0,-3).length?[`this earlier moment: "${pick(c.summary.slice(0,-3))}"`]:[]);
+      return opts.length?pick(opts):null},
+    escalate:()=>c.threads.length?pick(c.threads).text:null,
+    agency:()=>{const n=c.npcs.filter(n=>n.want);return n.length?(x=>`${x.name}, who wants ${x.want},`)(pick(n)):null},
+  };
+  let pool=BEATS.filter(b=>!recent.includes(b.id));
+  if(c.turn<2)pool=pool.filter(b=>!["callback","breather","reward"].includes(b.id));
+  if(last3>=2)pool=pool.filter(b=>b.t<0);            // three hard turns: let them breathe
+  else if(last2<=-1)pool=pool.filter(b=>b.t>0);       // two soft ones: push
+  const ready=[];
+  for(const b of pool){
+    if(!fills[b.id]){ready.push({id:b.id,t:b.t,w:b.w,text:b.text});continue}
+    const x=fills[b.id]();if(x)ready.push({id:b.id,t:b.t,w:b.w,text:b.text.replace("{x}",x)})}
+  const deck=ready.length?ready:[{id:"pressure",t:1,w:1,text:BEATS[0].text}];
+  let r=Math.random()*deck.reduce((a,b)=>a+b.w,0);
+  for(const b of deck){r-=b.w;if(r<=0)return b}
+  return deck[0]}
+function pick(a){return a[Math.floor(Math.random()*a.length)]}
+
+/* How each stat would resolve this roll, computed here so the band is honest. */
+function bandOf(total){return total>=10?"hit":total>=7?"mixed":"miss"}
+const BAND_TEXT={hit:"clean success",mixed:"success at a cost",miss:"it goes wrong"};
+function diceTable(c,roll){
+  const sum=roll[0]+roll[1];
+  return STATS.map(k=>{const m=num(c.pc.stats[k]);const tot=sum+m;
+    return`  ${k} ${m>=0?"+":""}${m} → ${tot}: ${BAND_TEXT[bandOf(tot)]}`}).join("\n")}
+
+/* ---------------------------------------------------------------- ledger -- */
+function ledger(c){
+  const gm=c.log.filter(e=>e.t==="gm").slice(-8).map(e=>e.text);
+  const counts=new Map();
+  gm.forEach((t,ti)=>{const w=words(t);const seen=new Set();
+    for(let i=0;i+4<=w.length;i++){const g=w.slice(i,i+4);if(g.filter(x=>x.length>2&&!STOP.has(x)).length<2)continue;
+      const k=g.join(" ");if(seen.has(k))continue;seen.add(k);counts.set(k,(counts.get(k)||0)+1)}});
+  const phrases=[];
+  for(const [k,n] of [...counts].filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1])){
+    const kw=k.split(" ");if(phrases.some(p=>p.split(" ").filter(x=>kw.includes(x)).length>=3))continue;
+    phrases.push(k);if(phrases.length>=10)break}
+  const slop=new Set();
+  for(const t of gm)for(const [re,label] of SLOP){re.lastIndex=0;if(re.test(t))slop.add(label)}
+  const openers=gm.slice(-5).map(t=>words(t).slice(0,3).join(" ")).filter(Boolean);
+  const endings=gm.slice(-4).map(t=>{const s=t.trim();return/\?["”’]?$/.test(s)?"a question":/(\.\.\.|…)["”’]?$/.test(s)?"an ellipsis":""}).filter(Boolean);
+  return{phrases,slop:[...slop],openers,endings}}
+function echoOf(c,text){
+  const prev=new Set();c.log.filter(e=>e.t==="gm").slice(-8).forEach(e=>{const w=words(e.text);for(let i=0;i+4<=w.length;i++)prev.add(w.slice(i,i+4).join(" "))});
+  const w=words(text);let n=0,hit=0;for(let i=0;i+4<=w.length;i++){n++;if(prev.has(w.slice(i,i+4).join(" ")))hit++}
+  return n?hit/n:0}
+
+/* -------------------------------------------------------------- prompts -- */
+function povLine(s,name){
+  return s.pov==="first"?`First person, as ${name||"the protagonist"} ("I").`:s.pov==="third"?`Close third person on ${name||"the protagonist"}.`:`Second person ("you"), the protagonist being the reader.`}
+function presetBrief(s){const p=PRESETS.find(x=>x.id===s.preset)||PRESETS[0];
+  return(p.brief||"")+(s.premise?`\nThe reader's premise: ${s.premise}`:"")}
+function worldLine(s){return s.world?`Set in: ${s.world}.${s.preset==="fan"||/[A-Z]/.test(s.world)?" Canon characters and places may appear; write original scenes rather than reproducing the source's text.":""}`:"An original world."}
+const TONES={grim:"grim and high-stakes; victories cost something",balanced:"serious stakes with room for humour and warmth",light:"light-hearted and fun, stakes still real",comedic:"comedic; the world is absurd and the protagonist knows it"};
+
+const WRITING=`How to write it: web-serial pace. Short paragraphs, concrete sensory detail, and a protagonist whose inner voice has personality and opinions. Where there are people, let dialogue carry the scene, and give each character a way of talking you could pick out without the tag. Keep the protagonist competent and the opposition clever, never arbitrary. Italics with *asterisks* for thoughts.
+LitRPG mechanics belong in "system", not in the prose, because the page draws them as status windows: skills gained, quest updates, items identified, warnings. Use them only for real mechanical events.
+End the passage on an image, a line of dialogue, or something changing. The page shows the reader their options, so don't end by asking what they do. Stay inside the fiction.`;
+
+function sheetText(c){
+  const p=c.pc;
+  return`${p.name}, ${p.cls}, level ${p.level} (XP ${p.xp}/${p.level*100}). HP ${p.hp}/${p.hpMax}, MP ${p.mp}/${p.mpMax}, gold ${p.gold}.
+Stats: ${STATS.map(k=>`${k} ${p.stats[k]>=0?"+":""}${p.stats[k]}`).join(", ")}.
+Skills: ${p.skills.map(s=>`${s.name} (${s.desc})`).join("; ")||"none yet"}.
+Carrying: ${p.items.join(", ")||"nothing much"}.`}
+
+function turnPrompt(c,action,roll,card){
+  const L=ledger(c),s=c.setup;
+  const recent=[];let n=0;
+  for(let i=c.log.length-1;i>=0&&n<6;i--){const e=c.log[i];
+    if(e.t==="gm"){recent.unshift(`THE STORY: ${e.text}`);n++}
+    else if(e.t==="act"){recent.unshift(`THE READER DID: ${e.text}`);n++}}
+  const chapterEnd=c.turn-c.chapterStart>=6;
+  return`You are the game master and narrator of an interactive web serial in the Royal Road and light-novel tradition. The reader is the protagonist: they say what they do, you write what happens next. What keeps them reading is the world pushing back, their choices coming back later, and each chapter feeling different from the last.
+
+THE SERIAL: "${c.title}"
+${presetBrief(s)}
+${worldLine(s)}
+World: ${c.world.name}. ${c.world.pitch} Rules of this world: ${(c.world.rules||[]).join(" ")}
+Tone: ${TONES[s.tone]||TONES.balanced}. Point of view: ${povLine(s,c.pc.name)}
+Chapter ${c.chapter}, turn ${c.turn+1}.
+
+THE PROTAGONIST (the page keeps these numbers; you narrate them)
+${sheetText(c)}
+
+STORY SO FAR
+${c.summary.slice(-24).map(x=>"- "+x).join("\n")||"- (just begun)"}
+
+PEOPLE
+${c.npcs.slice(-14).map(x=>`- ${x.name}: ${x.role||""}; wants ${x.want||"?"}; ${x.attitude||"neutral"} toward the protagonist; last seen turn ${x.seen}`).join("\n")||"- none yet"}
+
+OPEN THREADS
+${c.threads.map(t=>"- "+t.text).join("\n")||"- none"}
+
+CLOCKS (threats advancing on their own)
+${c.clocks.map(k=>`- ${k.name} ${k.filled}/${k.size}: when it fills, ${k.fills}`).join("\n")||"- none"}
+
+RECENT PAGES
+${recent.join("\n\n")}
+
+THE READER NOW DOES: """${String(action).slice(0,700)}"""
+
+THE DICE. The page already rolled 2d6 = ${roll[0]}+${roll[1]} = ${roll[0]+roll[1]}, and it can't be rerolled. If what the reader does is risky or opposed, choose the ONE stat that fits it best and honour that row:
+${diceTable(c,roll)}
+A clean success gets them what they wanted. Success at a cost gets it with a real price, complication or hard choice. When it goes wrong, the situation gets worse (a threat acts, something is lost, a clock advances), and something still happens that moves the story forward. If the action carries no real risk (talking, looking around, travelling), there's no roll: set "check" to null.
+
+THIS TURN'S DIRECTION, chosen by the page so the story doesn't settle into a groove: ${card.text}
+Honour what the reader did first, then weave this into how the world responds. Don't announce it.
+
+ALREADY USED IN THIS STORY. The reader has seen these, so show those moments in new ways:
+${L.phrases.length?"- repeated phrasing: "+L.phrases.map(x=>`"${x}"`).join(", ")+"\n":""}${L.slop.length?"- stock phrases: "+L.slop.join("; ")+"\n":""}${L.openers.length?"- recent passages opened with: "+L.openers.map(x=>`"${x}…"`).join(", ")+"\n":""}${L.endings.length?"- recent passages ended on "+L.endings.join(", ")+"\n":""}- always avoid: ${SLOP.slice(0,12).map(x=>x[1]).join("; ")}
+
+${WRITING}
+Length: 180 to 360 words of story.
+
+Reply with only this JSON. Numbers are changes this turn; the page bounds and applies them.
+{"check":{"stat":"one of STR AGI INT WIL CHA","band":"hit|mixed|miss"} or null,
+"story":"the passage, paragraphs separated by a blank line",
+"system":[{"kind":"skill|quest|item|notice|stat","title":"2-4 words","text":"one line"}],
+"hp":0,"mp":0,"xp":0,"gold":0,
+"addItems":[],"removeItems":[],"addSkills":[{"name":"","desc":"one line"}],
+"npcs":[{"name":"","role":"","want":"","attitude":"ally|friendly|neutral|wary|hostile"}],
+"openThreads":[],"closeThreads":[],
+"tickClocks":[{"name":"","by":1}],"newClock":null,
+"memory":"one sentence: what happened that matters later",
+"choices":[{"label":"under 12 words","tag":"bold|careful|clever|social|strange"}]${chapterEnd?`,
+"nextChapter":"a title for the chapter that starts after this passage"`:""}}
+Guidance for the numbers: XP 0-40 (more for clever or hard-won progress), HP loss matching the danger, at most one new skill a turn and only when earned. List only NPCs who appeared or changed. "newClock" is {"name","size":4-8,"fills":"what happens"} when a new threat starts ticking, otherwise null. Give 4 choices with 4 different tags, each a real option the reader might not think of.`}
+
+function openingPrompt(s){
+  return`You are setting up an interactive web serial in the Royal Road and light-novel tradition. The reader is the protagonist and will play it turn by turn; you will be the game master. Build a strong opening they will want to keep playing.
+
+${presetBrief(s)}
+${worldLine(s)}
+Protagonist: ${s.name?`named ${s.name}`:"name them to fit the world"}${s.concept?`; concept: ${s.concept}`:""}.
+Tone: ${TONES[s.tone]||TONES.balanced}. Point of view: ${povLine(s,s.name)}
+
+Make it specific and a little surprising: a world with 3 concrete rules that create problems, a protagonist with a flaw and a want, two people who want something from them, and two threats already ticking. Starting stats total +5 across STR AGI INT WIL CHA, each from -1 to +3, fitting the concept. Two starting skills with clear uses and limits. Pick names that belong to this world rather than ones stories default to (avoid Elara, Kael, Lyra, Thorne and the like).
+
+Then write the opening scene: drop into motion within the first paragraph, establish the voice, and end at the first real decision.
+
+${WRITING}
+Length: 250 to 420 words of story.
+
+Reply with only this JSON:
+{"title":"the serial's title","world":{"name":"","pitch":"one sentence","rules":["","",""]},
+"protagonist":{"name":"","cls":"class or role","hp":20,"mp":10,"gold":0,"stats":{"STR":0,"AGI":0,"INT":0,"WIL":0,"CHA":0},
+"skills":[{"name":"","desc":"one line, with its limit"}],"items":[""]},
+"npcs":[{"name":"","role":"","want":"","attitude":"ally|friendly|neutral|wary|hostile"}],
+"threads":["",""],"clocks":[{"name":"","size":6,"fills":"what happens when it fills"}],
+"chapter":"chapter 1 title","story":"the opening scene, paragraphs separated by a blank line",
+"system":[{"kind":"notice|skill|quest","title":"","text":""}],
+"memory":"one sentence","choices":[{"label":"under 12 words","tag":"bold|careful|clever|social|strange"}]}`}
+
+/* ---------------------------------------------------------------- apply -- */
+function applyTurn(c,out,roll,card,action){
+  const p=c.pc,sysMsgs=[];
+  const check=out.check&&STATS.includes(String(out.check.stat).toUpperCase())?{stat:String(out.check.stat).toUpperCase()}:null;
+  let rollInfo=null;
+  if(check){const m=num(p.stats[check.stat]);const tot=roll[0]+roll[1]+m;
+    rollInfo={d:roll,stat:check.stat,mod:m,total:tot,band:bandOf(tot),claimed:String(out.check.band||"")}}
+  // Coming back from 0 HP happens first, so this turn's numbers apply to the recovered protagonist.
+  if(card.id==="down"){p.down=false;p.hp=Math.max(p.hp,Math.ceil(p.hpMax/2))}
+  // numbers, bounded here
+  p.hp=clamp(p.hp+clamp(Math.round(num(out.hp)),-Math.max(15,Math.ceil(p.hpMax*.6)),p.hpMax),0,p.hpMax);
+  p.mp=clamp(p.mp+clamp(Math.round(num(out.mp)),-p.mpMax,p.mpMax),0,p.mpMax);
+  p.gold=Math.max(0,p.gold+clamp(Math.round(num(out.gold)),-100000,5000));
+  const xp=clamp(Math.round(num(out.xp)),0,60);p.xp+=xp;
+  for(const it of (out.removeItems||[]).slice(0,4)){const i=p.items.findIndex(x=>x.toLowerCase()===String(it).toLowerCase());if(i>=0)p.items.splice(i,1)}
+  for(const it of (out.addItems||[]).slice(0,3))if(it&&!p.items.includes(String(it)))p.items.push(String(it).slice(0,80));
+  for(const sk of (out.addSkills||[]).slice(0,1))if(sk&&sk.name&&!p.skills.some(x=>x.name.toLowerCase()===String(sk.name).toLowerCase()))
+    p.skills.push({name:String(sk.name).slice(0,50),desc:String(sk.desc||"").slice(0,160)});
+  if(p.hp<=0){p.down=true;sysMsgs.push({kind:"notice",title:"HP 0",text:"You're down. What happens next will cost you.",src:"page"})}
+  // levels are the page's call
+  while(p.xp>=p.level*100){p.xp-=p.level*100;p.level++;p.hpMax+=5;p.mpMax+=3;p.points++;
+    if(!p.down){p.hp=Math.min(p.hpMax,p.hp+5);p.mp=Math.min(p.mpMax,p.mp+3)}
+    sysMsgs.push({kind:"level",title:`Level ${p.level}`,text:"+5 max HP, +3 max MP, and 1 stat point to spend (open Sheet).",src:"page"})}
+  // people
+  for(const n of (out.npcs||[]).slice(0,4)){if(!n||!n.name)continue;
+    const ex=c.npcs.find(x=>x.name.toLowerCase()===String(n.name).toLowerCase());
+    const row={name:String(n.name).slice(0,60),role:String(n.role||"").slice(0,100),want:String(n.want||"").slice(0,140),attitude:String(n.attitude||"neutral"),seen:c.turn+1};
+    if(ex)Object.assign(ex,Object.fromEntries(Object.entries(row).filter(([,v])=>v!=="")));else c.npcs.push(row)}
+  // threads
+  for(const t of (out.closeThreads||[])){const i=bestThread(c,String(t));if(i>=0)c.threads.splice(i,1)}
+  for(const t of (out.openThreads||[]).slice(0,2))if(t&&c.threads.length<8)c.threads.push({id:uid8(),text:String(t).slice(0,160),opened:c.turn+1});
+  // clocks: the struck one goes, then ticks, then the world's own tick every third turn
+  if(card.id==="clock")c.clocks=c.clocks.filter(k=>k.id!==card.clock);
+  for(const tk of (out.tickClocks||[]).slice(0,3)){const k=bestClock(c,String(tk.name||""));if(k)k.filled=Math.min(k.size,k.filled+clamp(Math.round(num(tk.by,1)),0,2))}
+  if((c.turn+1)%3===0)for(const k of c.clocks)k.filled=Math.min(k.size,k.filled+1);
+  if(out.newClock&&out.newClock.name&&c.clocks.length<3)
+    c.clocks.push({id:uid8(),name:String(out.newClock.name).slice(0,60),size:clamp(Math.round(num(out.newClock.size,6)),4,8),filled:0,fills:String(out.newClock.fills||"").slice(0,160)});
+  // the record
+  const story=String(out.story||out.narration||"").trim();
+  const sys=(out.system||[]).slice(0,3).filter(x=>x&&(x.title||x.text)).map(x=>({kind:String(x.kind||"notice"),title:String(x.title||"").slice(0,60),text:String(x.text||"").slice(0,220)})).concat(sysMsgs);
+  const echo=echoOf(c,story);
+  c.turn++;
+  c.log.push({t:"gm",text:story,sys,roll:rollInfo,card:{id:card.id,text:card.text},echo,turn:c.turn});
+  if(out.memory)c.summary.push(String(out.memory).slice(0,220));
+  if(c.summary.length>60)c.summary.splice(0,c.summary.length-60);
+  c.cards.push(card.id);c.cards=c.cards.slice(-12);
+  c.tension.push(card.t);c.tension=c.tension.slice(-30);
+  c.choices=normChoices(out.choices);
+  if(out.nextChapter&&c.turn-c.chapterStart>=6){c.chapter++;c.chapterStart=c.turn;c.log.push({t:"chapter",n:c.chapter,title:String(out.nextChapter).slice(0,90)})}
+}
+function normChoices(a){return(a||[]).filter(x=>x&&x.label).slice(0,5).map(x=>({label:String(x.label).slice(0,90),tag:String(x.tag||"").toLowerCase().slice(0,12)}))}
+function overlap(a,b){const A=new Set(words(a).filter(w=>!STOP.has(w))),B=new Set(words(b).filter(w=>!STOP.has(w)));
+  if(!A.size||!B.size)return 0;let n=0;for(const x of A)if(B.has(x))n++;return n/Math.min(A.size,B.size)}
+function bestThread(c,t){let bi=-1,bv=.5;c.threads.forEach((x,i)=>{const v=overlap(x.text,t);if(v>=bv){bv=v;bi=i}});return bi}
+function bestClock(c,n){let b=null,bv=.5;for(const k of c.clocks){const v=k.name.toLowerCase()===n.toLowerCase()?1:overlap(k.name,n);if(v>=bv){bv=v;b=k}}return b}
+
+function newCampaign(s,out){
+  const pr=out.protagonist||{};
+  const stats={};let total=0;
+  for(const k of STATS){stats[k]=clamp(Math.round(num((pr.stats||{})[k])),-1,3);total+=stats[k]}
+  while(total>5){const k=STATS.reduce((a,b)=>stats[a]>=stats[b]?a:b);stats[k]--;total--}
+  const hpMax=clamp(Math.round(num(pr.hp,20)),10,40),mpMax=clamp(Math.round(num(pr.mp,10)),0,30);
+  const c={id:uid8()+uid8(),title:String(out.title||"Untitled").slice(0,90),created:Date.now(),updated:Date.now(),setup:s,
+    world:{name:String((out.world||{}).name||"").slice(0,80),pitch:String((out.world||{}).pitch||"").slice(0,240),rules:((out.world||{}).rules||[]).slice(0,4).map(x=>String(x).slice(0,200))},
+    pc:{name:String(pr.name||s.name||"You").slice(0,60),cls:String(pr.cls||"Unclassed").slice(0,60),level:1,xp:0,hp:hpMax,hpMax,mp:mpMax,mpMax,
+      gold:clamp(Math.round(num(pr.gold)),0,10000),stats,points:0,down:false,
+      skills:(pr.skills||[]).slice(0,3).filter(x=>x&&x.name).map(x=>({name:String(x.name).slice(0,50),desc:String(x.desc||"").slice(0,160)})),
+      items:(pr.items||[]).slice(0,8).map(x=>String(x).slice(0,80))},
+    npcs:(out.npcs||[]).slice(0,5).filter(n=>n&&n.name).map(n=>({name:String(n.name).slice(0,60),role:String(n.role||""),want:String(n.want||""),attitude:String(n.attitude||"neutral"),seen:0})),
+    threads:(out.threads||[]).slice(0,4).filter(Boolean).map(t=>({id:uid8(),text:String(t).slice(0,160),opened:0})),
+    clocks:(out.clocks||[]).slice(0,3).filter(k=>k&&k.name).map(k=>({id:uid8(),name:String(k.name).slice(0,60),size:clamp(Math.round(num(k.size,6)),4,8),filled:0,fills:String(k.fills||"").slice(0,160)})),
+    log:[],summary:[],turn:0,chapter:1,chapterStart:0,cards:[],tension:[],choices:[],prev:null};
+  c.log.push({t:"chapter",n:1,title:String(out.chapter||"Chapter One").slice(0,90)});
+  c.log.push({t:"gm",text:String(out.story||"").trim(),sys:(out.system||[]).slice(0,3).map(x=>({kind:String(x.kind||"notice"),title:String(x.title||""),text:String(x.text||"")})),turn:0});
+  if(out.memory)c.summary.push(String(out.memory));
+  c.choices=normChoices(out.choices);
+  return c}
+
+/* ----------------------------------------------------------- the calls -- */
+function errCopy(e){const c=e&&e.code;
+  if(c==="not_granted"||c==="sampling_disabled"||c==="capability_disabled"||c==="not_declared")return"This page can't reach Claude. Open it from your Claude account and allow it when asked.";
+  if(c==="rate_limited")return"You've hit a usage limit or sent too many at once. Give it a minute, then try again.";
+  if(c==="invalid_json")return"The chapter came back cut off or garbled. Try again.";
+  if(c==="refused")return"Claude wouldn't write that turn. Try a different action.";
+  if(c==="prompt_too_large")return"The story's context got too big to send. This shouldn't happen; please tell whoever set this up.";
+  if(c==="session_expired")return"Your Claude session expired. Sign in again and reload.";
+  if(e instanceof TypeError||e instanceof ReferenceError)return"Something broke on the page: "+e.message;
+  return"That didn't go through. Try again."}
+
+function partialStory(t){const m=/"story"\s*:\s*"((?:[^"\\]|\\.)*)/.exec(t);if(!m)return"";
+  const raw=m[1].replace(/\\u[0-9a-fA-F]{0,3}$|\\$/,"");
+  try{return JSON.parse('"'+raw+'"')}catch(e){return raw.replace(/\\n/g,"\n").replace(/\\"/g,'"')}}
+
+async function ask(prompt){
+  if(!sample)throw{code:"not_granted"};
+  ctl=new AbortController();S.live="";
+  return sample.json(prompt,{modelTier:"complex",cache:false,signal:ctl.signal,
+    onText:({text})=>{const s=partialStory(text);if(s!==S.live){S.live=s;paintLive()}}})}
+
+async function begin(){
+  const s={preset:S.preset,world:val("f-world"),name:val("f-name"),concept:val("f-concept"),premise:val("f-premise"),tone:val("f-tone")||"balanced",pov:val("f-pov")||"you"};
+  if(s.preset==="fan"&&!s.world){S.err="Name the world for your fanfic first.";return render()}
+  if(s.preset==="custom"&&!s.premise){S.err="Describe your premise first.";return render()}
+  lsSet("protagonist:setup",s);
+  S.busy=true;S.err="";S.step="Building the world";S.view="play";
+  S.camp=null;render();
+  try{const out=await ask(openingPrompt(s));S.camp=newCampaign(s,out);persist()}
+  catch(e){if(!(e&&e.code==="cancelled"))S.err=errCopy(e);S.view="home"}
+  S.busy=false;S.live="";render();window.scrollTo(0,0)}
+
+async function act(action,fixedRoll){
+  const c=S.camp;if(!c||S.busy)return;
+  action=String(action||"").trim();if(!action)return;
+  const keepPrev=c.prev;
+  const before=clone(Object.assign({},c,{prev:null}));
+  const roll=fixedRoll||[d6(),d6()];
+  const card=director(c);
+  c.log.push({t:"act",text:action});
+  S.busy=true;S.err="";S.step="Writing";S.retry=null;render();scrollEnd();
+  try{
+    const out=await ask(turnPrompt(before,action,roll,card));
+    applyTurn(c,out,roll,card,action);
+    c.prev={snapshot:before,action,roll};
+    persist()}
+  catch(e){
+    S.camp=Object.assign(before,{prev:keepPrev});
+    if(!(e&&e.code==="cancelled")){S.err=errCopy(e);S.retry={action,roll}}}
+  S.busy=false;S.live="";render();scrollEnd()}
+
+function redo(){const c=S.camp;if(!c||!c.prev||S.busy)return;const {snapshot,action,roll}=c.prev;
+  S.camp=snapshot;act(action,roll)}
+function undo(){const c=S.camp;if(!c||!c.prev||S.busy)return;const {snapshot,action}=c.prev;
+  S.camp=snapshot;persist();render();const t=$("say");if(t){t.value=action;t.focus()}}
+
+/* ------------------------------------------------------------- drawing -- */
+function val(id){const e=$(id);return e?String(e.value||"").trim():""}
+function paras(t){return String(t||"").split(/\n\s*\n|\n/).filter(x=>x.trim()).map(x=>"<p>"+esc(x.trim()).replace(/\*([^*\n]+)\*/g,"<em>$1</em>")+"</p>").join("")}
+function sysBox(m){return`<div class="sys">${m.src==="page"?`<span class="src">page</span>`:""}<div class="h">[ ${esc(m.title||m.kind)} ]</div>${m.text?`<div class="t">${esc(m.text)}</div>`:""}</div>`}
+function diceRow(r){return`<div class="dice"><span class="die">${r.d[0]}</span><span class="die">${r.d[1]}</span>
+  <span>${r.stat} ${r.mod>=0?"+":""}${r.mod} = ${r.total}</span><span class="band ${r.band}">${BAND_TEXT[r.band]}</span></div>`}
+function meter(label,v,max,color){const pct=max?clamp(v/max*100,0,100):0;
+  return`<div class="meter"><div class="l"><span>${label}</span><span>${v}/${max}</span></div><div class="b"><i style="width:${pct}%;background:var(${color})"></i></div></div>`}
+
+function paintStrip(){
+  const c=S.camp,el=$("strip");
+  if(!c||S.view!=="play"){el.innerHTML="";return}
+  const p=c.pc;
+  el.innerHTML=`<div class="strip" data-drawer="sheet" role="button" aria-label="Open character sheet">
+    <div class="lv">Lv ${p.level}${p.points?` <span class="pts">+${p.points}</span>`:""}</div>
+    ${meter("HP",p.hp,p.hpMax,"--hp")}${meter("MP",p.mp,p.mpMax,"--mp")}${meter("XP",p.xp,p.level*100,"--xp")}</div>`}
+
+function storyHtml(c){
+  let h="";
+  if(c.trimmed)h+=`<p class="note">Earlier pages were trimmed to keep this campaign saveable; the story so far is still remembered.</p>`;
+  for(const e of c.log){
+    if(e.t==="chapter")h+=`<div class="chap"><div class="n">Chapter ${e.n}</div><h2>${esc(e.title)}</h2></div>`;
+    else if(e.t==="act")h+=`<div class="act">▸ <b>${esc(e.text)}</b></div>`;
+    else if(e.t==="gm"){if(e.roll)h+=diceRow(e.roll);h+=`<div class="prose">${paras(e.text)}</div>`;for(const m of e.sys||[])h+=sysBox(m)}}
+  return h}
+
+function paintLive(){const el=$("live");if(!el)return;
+  el.innerHTML=S.live?paras(S.live).replace(/<\/p>$/,'<span class="caret"></span></p>'):`<p class="note">${esc(S.step)}… <span class="caret"></span></p>`}
+
+function homeHtml(){
+  const last=lsGet("protagonist:setup")||{};
+  const s=Object.assign({tone:"balanced",pov:"you"},last);
+  return`<section class="hero"><h1>You're the main character.</h1>
+    <p>A game master for web-serial stories: LitRPG, isekai, cultivation, fanfic. You say what you do; the dice, the world and a director keep it from going stale.</p></section>
+    ${!sample?`<div class="err">Open this page from your Claude account and allow it to use Claude. It writes the story with your Claude plan, not an API key.</div>`:""}
+    ${S.err?`<div class="err">${esc(S.err)}</div>`:""}
+    <div class="field"><span class="lab">Kind of story</span><div class="presets">
+      ${PRESETS.map(p=>`<button class="preset" data-preset="${p.id}" aria-pressed="${S.preset===p.id}"><b>${esc(p.name)}</b><span>${esc(p.blurb)}</span></button>`).join("")}
+    </div></div>
+    <div class="field"><label class="lab" for="f-world">World${S.preset==="fan"?" (required)":" (optional)"}</label>
+      <input id="f-world" value="${esc(s.world||"")}" placeholder="${S.preset==="fan"?"e.g. Naruto, after the war · Mushoku Tensei · Worm":"Leave blank for an original world, or name one"}"></div>
+    <div class="field"${S.preset==="custom"?"":" hidden"}><label class="lab" for="f-premise">Premise</label>
+      <textarea id="f-premise" rows="3" placeholder="What's the setup?">${esc(s.premise||"")}</textarea></div>
+    <div class="pair">
+      <div class="field"><label class="lab" for="f-name">Your character's name (optional)</label><input id="f-name" value="${esc(s.name||"")}" placeholder="Leave blank to be named"></div>
+      <div class="field"><label class="lab" for="f-concept">Concept (optional)</label><input id="f-concept" value="${esc(s.concept||"")}" placeholder="a burnt-out night-shift nurse"></div>
+    </div>
+    <div class="pair">
+      <div class="field"><label class="lab" for="f-tone">Tone</label><select id="f-tone">
+        ${Object.keys(TONES).map(k=>`<option value="${k}"${s.tone===k?" selected":""}>${{grim:"Grim",balanced:"Balanced",light:"Light-hearted",comedic:"Comedic"}[k]}</option>`).join("")}</select></div>
+      <div class="field"><label class="lab" for="f-pov">Told as</label><select id="f-pov">
+        ${[["you","You (second person)"],["first","I (first person)"],["third","He / she / they"]].map(([k,l])=>`<option value="${k}"${s.pov===k?" selected":""}>${l}</option>`).join("")}</select></div>
+    </div>
+    <button class="go begin" id="begin" ${!sample||S.busy?"disabled":""}>Begin chapter one</button>
+    ${S.list.length?`<section class="camps"><span class="lab">Your serials</span>
+      ${S.list.map(m=>`<div class="camp" data-open="${esc(m.id)}"><div><div class="t">${esc(m.title)}</div>
+        <div class="s">${esc(m.name||"")} · level ${m.level} · chapter ${m.chapter} · ${m.turn} turns</div></div>
+        <button class="del" data-del="${esc(m.id)}" aria-label="Delete ${esc(m.title)}">×</button></div>`).join("")}</section>`:""}
+    <div class="how"><b>Why it doesn't go stale.</b> The page rolls the dice before Claude writes, so you can fail. A director picks each turn's beat (pressure, a reveal, a callback to someone you met chapters ago, a breather) and balances tension. Threat clocks tick whether you act or not. Phrases the story has already used are tracked and steered away from. Open <b>Engine</b> while playing to see all of it.</div>`}
+
+function playHtml(){
+  const c=S.camp;
+  if(!c)return`<div class="story"><div class="prose" id="live"></div></div>${S.err?`<div class="err">${esc(S.err)}</div>`:""}`;
+  return`<div class="story">${storyHtml(c)}${S.busy?`<div class="act"></div><div class="prose" id="live"></div>`:""}</div>
+    ${S.err?`<div class="err">${esc(S.err)}${S.retry?` <button class="tbtn" id="retry" style="margin-left:6px">Try again</button>`:""}</div>`:""}`}
+
+function dockHtml(){
+  const c=S.camp;
+  if(S.busy)return`<div class="status"><span>${esc(S.step)}…</span><button class="tbtn stop" id="stop">Stop</button></div>`;
+  if(!c)return"";
+  return`${c.choices.length?`<div class="choices">${c.choices.map((x,i)=>`<button class="choice" data-choice="${i}"><small>${esc(x.tag||"option")}</small>${esc(x.label)}</button>`).join("")}</div>`:""}
+    <div class="say"><textarea id="say" rows="1" placeholder="Or do something else…" aria-label="What you do"></textarea><button class="go" id="send">Act</button></div>
+    <div class="minor">${c.prev?`<button id="redo">Rewrite last turn (same dice)</button><button id="undo">Undo and change it</button>`:""}</div>`}
+
+function sheetHtml(){
+  const c=S.camp,p=c.pc;
+  return`<button class="tbtn x" data-close>Close</button><h3>${esc(p.name)}</h3><div class="note">${esc(p.cls)} · level ${p.level} · ${p.gold} gold</div>
+    <h4 class="lab">Stats${p.points?` · ${p.points} point${p.points>1?"s":""} to spend`:""}</h4>
+    <div class="stats">${STATS.map(k=>`<div class="stat" title="${STAT_NAMES[k]}"><b>${p.stats[k]>=0?"+":""}${p.stats[k]}</b><span>${k}</span>
+      ${p.points&&p.stats[k]<4?`<button data-spend="${k}" aria-label="Raise ${STAT_NAMES[k]}">+</button>`:""}</div>`).join("")}</div>
+    <p class="note">Each roll is 2d6 plus the stat that fits: 10+ clean success, 7–9 success at a cost, 6 or less it goes wrong.</p>
+    <h4 class="lab">Skills</h4>${p.skills.map(s=>`<div class="li"><b>${esc(s.name)}</b><div class="s">${esc(s.desc)}</div></div>`).join("")||`<p class="note">None yet.</p>`}
+    <h4 class="lab">Inventory</h4>${p.items.map(x=>`<div class="li">${esc(x)}</div>`).join("")||`<p class="note">Empty.</p>`}
+    <h4 class="lab">People</h4>${c.npcs.map(n=>`<div class="li"><b>${esc(n.name)}</b><span class="tag">${esc(n.attitude)}</span><div class="s">${esc(n.role)}${n.want?` · wants ${esc(n.want)}`:""}</div></div>`).join("")||`<p class="note">No one yet.</p>`}
+    <h4 class="lab">Open threads</h4>${c.threads.map(t=>`<div class="li">${esc(t.text)}</div>`).join("")||`<p class="note">None.</p>`}
+    <h4 class="lab">Threat clocks</h4>${c.clocks.map(k=>`<div class="li"><b>${esc(k.name)}</b> <span class="tag">${k.filled}/${k.size}</span><div class="clock">${Array.from({length:k.size},(_,i)=>`<i class="${i<k.filled?"on":""}"></i>`).join("")}</div><div class="s">When it fills: ${esc(k.fills)}</div></div>`).join("")||`<p class="note">Nothing ticking.</p>`}`}
+
+function engineHtml(){
+  const c=S.camp,last=[...c.log].reverse().find(e=>e.t==="gm"&&e.card);
+  const L=ledger(c);
+  const gms=c.log.filter(e=>e.t==="gm"&&typeof e.echo==="number").slice(-12);
+  return`<button class="tbtn x" data-close>Close</button><h3>Engine</h3>
+    <p class="note">What the page decided, as opposed to what Claude wrote.</p>
+    <h4 class="lab">Last turn</h4>
+    ${last?`<div class="kv"><span>Director's card</span><span>${esc(last.card.id)}</span></div><p class="note">${esc(last.card.text)}</p>
+      ${last.roll?`<div class="kv"><span>Dice</span><span>${last.roll.d.join("+")} ${last.roll.stat} ${last.roll.mod>=0?"+":""}${last.roll.mod} = ${last.roll.total} · ${last.roll.band}</span></div>
+      ${last.roll.claimed&&last.roll.claimed!==last.roll.band?`<p class="note" style="color:var(--bad)">Claude wrote it as "${esc(last.roll.claimed)}"; the dice said ${last.roll.band}. The page records the dice.</p>`:""}`:`<div class="kv"><span>Dice</span><span>no roll (no real risk)</span></div>`}
+      <div class="kv"><span>Echo of earlier pages</span><span>${Math.round((last.echo||0)*100)}%</span></div>`:`<p class="note">Play a turn first.</p>`}
+    <h4 class="lab">Tension, recent turns</h4>
+    <div class="spark">${c.tension.slice(-16).map((t,i,a)=>{const run=a.slice(0,i+1).reduce((x,y)=>x+y,0);return`<i style="height:${clamp(30+run*12,8,100)}%"></i>`}).join("")||`<span class="note">—</span>`}</div>
+    <p class="note">Recent cards: ${c.cards.slice(-6).map(esc).join(" · ")||"—"}. Three hard turns in a row force a breather; two soft ones force pressure.</p>
+    <h4 class="lab">Echo per turn</h4>
+    <div class="spark">${gms.map(e=>`<i style="height:${clamp(e.echo*400,4,100)}%;background:${e.echo>.12?"var(--bad)":"var(--sys)"}"></i>`).join("")||`<span class="note">—</span>`}</div>
+    <p class="note">Share of each passage's four-word runs that already appeared in the last eight. Red is above 12%.</p>
+    <h4 class="lab">Ledger sent with the next turn</h4>
+    <div class="note">${L.phrases.length?"Repeated phrasing: "+L.phrases.map(x=>`“${esc(x)}”`).join(", "):"No repeated phrasing yet."}</div>
+    <div class="note" style="margin-top:6px">${L.slop.length?"Stock phrases used: "+L.slop.map(esc).join("; "):"No stock phrases used yet."}</div>
+    <h4 class="lab">Clocks</h4>${c.clocks.map(k=>`<div class="kv"><span>${esc(k.name)}</span><span>${k.filled}/${k.size}</span></div>`).join("")||`<p class="note">None.</p>`}
+    <p class="note">Every clock also advances by one every third turn, on its own.</p>`}
+
+function render(){
+  const c=S.camp,play=S.view==="play";
+  $("ttl").textContent=play&&c?c.title:"";
+  $("bsheet").hidden=$("bengine").hidden=!(play&&c);
+  paintStrip();
+  $("main").innerHTML=play?playHtml():homeHtml();
+  const dock=$("dock");dock.hidden=!play;
+  if(play){const keep=$("say")?$("say").value:"";$("dockin").innerHTML=dockHtml();if($("say")&&keep)$("say").value=keep}
+  if(S.busy)paintLive();
+  const d=$("drawer");
+  document.body.style.overflow=S.drawer&&c?"hidden":"";
+  if(S.drawer&&c){d.hidden=false;d.innerHTML=`<div class="panel">${S.drawer==="sheet"?sheetHtml():engineHtml()}</div>`;
+    $("bsheet").setAttribute("aria-pressed",String(S.drawer==="sheet"));$("bengine").setAttribute("aria-pressed",String(S.drawer==="engine"))}
+  else{d.hidden=true;d.innerHTML="";$("bsheet").setAttribute("aria-pressed","false");$("bengine").setAttribute("aria-pressed","false")}}
+function scrollEnd(){requestAnimationFrame(()=>window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"}))}
+
+/* ------------------------------------------------------------- events -- */
+document.addEventListener("click",async ev=>{
+  const t=ev.target.closest("button,[data-drawer],[data-open],[data-go],.drawer");if(!t)return;
+  if(t.id==="drawer"&&ev.target===t){S.drawer=null;return render()}
+  if(t.dataset.close!==undefined){S.drawer=null;return render()}
+  if(t.dataset.del){ev.stopPropagation();
+    if(t.dataset.sure!=="1"){t.dataset.sure="1";t.textContent="Delete?";setTimeout(()=>{if(t.isConnected){t.dataset.sure="";t.textContent="×"}},4000);return}
+    await deleteCamp(t.dataset.del);return render()}
+  if(t.dataset.drawer){S.drawer=S.drawer===t.dataset.drawer?null:t.dataset.drawer;return render()}
+  if(t.dataset.go==="home"){if(S.busy)return;S.view="home";S.drawer=null;S.err="";render();return window.scrollTo(0,0)}
+  if(t.dataset.open){const c=await loadCamp(t.dataset.open);if(!c){S.err="Couldn't open that one.";return render()}
+    S.camp=c;S.view="play";S.err="";render();return scrollEnd()}
+  if(t.dataset.preset){S.preset=t.dataset.preset;S.err="";const keep={w:val("f-world"),n:val("f-name"),c:val("f-concept"),p:val("f-premise"),t:val("f-tone"),v:val("f-pov")};
+    render();$("f-world").value=keep.w;$("f-name").value=keep.n;$("f-concept").value=keep.c;$("f-premise").value=keep.p;if(keep.t)$("f-tone").value=keep.t;if(keep.v)$("f-pov").value=keep.v;return}
+  if(t.id==="begin")return void begin();
+  if(t.dataset.choice!==undefined){const x=S.camp.choices[+t.dataset.choice];if(x)return void act(x.label)}
+  if(t.id==="send"){const v=val("say");if(v)return void act(v)}
+  if(t.id==="stop"){if(ctl)ctl.abort();return}
+  if(t.id==="retry"&&S.retry)return void act(S.retry.action,S.retry.roll);
+  if(t.id==="redo")return void redo();
+  if(t.id==="undo")return void undo();
+  if(t.dataset.spend){const p=S.camp.pc,k=t.dataset.spend;if(p.points>0&&p.stats[k]<4){p.stats[k]++;p.points--;persist();render()}}
+});
+document.addEventListener("keydown",ev=>{
+  if(ev.target.id==="say"&&ev.key==="Enter"&&!ev.shiftKey){ev.preventDefault();const v=val("say");if(v)act(v)}
+  if(ev.key==="Escape"&&S.drawer){S.drawer=null;render()}});
+document.addEventListener("input",ev=>{if(ev.target.id==="say"){const t=ev.target;t.style.height="auto";t.style.height=Math.min(140,t.scrollHeight)+"px"}});
+
+/* --------------------------------------------------------------- boot -- */
+(async()=>{
+  S.list=lsGet(LS_INDEX)||[];
+  const last=lsGet("protagonist:setup");if(last&&last.preset)S.preset=last.preset;
+  render();
+  try{sample=await claude.use("sample")}catch(e){sample=null}
+  render();
+  try{
+    const [d,u]=await Promise.all([claude.use("db"),claude.use("user")]);
+    db=d;uid=u?await u.id():null;
+    if(db&&uid){const snap=await profRef().get();
+      if(snap.exists){const remote=clone(snap.data()).campaigns||[];
+        const byId=new Map(S.list.map(m=>[m.id,m]));
+        for(const m of remote)if(!byId.has(m.id)||num(m.updated)>num(byId.get(m.id).updated))byId.set(m.id,m);
+        S.list=[...byId.values()].sort((a,b)=>num(b.updated)-num(a.updated));lsSet(LS_INDEX,S.list);if(S.view==="home")render()}}
+  }catch(e){db=null}
+})();
+</script>
