@@ -6,6 +6,7 @@
  * Every credential stays in this process. The browser is handed results only. */
 
 import http from "node:http";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
@@ -86,17 +87,52 @@ async function readBody(req, limit = 2_000_000) {
   if (!chunks.length) return null;
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
+/* With APP_TOKEN set, the whole site is private: pages and API alike. A
+ * browser signs in once and gets a cookie; the cookie holds a hash derived
+ * from the token, never the token itself. */
+const SESSION = APP_TOKEN ? crypto.createHash("sha256").update("ach-session:" + APP_TOKEN).digest("hex") : "";
+const same = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && crypto.timingSafeEqual(x, y); };
+function cookie(req, name) {
+  for (const part of String(req.headers.cookie || "").split(";")) {
+    const i = part.indexOf("="); if (i < 0) continue;
+    if (part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return "";
+}
 function authed(req, url) {
   if (!APP_TOKEN) return true;
   const h = req.headers.authorization || "";
-  if (h.startsWith("Bearer ") && h.slice(7) === APP_TOKEN) return true;
-  return url.searchParams.get("token") === APP_TOKEN;
+  if (h.startsWith("Bearer ") && same(h.slice(7), APP_TOKEN)) return true;
+  if (same(cookie(req, "ach_session"), SESSION)) return true;
+  return same(url.searchParams.get("token") || "", APP_TOKEN);
+}
+const safeNext = n => (typeof n === "string" && /^\/(?!\/)[\w\-./?=&%]*$/.test(n) ? n : "/");
+function loginPage(next, wrong) {
+  return `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Private</title>
+<style>:root{color-scheme:light dark;--g:#eceef0;--c:#f8f9fa;--i:#16191d;--d:#666d75;--r:#ccd2d7;--b:#a33227}
+@media (prefers-color-scheme:dark){:root{--g:#101316;--c:#181c20;--i:#e7e9ea;--d:#8b939b;--r:#2a2f35;--b:#e0776a}}
+*{box-sizing:border-box}body{margin:0;background:var(--g);color:var(--i);font:16px/1.5 system-ui,sans-serif}
+form{max-width:380px;margin:18vh auto 0;padding:0 18px}h1{font-size:20px;margin:0 0 6px}p{color:var(--d);margin:0 0 18px;font-size:14.5px}
+input{width:100%;font:inherit;padding:12px;border:1px solid var(--r);border-radius:6px;background:var(--c);color:var(--i)}
+button{width:100%;margin-top:10px;font:inherit;font-weight:600;padding:12px;border:0;border-radius:6px;background:var(--i);color:var(--g)}
+.w{color:var(--b);font-size:14px;margin:10px 0 0}</style>
+<form method="post" action="/login"><h1>This site is private</h1><p>Enter the access token (your APP_TOKEN in Render) to continue.</p>
+<input type="hidden" name="next" value="${String(next).replace(/[<>"&]/g, "")}">
+<input name="token" type="password" autocomplete="current-password" placeholder="Access token" autofocus required>
+<button>Continue</button>${wrong ? `<p class="w">That token didn't match.</p>` : ""}</form>`;
 }
 
 /* --------------------------------------------------------------- routes --- */
 
 async function handleApi(req, res, url) {
   const route = url.pathname;
+
+  if (route === "/api/health" && !authed(req, url)) {
+    // Render's health check still gets its 200; strangers learn nothing about the setup.
+    return send(res, 200, { ok: true, app: "two-hours-in", needsToken: true, authed: false });
+  }
 
   if (route === "/api/health") {
     // ?check=catalog makes one small real request, so the page can tell a
@@ -408,6 +444,21 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
   try {
     if (url.pathname.startsWith("/api/")) return await handleApi(req, res, url);
+    if (url.pathname === "/login" && req.method === "POST") {
+      const chunks = []; let size = 0;
+      for await (const c of req) { size += c.length; if (size > 4096) break; chunks.push(c); }
+      const form = new URLSearchParams(Buffer.concat(chunks).toString("utf8"));
+      const next = safeNext(form.get("next"));
+      if (!APP_TOKEN || !same(form.get("token") || "", APP_TOKEN)) {
+        await new Promise(r => setTimeout(r, 800));   // slow down guessing
+        return send(res, 401, loginPage(next, true), "text/html; charset=utf-8");
+      }
+      const secure = req.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
+      res.writeHead(303, { Location: next, "Cache-Control": "no-store",
+        "Set-Cookie": `ach_session=${SESSION}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${secure}` });
+      return res.end();
+    }
+    if (!authed(req, url)) return send(res, 401, loginPage(url.pathname + url.search, false), "text/html; charset=utf-8");
     /* The root is a signpost, not one of the apps. Serving one of them here
      * makes the other look missing, and makes the whole deployment look like
      * whichever app happened to be at "/". */
