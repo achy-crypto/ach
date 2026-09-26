@@ -1,0 +1,469 @@
+<title>Ekagra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Work+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ground:#F4F0E8;--panel:#FBF9F4;--ink:#231E17;--dim:#766D61;--rule:#DED6C8;--soft:#ECE5D8;
+  --flame:#E08A2E;--glow:#F5B85A;--good:#3D7D55;--bad:#B4442F;--calm:#4B7A8C;
+  --display:"Cormorant Garamond",Georgia,serif;--ui:"Work Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"DM Mono",ui-monospace,Menlo,monospace;
+  --stage:#0D0B09;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --ground:#12100D;--panel:#1B1814;--ink:#EDE6DA;--dim:#A0968A;--rule:#2F2A23;--soft:#241F1A;
+  --flame:#F0A04A;--glow:#F5B85A;--good:#72BE8C;--bad:#E8806B;--calm:#7FB3C6}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --ground:#12100D;--panel:#1B1814;--ink:#EDE6DA;--dim:#A0968A;--rule:#2F2A23;--soft:#241F1A;
+  --flame:#F0A04A;--glow:#F5B85A;--good:#72BE8C;--bad:#E8806B;--calm:#7FB3C6}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);font-size:15.5px;line-height:1.55;
+  -webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:620px;margin:0 auto;padding:22px 16px 70px}
+button{font-family:inherit}
+button:focus-visible,select:focus-visible{outline:2px solid var(--flame);outline-offset:2px}
+.lab{font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;border-bottom:1px solid var(--rule);padding-bottom:10px}
+header h1{font-family:var(--display);font-weight:600;font-size:30px;margin:0;line-height:1}
+header nav{display:flex;gap:4px}
+.nb{appearance:none;border:0;background:none;color:var(--dim);font-size:14px;font-weight:500;padding:8px 10px;cursor:pointer;border-radius:6px}
+.nb[aria-current="true"]{color:var(--ink);background:var(--soft)}
+
+.lede{font-family:var(--display);font-size:22px;line-height:1.3;margin:22px 0 4px}
+.sub{color:var(--dim);margin:0 0 6px;max-width:56ch}
+.modes{display:grid;gap:10px;margin-top:18px}
+.mode{appearance:none;text-align:left;border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:10px;padding:16px;cursor:pointer;display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.mode[aria-pressed="true"]{border-color:var(--flame);box-shadow:inset 0 0 0 1px var(--flame)}
+.mode .ic{width:44px;height:44px;border-radius:50%;background:var(--stage);display:grid;place-items:center}
+.mode b{font-size:16px;font-weight:600}
+.mode span{display:block;color:var(--dim);font-size:13.5px;margin-top:3px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:16px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.seg button{appearance:none;border:0;background:var(--panel);color:var(--dim);padding:10px 14px;min-height:44px;font-size:14px;font-weight:500;cursor:pointer}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--ground)}
+.check{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:14px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--flame)}
+.begin{width:100%;margin-top:18px;appearance:none;border:0;border-radius:10px;background:var(--ink);color:var(--ground);font-weight:600;font-size:17px;padding:16px;min-height:54px;cursor:pointer}
+.how{margin-top:14px;font-size:14px;color:var(--dim)}
+.how b{color:var(--ink);font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:8px;overflow:hidden;margin-top:22px}
+.stats div{background:var(--panel);padding:12px}
+.stats b{display:block;font-family:var(--mono);font-size:21px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.stats span{font-size:12px;color:var(--dim)}
+
+/* the stage */
+.stage{position:fixed;inset:0;z-index:20;background:var(--stage);color:#E8DFD0;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.stage .bar{position:absolute;left:0;top:0;height:2px;background:#ffffff26;transition:width 1s linear}
+.stage .quit{position:absolute;z-index:4;top:calc(10px + env(safe-area-inset-top,0px));right:12px;appearance:none;border:1px solid #ffffff24;background:none;color:#ffffff8c;border-radius:6px;padding:7px 11px;font-size:13px;cursor:pointer}
+.stage .hint{position:absolute;left:0;right:0;bottom:calc(26px + env(safe-area-inset-bottom,0px));text-align:center;font-size:13px;color:#ffffff66;pointer-events:none}
+.toast{position:absolute;left:50%;top:calc(52px + env(safe-area-inset-top,0px));transform:translate(-50%,-140%);opacity:0;background:#2A2723;color:#E8DFD0;border-radius:12px;
+  padding:10px 14px;font-size:13.5px;box-shadow:0 8px 30px #0008;transition:transform .35s ease,opacity .35s;pointer-events:none;width:min(320px,86vw)}
+.toast.on{transform:translate(-50%,0);opacity:1}
+.toast small{display:block;color:#ffffff80;font-size:11.5px}
+.probe{position:absolute;inset:0;display:grid;place-items:center;background:#0D0B09EE;z-index:3}
+.probe .card{width:min(360px,90vw);text-align:center}
+.probe h2{font-family:var(--display);font-weight:500;font-size:25px;margin:0 0 16px;color:#F0E6D6}
+.probe button{display:block;width:100%;margin-top:9px;appearance:none;border:1px solid #ffffff2e;background:#ffffff0d;color:#F0E6D6;border-radius:10px;padding:14px;font-size:16px;cursor:pointer}
+.count{font-family:var(--display);font-size:54px;color:#ffffff99}
+
+/* breath */
+.breath{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:70px 20px calc(30px + env(safe-area-inset-bottom,0px))}
+.orb{width:min(58vw,260px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 50% 45%,#F5B85A22,#F5B85A08 60%,transparent 70%);display:grid;place-items:center}
+.orb i{width:12px;height:12px;border-radius:50%;background:#F5B85A;opacity:.8;transition:transform .25s ease}
+.orb i.tap{transform:scale(1.8)}
+.bbtns{display:grid;grid-template-columns:2fr 1fr;gap:10px;width:min(440px,100%)}
+.bbtns button{appearance:none;border:1px solid #ffffff2e;background:#ffffff0f;color:#F0E6D6;border-radius:14px;min-height:120px;font-size:19px;font-weight:600;cursor:pointer;touch-action:manipulation}
+.bbtns button:active{background:#ffffff22}
+.lost{appearance:none;border:0;background:none;color:#ffffff80;font-size:14px;padding:10px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.bnote{color:#ffffff66;font-size:13px;text-align:center;max-width:36ch}
+
+/* results & progress */
+.result h2{font-family:var(--display);font-weight:600;font-size:30px;margin:22px 0 2px}
+.big{display:flex;align-items:baseline;gap:10px;margin-top:10px}
+.big b{font-family:var(--mono);font-size:46px;font-weight:500;line-height:1}
+.big span{color:var(--dim)}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--rule);font-size:14.5px}
+.kv span:last-child{font-family:var(--mono);text-align:right}
+.kv small{display:block;color:var(--dim);font-size:12.5px;font-family:var(--ui)}
+.note{color:var(--dim);font-size:13.5px}
+.pb{color:var(--flame);font-family:var(--mono);font-size:11px;letter-spacing:.1em;margin-left:6px}
+.sec{margin-top:26px}
+.sec h3{font-size:15px;margin:0 0 6px}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.sess{padding:10px 0;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.sess .s{color:var(--dim);font-size:12.5px}
+.ghost{appearance:none;border:1px solid var(--rule);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px 14px;min-height:44px;font-size:14px;cursor:pointer}
+.science{margin-top:34px;padding-top:14px;border-top:1px solid var(--rule);color:var(--dim);font-size:13px;max-width:62ch}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Ekagra</h1>
+    <nav><button class="nb" data-view="home">Train</button><button class="nb" data-view="progress">Progress</button></nav>
+  </header>
+  <main id="main"></main>
+</div>
+<div class="stage" id="stage" hidden></div>
+
+<script>
+"use strict";
+/* ============================================================================
+   EKAGRA — one-pointed attention, trained as a game.
+
+   FLAME is a vigilance task in the SART / gradCPT family: watch one object,
+   respond only to one rare, subtle change, and ignore everything else that
+   tries to pull you away — drifting sparks, gusts that look like the event,
+   fake notifications. The change gets subtler as you catch it (a staircase)
+   and rarer as your level rises, so the task stays at the edge of what you
+   can hold. Every minute or two it stops and asks where your attention just
+   was; your answer is checked against what you actually did, which trains
+   meta-awareness — noticing that you left, the heart of dharana.
+
+   BREATH is the Breath Counting Task (Levinson et al., 2014): tap each
+   exhale, 1 to 8, then "nine"; nothing on screen keeps count for you.
+   Losing count and saying so is scored as a catch, not a failure.
+   ============================================================================ */
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>a+Math.random()*(b-a);
+const median=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2};
+const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+const sd=a=>{const m=mean(a);return a.length>1?Math.sqrt(a.reduce((x,y)=>x+(y-m)**2,0)/(a.length-1)):null};
+const mmss=s=>{s=Math.max(0,Math.round(s));return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")};
+const dayKey=t=>{const d=new Date(t);return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()};
+
+/* ------------------------------------------------------------ profile -- */
+const LS="ekagra:v1";
+const P={delta:.42,sessions:[],updated:0,calm:false,mode:"flame",minutes:5};
+let db=null,uid=null,view="home",last=null;
+function load(){try{const d=JSON.parse(localStorage.getItem(LS)||"null");if(d)adopt(d)}catch(e){}}
+function adopt(d){d=JSON.parse(JSON.stringify(d||{}));   // store snapshots arrive frozen; always work on a copy
+  if(typeof d.delta==="number")P.delta=clamp(d.delta,.035,.6);
+  if(Array.isArray(d.sessions))P.sessions=d.sessions.slice(-400);
+  for(const k of ["calm","mode","minutes","updated"])if(d[k]!==undefined)P[k]=d[k]}
+let writing=Promise.resolve();
+function save(){P.updated=Date.now();const body=JSON.parse(JSON.stringify(P));
+  try{localStorage.setItem(LS,JSON.stringify(body))}catch(e){}
+  if(db&&uid)writing=writing.then(()=>db.doc("data/users/"+uid+"/ekagra").set(body)).catch(()=>{})}
+
+/* Level: how subtle a dimming you can catch, as a whole number. 0 is an
+   obvious change; each level is ~8% subtler. */
+const levelOf=delta=>Math.max(0,Math.round(Math.log(.42/delta)/Math.log(1/.92)));
+
+/* ================================================================ FLAME == */
+let G=null; // the running game
+function flameParams(level,calm){
+  return{gapMin:6+level*.35,gapMax:13+level*.9,           // longer, less predictable waits as you rise
+    sparkRate:calm?.25:.5+level*.05,                        // sparks per second
+    lureEvery:calm?[40,70]:[Math.max(10,24-level*.5),Math.max(20,44-level)],  // gusts that look like the event
+    toastEvery:calm?[9999,9999]:[Math.max(18,45-level),Math.max(35,80-level)], // fake notifications
+    window:1500}}
+
+function startFlame(){
+  const minutes=P.minutes,level=levelOf(P.delta);
+  const pr=flameParams(level,P.calm);
+  const stage=$("stage");stage.hidden=false;document.body.style.overflow="hidden";
+  stage.innerHTML=`<canvas id="cv" aria-label="A candle flame. Tap anywhere when it dims."></canvas><div class="bar" id="bar" style="width:0"></div>
+    <button class="quit" id="quit">End</button><div class="toast" id="toast"></div>
+    <div class="hint" id="hint">Tap anywhere, or press space, the moment the flame dims. Ignore everything else.</div>`;
+  const now=performance.now();
+  G={kind:"flame",t0:now,dur:minutes*60000,paused:0,pauseAt:null,level,startDelta:P.delta,delta:P.delta,pr,
+    target:null,nextTarget:now+rand(4000,7000),nextLure:now+rand(...pr.lureEvery)*1000,nextToast:now+rand(...pr.toastEvery)*1000,
+    lure:null,sparks:[],events:[],hits:[],misses:0,fas:0,lureFas:0,toastFas:0,lastError:now,locks:[],
+    probes:[],nextProbe:now+rand(55000,95000),probing:false,raf:0,sway:0,seed:Math.random()*1000};
+  setTimeout(()=>{const h=$("hint");if(h)h.style.opacity="0"},6000);
+  sizeCanvas();G.raf=requestAnimationFrame(frame)}
+
+function sizeCanvas(){const c=$("cv");if(!c)return;const d=Math.min(2,window.devicePixelRatio||1);
+  c.width=Math.round(c.clientWidth*d);c.height=Math.round(c.clientHeight*d);G.dpr=d}
+
+function tnow(){return performance.now()}
+function frame(){
+  if(!G||G.kind!=="flame")return;
+  const t=tnow();
+  if(G.pauseAt===null){step(t);if(!G)return}
+  draw(t);
+  G.raf=requestAnimationFrame(frame)}
+
+function elapsed(t){return t-G.t0-G.paused-(G.pauseAt!==null?t-G.pauseAt:0)}
+function step(t){
+  const el=elapsed(t);
+  const bar=$("bar");if(bar)bar.style.width=clamp(el/G.dur*100,0,100)+"%";
+  if(el>=G.dur&&!G.target)return endFlame(false);
+  // the change itself
+  if(!G.target&&t>=G.nextTarget&&el<G.dur-2000){G.target={on:t,delta:G.delta,answered:false}}
+  if(G.target&&t-G.target.on>G.pr.window){
+    if(!G.target.answered){G.misses++;G.events.push({t:el,type:"miss",delta:G.target.delta});
+      closeLock(t);G.delta=clamp(G.delta*1.15,.035,.6)}
+    G.target=null;G.nextTarget=t+rand(G.pr.gapMin,G.pr.gapMax)*1000}
+  // lures: a gust that moves the flame hard without dimming it
+  if(!G.lure&&t>=G.nextLure&&!G.target){G.lure={on:t,dir:Math.random()<.5?-1:1};G.nextLure=t+rand(...G.pr.lureEvery)*1000}
+  if(G.lure&&t-G.lure.on>1400)G.lure=null;
+  // fake notifications
+  if(t>=G.nextToast){G.nextToast=t+rand(...G.pr.toastEvery)*1000;showToast(t)}
+  // sparks drifting across
+  if(Math.random()<G.pr.sparkRate/60)G.sparks.push({x:Math.random(),y:1.05,vx:rand(-.03,.03),vy:-rand(.05,.14),life:0,r:rand(1,2.4)});
+  G.sparks=G.sparks.filter(s=>(s.life+=1/60,s.x+=s.vx/60,s.y+=s.vy/60,s.y>-.05&&s.life<14));
+  // the question
+  if(!G.probing&&t>=G.nextProbe&&!G.target&&el<G.dur-8000)probe(t)}
+
+const TOASTS=[["Messages","Are you free later?"],["Reminder","Did you lock the door?"],["News","You won't believe what happened"],
+  ["Mum","Call me when you can"],["Calendar","Something in 10 minutes"],["Photos","You have a new memory from 3 years ago"],["Group chat","14 new messages"]];
+function showToast(t){const el=$("toast");if(!el)return;const [a,b]=TOASTS[Math.floor(Math.random()*TOASTS.length)];
+  el.innerHTML=`<small>${esc(a)} · now</small>${esc(b)}`;el.classList.add("on");G.toastOn=t;setTimeout(()=>el.classList.remove("on"),2200)}
+
+function brightnessAt(t){
+  if(!G.target)return 1;const a=t-G.target.on;const d=G.target.delta;
+  if(a<160)return 1-d*(a/160);if(a<860)return 1-d;if(a<1020)return 1-d*(1-(a-860)/160);return 1}
+
+function draw(t){
+  const c=$("cv");if(!c)return;const x=c.getContext("2d"),W=c.width,H=c.height,d=G.dpr||1;
+  x.fillStyle="#0D0B09";x.fillRect(0,0,W,H);
+  const cx=W/2,base=H*.6,s=Math.min(W,H*.9)/420;
+  const k=(t+G.seed)/1000;
+  const B=brightnessAt(t);
+  // gusts push the flame; ordinary flicker is small and continuous
+  let push=0;if(G.lure){const a=(t-G.lure.on)/1400;push=G.lure.dir*Math.sin(a*Math.PI)*28}
+  const sway=Math.sin(k*1.7)*3+Math.sin(k*3.1+1)*2+Math.sin(k*7.3)*1+push;
+  const h=(118+Math.sin(k*2.3)*6+Math.sin(k*5.9)*4+Math.sin(k*11.7)*2-Math.abs(push)*.6)*s;
+  const w=26*s*(1+Math.abs(push)/90);
+  // glow
+  const g=x.createRadialGradient(cx,base-h*.45,0,cx,base-h*.45,210*s);
+  g.addColorStop(0,`rgba(245,184,90,${.22*B})`);g.addColorStop(.5,`rgba(224,138,46,${.07*B})`);g.addColorStop(1,"rgba(0,0,0,0)");
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  // candle
+  x.fillStyle="#E9E1D2";x.fillRect(cx-18*s,base+8*s,36*s,H);x.fillStyle="#3a3128";x.fillRect(cx-1.2*s,base-2*s,2.4*s,12*s);
+  // flame body
+  const tipX=cx+sway*s,tipY=base-h;
+  x.beginPath();x.moveTo(cx,base+4*s);
+  x.bezierCurveTo(cx-w*1.25,base-h*.25,cx-w*.55+sway*s*.4,base-h*.72,tipX,tipY);
+  x.bezierCurveTo(cx+w*.55+sway*s*.4,base-h*.72,cx+w*1.25,base-h*.25,cx,base+4*s);
+  const fg=x.createLinearGradient(0,base,0,tipY);
+  fg.addColorStop(0,`rgba(90,120,255,${.55*B})`);fg.addColorStop(.12,`rgba(255,244,214,${.98*B})`);
+  fg.addColorStop(.45,`rgba(255,196,96,${.95*B})`);fg.addColorStop(1,`rgba(224,110,30,${.15*B})`);
+  x.fillStyle=fg;x.fill();
+  // core
+  x.beginPath();x.ellipse(cx+sway*s*.15,base-h*.22,w*.32,h*.2,0,0,Math.PI*2);x.fillStyle=`rgba(255,252,240,${.85*B})`;x.fill();
+  // sparks
+  for(const sp of G.sparks){x.beginPath();x.arc(sp.x*W,sp.y*H,sp.r*d,0,Math.PI*2);x.fillStyle=`rgba(245,184,90,${.5*Math.max(0,1-sp.life/14)})`;x.fill()}
+}
+
+function respond(){
+  if(!G||G.kind!=="flame"||G.pauseAt!==null)return;
+  const t=tnow(),el=elapsed(t);
+  if(G.target&&!G.target.answered){
+    G.target.answered=true;const rt=t-G.target.on;G.hits.push(rt);G.events.push({t:el,type:"hit",rt,delta:G.target.delta});
+    // ×0.95 on a catch, ×1.15 on a miss: settles where you catch about 73%.
+    G.delta=clamp(G.delta*.95,.035,.6);return}
+  G.fas++;const why=G.lure?"lure":G.toastOn&&t-G.toastOn<2600?"toast":"none";
+  if(why==="lure")G.lureFas++;if(why==="toast")G.toastFas++;
+  G.events.push({t:el,type:"fa",why});closeLock(t)}
+
+function closeLock(t){G.locks.push((t-G.lastError)/1000);G.lastError=t}
+
+function probe(t){
+  G.probing=true;G.pauseAt=t;
+  const el=elapsed(t);
+  const stage=$("stage"),o=document.createElement("div");o.className="probe";o.id="probe";
+  o.innerHTML=`<div class="card"><h2>Just now, where was your attention?</h2>
+    <button data-probe="on">On the flame</button><button data-probe="drift">Drifting</button><button data-probe="away">Somewhere else</button></div>`;
+  stage.appendChild(o);G.probeAt=el}
+function answerProbe(ans){
+  const t=tnow(),el=G.probeAt;
+  // what actually happened in the 20 seconds before the question
+  const recent=G.events.filter(e=>e.t>=el-20000&&e.t<=el);
+  const lapses=recent.filter(e=>e.type==="miss"||e.type==="fa").length;
+  G.probes.push({t:el,ans,lapses});
+  const o=$("probe");o.innerHTML=`<div class="count" id="cd">3</div>`;
+  let n=3;const iv=setInterval(()=>{n--;if(n<=0){clearInterval(iv);o.remove();
+      const t2=tnow();G.paused+=t2-G.pauseAt;G.pauseAt=null;G.probing=false;
+      G.nextProbe=t2+rand(60000,110000);if(G.nextTarget<t2+2500)G.nextTarget=t2+rand(2500,5000)}
+    else{const cd=$("cd");if(cd)cd.textContent=n}},700)}
+
+function endFlame(early){
+  if(!G)return;cancelAnimationFrame(G.raf);
+  const t=tnow(),el=Math.min(elapsed(t),G.dur);
+  closeLock(t);
+  const targets=G.hits.length+G.misses;
+  const rtMed=median(G.hits),rtSd=sd(G.hits);
+  const onReports=G.probes.filter(p=>p.ans==="on");
+  const lapseProbes=G.probes.filter(p=>p.lapses>0);
+  const s={kind:"flame",at:Date.now(),secs:Math.round(el/1000),early:!!early,level:G.level,levelEnd:levelOf(G.delta),
+    deltaStart:G.startDelta,deltaEnd:G.delta,targets,hits:G.hits.length,misses:G.misses,fas:G.fas,lureFas:G.lureFas,toastFas:G.toastFas,
+    rtMed:rtMed&&Math.round(rtMed),rtCv:rtSd&&rtMed?+(rtSd/mean(G.hits)).toFixed(3):null,
+    longest:Math.round(Math.max(0,...G.locks)),
+    probes:G.probes.length,probeOn:onReports.length,
+    lapseProbes:lapseProbes.length,lapseNoticed:lapseProbes.filter(p=>p.ans!=="on").length,
+    calmProbes:G.probes.filter(p=>p.lapses===0).length,calmSaidOn:G.probes.filter(p=>p.lapses===0&&p.ans==="on").length};
+  if(s.secs>=30){P.delta=G.delta;P.sessions.push(s);save()}
+  G=null;closeStage();last=s;view="result";render()}
+
+/* =============================================================== BREATH == */
+function startBreath(){
+  const stage=$("stage");stage.hidden=false;document.body.style.overflow="hidden";
+  stage.innerHTML=`<div class="bar" id="bar" style="width:0"></div><button class="quit" id="quit">End</button>
+    <div class="breath"><div class="orb"><i id="dot"></i></div>
+      <div class="bnote" id="bnote">Breathe naturally. Tap <b>Exhale</b> on breaths one to eight, <b>Nine</b> on the ninth, then start again. Nothing here keeps count for you.</div>
+      <div class="bbtns"><button id="bx" aria-label="Exhale, breaths one to eight">Exhale</button><button id="b9">Nine</button></div>
+      <button class="lost" id="blost">I lost count</button></div>`;
+  G={kind:"breath",t0:performance.now(),dur:P.minutes*60000,pos:0,taps:[],correct:0,miscounts:0,over:0,early9:0,caught:0,timer:0};
+  G.timer=setInterval(()=>{if(!G)return;const el=performance.now()-G.t0;const bar=$("bar");if(bar)bar.style.width=clamp(el/G.dur*100,0,100)+"%";
+    if(el>=G.dur)endBreath(false)},500);
+  setTimeout(()=>{const n=$("bnote");if(n)n.style.opacity=".0"},9000)}
+function pulse(){const d=$("dot");if(!d)return;d.classList.add("tap");setTimeout(()=>d.classList.remove("tap"),180)}
+function breathTap(kind){
+  if(!G||G.kind!=="breath")return;const t=performance.now();G.taps.push({t:t-G.t0,kind});pulse();
+  if(kind==="x"){G.pos++;if(G.pos>8){G.miscounts++;G.over++;G.pos=0}}
+  else if(kind==="9"){if(G.pos===8)G.correct++;else{G.miscounts++;G.early9++}G.pos=0}
+  else if(kind==="lost"){G.caught++;G.pos=0}}
+function endBreath(early){
+  if(!G)return;clearInterval(G.timer);
+  const el=Math.min(performance.now()-G.t0,G.dur);
+  const breaths=G.taps.filter(x=>x.kind!=="lost");
+  const gaps=[];for(let i=1;i<breaths.length;i++)gaps.push((breaths[i].t-breaths[i-1].t)/1000);
+  const mg=median(gaps);
+  const drift=mg?gaps.filter(g=>g>mg*2.6).length:0;
+  const s={kind:"breath",at:Date.now(),secs:Math.round(el/1000),early:!!early,correct:G.correct,miscounts:G.miscounts,over:G.over,early9:G.early9,
+    caught:G.caught,breaths:breaths.length,perMin:mg?+(60/mg).toFixed(1):null,gapCv:gaps.length>2?+(sd(gaps)/mean(gaps)).toFixed(3):null,drift,
+    accuracy:G.correct+G.miscounts?+(G.correct/(G.correct+G.miscounts)).toFixed(3):null};
+  if(s.secs>=30&&s.breaths>=9){P.sessions.push(s);save()}
+  G=null;closeStage();last=s;view="result";render()}
+
+function closeStage(){const st=$("stage");st.hidden=true;st.innerHTML="";document.body.style.overflow=""}
+
+/* ================================================================ VIEWS == */
+function pbs(){
+  const f=P.sessions.filter(s=>s.kind==="flame"),b=P.sessions.filter(s=>s.kind==="breath");
+  const days=new Set(P.sessions.map(s=>dayKey(s.at)));
+  let streak=0,d=new Date();d.setHours(12);if(!days.has(dayKey(d)))d.setDate(d.getDate()-1);
+  while(days.has(dayKey(d))){streak++;d.setDate(d.getDate()-1)}
+  return{f,b,minutes:Math.round(P.sessions.reduce((a,s)=>a+s.secs,0)/60),streak,
+    bestLock:Math.max(0,...f.map(s=>s.longest||0)),bestLevel:Math.max(levelOf(P.delta),...f.map(s=>s.levelEnd||0)),
+    bestCycles:Math.max(0,...b.map(s=>s.correct||0))}}
+
+function homeHtml(){
+  const k=pbs(),lvl=levelOf(P.delta);
+  const flameIc=`<svg width="18" height="26" viewBox="0 0 18 26" aria-hidden="true"><path d="M9 1C12 7 16 10 16 16a7 7 0 0 1-14 0C2 10 6 7 9 1z" fill="#F5B85A"/><ellipse cx="9" cy="18" rx="3" ry="4" fill="#FFF4DA"/></svg>`;
+  const breathIc=`<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#F5B85A" stroke-opacity=".5"/><circle cx="12" cy="12" r="3.5" fill="#F5B85A"/></svg>`;
+  return`<p class="lede">Hold one thing. Notice when you let go. Come back.</p>
+    <p class="sub">That is the whole of dharana, and each part of it can be practised and measured.</p>
+    <div class="modes">
+      <button class="mode" data-mode="flame" aria-pressed="${P.mode==="flame"}"><div class="ic">${flameIc}</div><div><b>Flame</b>
+        <span>Watch the flame. Tap only when it dims. Sparks, gusts and notifications will try to pull you off it. It gets subtler as you improve — you're at level ${lvl}.</span></div></button>
+      <button class="mode" data-mode="breath" aria-pressed="${P.mode==="breath"}"><div class="ic">${breathIc}</div><div><b>Breath count</b>
+        <span>Count exhales to nine by touch alone, with nothing on screen keeping count. Saying you lost count is scored as a catch.</span></div></button>
+    </div>
+    <div class="row"><span class="lab" style="margin-right:4px">Length</span>
+      <div class="seg" role="group" aria-label="Session length">${[3,5,10,15].map(m=>`<button data-min="${m}" aria-pressed="${P.minutes===m}">${m} min</button>`).join("")}</div></div>
+    ${P.mode==="flame"?`<div class="row"><label class="check"><input type="checkbox" id="calm" ${P.calm?"checked":""}> Gentle distractions (no notifications, fewer gusts)</label></div>`:""}
+    <button class="begin" id="begin">Begin</button>
+    <p class="how">${P.mode==="flame"?"Sit where the screen is still. <b>Tap anywhere</b> (or press space) the moment the flame dims; every other tap counts against you. Every minute or two it will stop and ask where your attention just was. Answer honestly: your answer is checked against what you did, and that is the part that trains noticing."
+      :"Sit comfortably and breathe without controlling it. Rest your eyes anywhere, or close them and tap by feel. <b>Exhale</b> for breaths one to eight, <b>Nine</b> on the ninth. If you realise you've lost count, tap <b>I lost count</b> and start again at one."}</p>
+    ${P.sessions.length?`<div class="stats"><div><b>${k.minutes}</b><span>minutes trained</span></div><div><b>${k.streak}</b><span>day streak</span></div><div><b>${mmss(k.bestLock)}</b><span>longest unbroken hold</span></div></div>`:""}
+    <div class="science"><b>What this is based on.</b> Flame is a vigilance task in the family of the Sustained Attention to Response Task (Robertson et al., 1997) and the gradual-onset CPT (Esterman et al., 2013), with thought probes like those used in mind-wandering research (Smallwood &amp; Schooler). Breath count is the Breath Counting Task (Levinson et al., 2014), a behavioural measure of mindful attention. Practising a task makes you better at that task; how far it carries into the rest of life is still being studied, which is one reason the probes ask you to notice for yourself.</div>`}
+
+function resultHtml(){
+  const s=last;if(!s)return homeHtml();
+  const k=pbs();
+  if(s.kind==="flame"){
+    const hr=s.targets?Math.round(s.hits/s.targets*100):0;
+    const aware=s.lapseProbes?Math.round(s.lapseNoticed/s.lapseProbes*100):null;
+    const lvlUp=s.levelEnd-s.level;
+    return`<div class="result"><h2>${s.early?"Ended early":"Session done"}</h2><p class="note">Flame · ${mmss(s.secs)} · level ${s.level} → ${s.levelEnd}${lvlUp>0?` <span class="pb">+${lvlUp}</span>`:""}</p>
+      <div class="big"><b>${mmss(s.longest)}</b><span>longest unbroken hold${s.longest>=k.bestLock&&s.longest>0?`<span class="pb">BEST</span>`:""}</span></div>
+      <p class="note">The longest stretch without missing a dimming or tapping at something else. Dharana is the hold; this is its length.</p>
+      <div class="sec">
+        <div class="kv"><span>Caught<small>dimmings you tapped within 1.5 s</small></span><span>${s.hits}/${s.targets} · ${hr}%</span></div>
+        <div class="kv"><span>Pulled away<small>taps at nothing${s.lureFas?`, ${s.lureFas} at a gust`:""}${s.toastFas?`, ${s.toastFas} at a notification`:""}</small></span><span>${s.fas}</span></div>
+        <div class="kv"><span>Reaction<small>median time to catch it</small></span><span>${s.rtMed?s.rtMed+" ms":"—"}</span></div>
+        <div class="kv"><span>Steadiness<small>how even your reactions were (lower is steadier)</small></span><span>${s.rtCv!=null?Math.round(s.rtCv*100)+"%":"—"}</span></div>
+      </div>
+      ${s.probes?`<div class="sec"><h3>Noticing</h3>
+        <div class="kv"><span>Said "on the flame"<small>of ${s.probes} question${s.probes>1?"s":""}</small></span><span>${s.probeOn}/${s.probes}</span></div>
+        ${s.lapseProbes?`<div class="kv"><span>Lapses you noticed<small>when you'd missed or mis-tapped in the 20 s before, how often you said you'd drifted</small></span><span>${s.lapseNoticed}/${s.lapseProbes}${aware!=null?` · ${aware}%`:""}</span></div>`:""}
+        <p class="note">${!s.lapseProbes?"No lapses happened before a question this time, so there was nothing to catch.":aware>=67?"You mostly knew when you'd left. That knowing is what gets you back sooner.":"Some lapses happened while you felt you were on the flame. That's normal and it's exactly the gap this trains: the moment of leaving is quieter than it feels."}</p></div>`:""}
+      <div class="row"><button class="begin" id="again" style="margin-top:8px">Again</button></div></div>`}
+  const acc=s.accuracy!=null?Math.round(s.accuracy*100):null;
+  return`<div class="result"><h2>${s.early?"Ended early":"Session done"}</h2><p class="note">Breath count · ${mmss(s.secs)} · ${s.breaths} breaths${s.perMin?` · ${s.perMin} a minute`:""}</p>
+    <div class="big"><b>${s.correct}</b><span>clean rounds of nine${s.correct>=k.bestCycles&&s.correct>0?`<span class="pb">BEST</span>`:""}</span></div>
+    <div class="sec">
+      <div class="kv"><span>Accuracy<small>rounds that landed exactly on nine</small></span><span>${acc!=null?acc+"%":"—"}</span></div>
+      <div class="kv"><span>Miscounts<small>${s.over} ran past nine, ${s.early9} called nine early</small></span><span>${s.miscounts}</span></div>
+      <div class="kv"><span>Caught yourself<small>times you noticed and said so</small></span><span>${s.caught}</span></div>
+      <div class="kv"><span>Long gaps<small>pauses well beyond your usual breath, often a sign you'd drifted</small></span><span>${s.drift}</span></div>
+    </div>
+    <p class="note">${s.caught>=s.miscounts&&s.caught>0?"You caught more drifts than slipped past you. That's the skill.":s.miscounts?"Miscounts are drifts you didn't notice in time. Next time, try tapping “I lost count” the instant you're unsure; it's scored as a catch, not a failure.":"No miscounts. Try a longer session."}</p>
+    <div class="row"><button class="begin" id="again" style="margin-top:8px">Again</button></div></div>`}
+
+function spark(vals,{min,max,fmt,color}){
+  if(vals.length<2)return`<p class="note">A couple more sessions and the line appears.</p>`;
+  const W=300,H=70,lo=min??Math.min(...vals),hi=max??Math.max(...vals),span=hi-lo||1;
+  const xs=i=>i/(vals.length-1)*W,ys=v=>H-6-((v-lo)/span)*(H-16);
+  const d=vals.map((v,i)=>(i?"L":"M")+xs(i).toFixed(1)+" "+ys(v).toFixed(1)).join(" ");
+  return`<div class="chart"><svg viewBox="-4 -4 ${W+8} ${H+14}" role="img" aria-label="trend">
+    <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="var(--rule)"/>
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${xs(vals.length-1)}" cy="${ys(vals[vals.length-1])}" r="3.5" fill="${color}"/>
+    <text x="${W}" y="${ys(vals[vals.length-1])-8}" text-anchor="end" font-size="11" fill="var(--dim)" font-family="DM Mono, monospace">${fmt(vals[vals.length-1])}</text></svg></div>`}
+
+function progressHtml(){
+  const k=pbs();
+  if(!P.sessions.length)return`<p class="lede">Nothing yet.</p><p class="sub">Finish a session of at least 30 seconds and your numbers start here.</p>`;
+  const f=k.f.slice(-30),b=k.b.slice(-30);
+  return`<div class="stats"><div><b>${k.minutes}</b><span>minutes trained</span></div><div><b>${k.streak}</b><span>day streak</span></div><div><b>${levelOf(P.delta)}</b><span>flame level</span></div>
+    <div><b>${mmss(k.bestLock)}</b><span>longest hold</span></div><div><b>${k.bestCycles}</b><span>best rounds of nine</span></div><div><b>${P.sessions.length}</b><span>sessions</span></div></div>
+    ${f.length?`<div class="sec"><h3>Flame level</h3><p class="note">How subtle a change you can catch while things pull at you.</p>${spark(f.map(s=>s.levelEnd),{fmt:v=>"lvl "+v,color:"var(--flame)"})}</div>
+    <div class="sec"><h3>Longest hold</h3>${spark(f.map(s=>s.longest),{min:0,fmt:mmss,color:"var(--good)"})}</div>
+    ${f.some(s=>s.lapseProbes)?`<div class="sec"><h3>Lapses noticed</h3><p class="note">Of the lapses just before a question, how many you said you'd drifted.</p>${spark(f.filter(s=>s.lapseProbes).map(s=>s.lapseNoticed/s.lapseProbes*100),{min:0,max:100,fmt:v=>Math.round(v)+"%",color:"var(--calm)"})}</div>`:""}`:""}
+    ${b.length?`<div class="sec"><h3>Breath-count accuracy</h3>${spark(b.filter(s=>s.accuracy!=null).map(s=>s.accuracy*100),{min:0,max:100,fmt:v=>Math.round(v)+"%",color:"var(--flame)"})}</div>`:""}
+    <div class="sec"><h3>Recent sessions</h3>${P.sessions.slice(-12).reverse().map(s=>`<div class="sess"><div>${s.kind==="flame"?"Flame":"Breath count"} · ${mmss(s.secs)}
+      <div class="s">${new Date(s.at).toLocaleDateString(undefined,{month:"short",day:"numeric"})}${s.early?" · ended early":""}</div></div>
+      <div style="text-align:right;font-family:var(--mono);font-size:13px">${s.kind==="flame"?`lvl ${s.levelEnd} · hold ${mmss(s.longest)}<div class="s">${s.hits}/${s.targets} caught · ${s.fas} pulled</div>`:`${s.correct} rounds<div class="s">${s.accuracy!=null?Math.round(s.accuracy*100)+"%":"—"} · ${s.caught} caught</div>`}</div></div>`).join("")}</div>`}
+
+function render(){
+  document.querySelectorAll(".nb").forEach(b=>b.setAttribute("aria-current",String(b.dataset.view===(view==="result"?"home":view))));
+  $("main").innerHTML=view==="progress"?progressHtml():view==="result"?resultHtml():homeHtml()}
+
+/* =============================================================== EVENTS == */
+function begin(){if(document.activeElement)document.activeElement.blur();if(P.mode==="breath")startBreath();else startFlame()}
+document.addEventListener("click",ev=>{
+  const t=ev.target.closest("button");if(!t)return;
+  if(t.dataset.view){view=t.dataset.view;return render()}
+  if(t.dataset.mode){P.mode=t.dataset.mode;save();return render()}
+  if(t.dataset.min){P.minutes=+t.dataset.min;save();return render()}
+  if(t.id==="begin"||t.id==="again")return begin();
+  if(t.id==="quit"){if(G&&G.kind==="flame")endFlame(true);else if(G&&G.kind==="breath")endBreath(true);return}
+  if(t.dataset.probe){answerProbe(t.dataset.probe);return}
+  if(t.id==="bx")return breathTap("x");
+  if(t.id==="b9")return breathTap("9");
+  if(t.id==="blost")return breathTap("lost")});
+document.addEventListener("change",ev=>{if(ev.target.id==="calm"){P.calm=ev.target.checked;save()}});
+// Flame responses: a touch anywhere on the stage (except its buttons) or the space bar. pointerdown, not click, for honest timing.
+document.addEventListener("pointerdown",ev=>{if(G&&G.kind==="flame"&&ev.target.id==="cv"){ev.preventDefault();respond()}},{passive:false});
+document.addEventListener("keydown",ev=>{
+  if(!G)return;
+  if(G.kind==="flame"&&(ev.code==="Space"||ev.key===" ")){ev.preventDefault();if(!G.probing)respond()}
+  if(G.kind==="breath"&&!ev.repeat){if(ev.key==="ArrowDown"||ev.key==="j"){ev.preventDefault();breathTap("x")}if(ev.key==="9"||ev.key==="k"){ev.preventDefault();breathTap("9")}}
+  if(ev.key==="Escape"){if(G.kind==="flame")endFlame(true);else endBreath(true)}});
+window.addEventListener("resize",()=>{if(G&&G.kind==="flame")sizeCanvas()});
+// Leaving the page mid-flame pauses it; the time away isn't counted.
+document.addEventListener("visibilitychange",()=>{
+  if(!G||G.kind!=="flame")return;const t=tnow();
+  if(document.hidden&&G.pauseAt===null){G.pauseAt=t;G.hiddenPause=true}
+  else if(!document.hidden&&G.hiddenPause&&!G.probing){G.paused+=t-G.pauseAt;G.pauseAt=null;G.hiddenPause=false;
+    if(G.target){G.target=null;G.nextTarget=t+rand(3000,6000)}}});
+
+load();render();
+(async()=>{try{
+  const [d,u]=await Promise.all([claude.use("db"),claude.use("user")]);
+  db=d;uid=u?await u.id():null;
+  if(db&&uid){const snap=await db.doc("data/users/"+uid+"/ekagra").get();
+    if(snap.exists){const r=snap.data();if((r.updated||0)>(P.updated||0)){adopt(r);if(!G)render()}}}
+}catch(e){db=null}})();
+</script>
